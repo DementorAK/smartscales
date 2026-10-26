@@ -1,0 +1,23 @@
+# Normalize line endings in the repository; check out with native endings
+* text=auto eol=lf
+
+# Windows scripts need CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Shell scripts must keep LF
+gradlew text eol=lf
+*.sh text eol=lf
+
+# Binary files
+*.jar binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.ico binary
+*.ttf binary
+*.otf binary
+*.keystore binary
+*.jks binary

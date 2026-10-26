@@ -1,0 +1,49 @@
+# --- Gradle ---
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+.kotlin/
+
+# --- Android Studio / IntelliJ ---
+*.iml
+.idea/*
+!.idea/codeStyles/
+!.idea/copyright/
+.navigation/
+captures/
+.externalNativeBuild/
+.cxx/
+output-metadata.json
+
+# --- Local configuration ---
+local.properties
+*.log
+
+# --- Signing and secrets (never commit) ---
+*.jks
+*.keystore
+keystore.properties
+signing.properties
+google-services.json
+*.p12
+*.pem
+
+# --- Build outputs ---
+*.apk
+*.aab
+*.ap_
+*.dex
+/release/
+/app/release/
+
+# --- OS / editor files ---
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+
+# --- Claude Code (local assistant context) ---
+CLAUDE.md
+CLAUDE.local.md
+.claude/settings.local.json

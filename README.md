@@ -25,6 +25,7 @@ No ads, no accounts, no paid features.
 | `:core:ble` | Android library | Scale drivers and BLE advertisement / GATT adapters |
 | `:core:formula` | Pure Kotlin | Formula expression engine and JSON formula sets |
 | `:core:data` | Android library | Room database (raw measurements only), repositories, settings |
+| `:lint` | Lint checks | Project lint rules, e.g. `ComposeHardcodedText`: UI text in Compose must come from string resources |
 
 ## Building
 

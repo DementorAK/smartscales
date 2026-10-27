@@ -63,7 +63,8 @@ android {
         compose = true
     }
     lint {
-        // All UI text must live in string resources so the app can be translated
+        // All UI text must live in string resources so the app can be translated:
+        // HardcodedText covers XML, ComposeHardcodedText (from :lint) covers Compose
         error += "HardcodedText"
         checkDependencies = true
     }
@@ -74,6 +75,7 @@ dependencies {
     implementation(project(":core:ble"))
     implementation(project(":core:formula"))
     implementation(project(":core:data"))
+    lintChecks(project(":lint"))
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)

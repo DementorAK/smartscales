@@ -28,4 +28,5 @@ include(":core:protocol")
 include(":core:ble")
 include(":core:formula")
 include(":core:data")
+include(":lint")
  

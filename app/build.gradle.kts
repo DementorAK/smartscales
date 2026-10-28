@@ -71,6 +71,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":core:model"))
     implementation(project(":core:protocol"))
     implementation(project(":core:ble"))
     implementation(project(":core:formula"))

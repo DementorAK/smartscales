@@ -24,6 +24,7 @@ dependencyResolutionManagement {
 
 rootProject.name = "SmartScales"
 include(":app")
+include(":core:model")
 include(":core:protocol")
 include(":core:ble")
 include(":core:formula")

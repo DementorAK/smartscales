@@ -18,5 +18,7 @@ kotlin {
 }
 
 dependencies {
+    // Parsed frames are returned as :core:model types (Impedance, units)
+    api(project(":core:model"))
     testImplementation(libs.junit)
 }

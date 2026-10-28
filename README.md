@@ -21,6 +21,7 @@ No ads, no accounts, no paid features.
 | Module | Kind | Contents |
 |---|---|---|
 | `:app` | Android app | UI (Jetpack Compose, Material 3), navigation, DI wiring |
+| `:core:model` | Pure Kotlin | Shared types without dependencies: sex, units, raw measurement and person snapshot |
 | `:core:protocol` | Pure Kotlin | Chipsea / OKOK frame parsing, command building, V2 decryption |
 | `:core:ble` | Android library | Scale drivers and BLE advertisement / GATT adapters |
 | `:core:formula` | Pure Kotlin | Formula expression engine and JSON formula sets |

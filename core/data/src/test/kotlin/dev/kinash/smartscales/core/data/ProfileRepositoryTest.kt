@@ -22,7 +22,7 @@ import java.time.LocalDate
 @RunWith(RobolectricTestRunner::class)
 class ProfileRepositoryTest : DatabaseTestBase() {
 
-    private val profiles by lazy { ProfileRepository(database) }
+    private val profiles by lazy { ProfileRepository(database, clock) }
     private val measurements by lazy { MeasurementRepository(database) }
 
     @Test
@@ -62,6 +62,29 @@ class ProfileRepositoryTest : DatabaseTestBase() {
     }
 
     @Test
+    fun measurementsBeforeDateAreCountedByLocalDate() = runTest {
+        val profileId = profiles.add(profile())
+        // 22:30 UTC is already the next day in Kyiv
+        measurements.add(measurement(profileId, takenAt = "2026-10-27T22:30:00Z"))
+
+        assertEquals(0, profiles.countMeasurementsBefore(profileId, LocalDate.parse("2026-10-28")))
+        assertEquals(1, profiles.countMeasurementsBefore(profileId, LocalDate.parse("2026-10-29")))
+    }
+
+    @Test
+    fun applyToPastRefusesBirthDateAfterPastMeasurements() = runTest {
+        val profileId = profiles.add(profile())
+        val id = measurements.add(measurement(profileId, takenAt = "2026-10-27T07:00:00Z"))
+        val edited = profiles.get(profileId)!!.copy(birthDate = LocalDate.parse("2026-10-28"))
+
+        val error = runCatching { profiles.update(edited, applyToPastMeasurements = true) }.exceptionOrNull()
+
+        assertTrue(error is IllegalArgumentException)
+        assertEquals(LocalDate.parse("1990-10-28"), profiles.get(profileId)!!.birthDate)
+        assertEquals(LocalDate.parse("1990-10-28"), measurements.get(id)!!.person!!.birthDate)
+    }
+
+    @Test
     fun heightOrNameChangeDoesNotAsk() {
         val stored = profile()
         assertFalse(ProfileRepository.changesPastSnapshots(stored, stored.copy(name = "D", heightCm = 181.0)))
@@ -94,6 +117,18 @@ class ProfileRepositoryTest : DatabaseTestBase() {
         measurements.add(measurement(profileId))
 
         database.profileDao().delete(profileId)
+    }
+
+    @Test
+    fun weightGoalIsSetAndCleared() = runTest {
+        val profileId = profiles.add(profile())
+        assertNull(profiles.getGoal(profileId, ProfileRepository.WEIGHT_GOAL))
+
+        profiles.setGoal(profileId, ProfileRepository.WEIGHT_GOAL, 75.0)
+        assertEquals(75.0, profiles.getGoal(profileId, ProfileRepository.WEIGHT_GOAL)!!, 0.0)
+
+        profiles.setGoal(profileId, ProfileRepository.WEIGHT_GOAL, null)
+        assertNull(profiles.getGoal(profileId, ProfileRepository.WEIGHT_GOAL))
     }
 
     @Test

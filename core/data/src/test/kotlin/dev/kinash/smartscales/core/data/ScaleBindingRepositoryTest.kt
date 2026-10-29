@@ -54,7 +54,7 @@ class ScaleBindingRepositoryTest : DatabaseTestBase() {
     @Test
     fun unbindingKeepsHistoryLinked() = runTest {
         val id = scales.bind("AA:BB:CC:DD:EE:FF", null, "chipsea_ca20", null, null)
-        val profileId = ProfileRepository(database).add(profile())
+        val profileId = ProfileRepository(database, clock).add(profile())
         val measurements = MeasurementRepository(database)
         val measurementId = measurements.add(measurement(profileId).copy(scaleBindingId = id))
 

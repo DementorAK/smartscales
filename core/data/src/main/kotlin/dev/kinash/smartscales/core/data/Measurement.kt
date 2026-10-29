@@ -8,6 +8,7 @@ import dev.kinash.smartscales.core.model.MeasurementSource
 import dev.kinash.smartscales.core.model.PersonSnapshot
 import dev.kinash.smartscales.core.model.RawMeasurement
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 
 /**
@@ -38,6 +39,12 @@ data class Measurement(
         require(weightKg > 0) { "Weight must be positive: $weightKg" }
         require(profileId == null || person != null) { "A measurement assigned to a profile needs a person snapshot" }
     }
+
+    /** Calendar date of the measurement where it was taken. */
+    val localDate: LocalDate get() = takenAt.atZone(zone).toLocalDate()
+
+    /** False when the snapshot birth date is after the measurement date; such a measurement must not be saved. */
+    val isAfterBirth: Boolean get() = person == null || !localDate.isBefore(person.birthDate)
 
     /** Input for formulas, or null in the inbox where the person is not known yet. */
     fun toRawMeasurement(): RawMeasurement? = person?.let {

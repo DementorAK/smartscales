@@ -1,0 +1,92 @@
+<resources>
+    <string name="action_back">Назад</string>
+    <string name="action_save">Сохранить</string>
+    <string name="action_delete">Удалить</string>
+
+    <string name="unit_kg">кг</string>
+    <string name="unit_lb">фнт</string>
+    <string name="unit_st">ст</string>
+    <string name="unit_cm">см</string>
+    <string name="unit_in">дюйм</string>
+    <string name="unit_kg_value">%1$s кг</string>
+    <string name="unit_lb_value">%1$s фнт</string>
+    <string name="unit_st_lb_value">%1$s ст %2$s фнт</string>
+    <string name="unit_cm_value">%1$s см</string>
+    <string name="unit_in_value">%1$s дюйм</string>
+    <string name="unit_kilograms">Килограммы</string>
+    <string name="unit_pounds">Фунты</string>
+    <string name="unit_stones">Стоуны</string>
+    <string name="unit_centimetres">Сантиметры</string>
+    <string name="unit_inches">Дюймы</string>
+
+    <string name="sex_male">Мужской</string>
+    <string name="sex_female">Женский</string>
+
+    <string name="history_no_profiles">Создайте профиль для каждого, кто будет взвешиваться.</string>
+    <string name="history_empty">Измерений пока нет. Добавьте первое кнопкой +.</string>
+    <string name="history_date_with_zone">%1$s (%2$s)</string>
+
+    <string name="profile_new">Новый профиль</string>
+    <string name="profile_edit">Изменить профиль</string>
+    <string name="profile_switch">Сменить профиль</string>
+    <string name="profile_name">Имя</string>
+    <string name="profile_sex">Пол</string>
+    <string name="profile_birth_date">Дата рождения</string>
+    <string name="profile_height">Рост</string>
+    <string name="profile_weight_unit">Единица веса</string>
+    <string name="profile_length_unit">Единица длины</string>
+    <string name="profile_goal_weight">Целевой вес (необязательно)</string>
+    <string name="profile_color">Цвет</string>
+    <string name="profile_avatar">Аватар</string>
+    <string name="profile_avatar_hint">Эмодзи или буквы вместо первой буквы имени</string>
+    <string name="profile_apply_to_past_title">Применить к прошлым измерениям?</string>
+    <string name="profile_apply_to_past_text">Изменились пол или дата рождения. Заменить их и во всех прошлых измерениях профиля? Рост в прошлых измерениях не изменится.</string>
+    <string name="profile_apply_to_past_yes">Заменить везде</string>
+    <string name="profile_apply_to_past_no">Только для новых</string>
+    <plurals name="profile_apply_to_past_blocked">
+        <item quantity="one">%1$d прошлое измерение сделано раньше новой даты рождения, поэтому в прошлых измерениях останутся старые данные. Сохранить изменение только для новых?</item>
+        <item quantity="few">%1$d прошлых измерения сделаны раньше новой даты рождения, поэтому в прошлых измерениях останутся старые данные. Сохранить изменение только для новых?</item>
+        <item quantity="many">%1$d прошлых измерений сделаны раньше новой даты рождения, поэтому в прошлых измерениях останутся старые данные. Сохранить изменение только для новых?</item>
+        <item quantity="other">%1$d прошлых измерения сделаны раньше новой даты рождения, поэтому в прошлых измерениях останутся старые данные. Сохранить изменение только для новых?</item>
+    </plurals>
+    <string name="profile_born_later">Дата рождения позже этого измерения</string>
+    <string name="profile_delete">Удалить профиль</string>
+    <string name="profile_delete_title">Удалить профиль «%1$s»?</string>
+    <string name="profile_delete_text_empty">У профиля нет измерений.</string>
+    <plurals name="profile_delete_text">
+        <item quantity="one">Вместе с профилем будет удалено %1$d измерение. Отменить это нельзя.</item>
+        <item quantity="few">Вместе с профилем будут удалены %1$d измерения. Отменить это нельзя.</item>
+        <item quantity="many">Вместе с профилем будут удалены %1$d измерений. Отменить это нельзя.</item>
+        <item quantity="other">Вместе с профилем будут удалены %1$d измерения. Отменить это нельзя.</item>
+    </plurals>
+
+    <string name="measurement_new">Новое измерение</string>
+    <string name="measurement_edit">Измерение</string>
+    <string name="measurement_date">Дата</string>
+    <string name="measurement_time">Время</string>
+    <string name="measurement_weight">Вес</string>
+    <string name="measurement_before_birth">Дата раньше даты рождения.</string>
+    <string name="measurement_height">Рост на тот момент</string>
+    <string name="measurement_circumferences">Обхваты (необязательно)</string>
+    <string name="measurement_waist">Талия</string>
+    <string name="measurement_hip">Бёдра</string>
+    <string name="measurement_neck">Шея</string>
+    <string name="measurement_note">Заметка</string>
+    <string name="measurement_tags">Метки</string>
+    <string name="measurement_new_tag">Новая метка</string>
+    <string name="measurement_add_tag">Добавить метку</string>
+    <string name="measurement_delete">Удалить измерение</string>
+    <string name="measurement_delete_title">Удалить измерение?</string>
+    <string name="measurement_delete_text">Отменить это нельзя.</string>
+    <string name="measurement_transfer">Перенести в другой профиль</string>
+    <string name="measurement_transfer_title">Перенести в профиль</string>
+    <string name="measurement_transfer_text">Сначала будут сохранены ваши правки. Пол и дата рождения будут взяты из выбранного профиля, рост — из его ближайшего по времени измерения.</string>
+    <string name="measurement_transfer_no_profiles">Других профилей нет.</string>
+    <string name="measurement_transferred">Перенесено: %1$s. Проверьте рост.</string>
+
+    <string name="inbox_title">Входящие</string>
+    <string name="inbox_empty">Нераспределённых взвешиваний нет.</string>
+    <string name="inbox_not_assigned">Ещё не присвоено профилю</string>
+    <string name="inbox_assign">Присвоить</string>
+    <string name="inbox_assign_title">Чьё это взвешивание?</string>
+</resources>

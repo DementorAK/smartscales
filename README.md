@@ -40,6 +40,9 @@ Release builds are signed only when these variables are set, either as environme
 Parts of the scale driver architecture and scientific formula implementations are planned to be adapted from
 [openScale](https://github.com/oliexdev/openScale) (GPL-3.0). Adapted files keep their original copyright notices.
 
+Icons in `app/src/main/res/drawable/ic_*.xml` (except the launcher icon) are
+[Material Icons](https://github.com/google/material-design-icons) by Google (Apache License 2.0).
+
 ## License
 
 [GNU General Public License v3.0](LICENSE)

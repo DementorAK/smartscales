@@ -1,4 +1,90 @@
 <resources>
-    <string name="app_name">SmartScales</string>
-    <string name="placeholder_under_development">SmartScales is under development</string>
+    <string name="app_name" translatable="false">SmartScales</string>
+
+    <string name="action_back">Back</string>
+    <string name="action_save">Save</string>
+    <string name="action_delete">Delete</string>
+
+    <string name="unit_kg">kg</string>
+    <string name="unit_lb">lb</string>
+    <string name="unit_st">st</string>
+    <string name="unit_cm">cm</string>
+    <string name="unit_in">in</string>
+    <string name="unit_kg_value">%1$s kg</string>
+    <string name="unit_lb_value">%1$s lb</string>
+    <string name="unit_st_lb_value">%1$s st %2$s lb</string>
+    <string name="unit_cm_value">%1$s cm</string>
+    <string name="unit_in_value">%1$s in</string>
+    <string name="unit_kilograms">Kilograms</string>
+    <string name="unit_pounds">Pounds</string>
+    <string name="unit_stones">Stones</string>
+    <string name="unit_centimetres">Centimetres</string>
+    <string name="unit_inches">Inches</string>
+
+    <string name="sex_male">Male</string>
+    <string name="sex_female">Female</string>
+
+    <string name="history_no_profiles">Create a profile for each person who will weigh themselves.</string>
+    <string name="history_empty">No measurements yet. Add one with the + button.</string>
+    <string name="history_date_with_zone">%1$s (%2$s)</string>
+
+    <string name="profile_new">New profile</string>
+    <string name="profile_edit">Edit profile</string>
+    <string name="profile_switch">Switch profile</string>
+    <string name="profile_name">Name</string>
+    <string name="profile_sex">Sex</string>
+    <string name="profile_birth_date">Date of birth</string>
+    <string name="profile_height">Height</string>
+    <string name="profile_weight_unit">Weight unit</string>
+    <string name="profile_length_unit">Length unit</string>
+    <string name="profile_goal_weight">Goal weight (optional)</string>
+    <string name="profile_color">Colour</string>
+    <string name="profile_avatar">Avatar</string>
+    <string name="profile_avatar_hint">An emoji or letters shown instead of the initial</string>
+    <string name="profile_apply_to_past_title">Apply to past measurements?</string>
+    <string name="profile_apply_to_past_text">Sex or date of birth changed. Update them in all past measurements of this profile as well? Heights in past measurements stay as they are.</string>
+    <string name="profile_apply_to_past_yes">Update all</string>
+    <string name="profile_apply_to_past_no">Only new ones</string>
+    <plurals name="profile_apply_to_past_blocked">
+        <item quantity="one">%1$d past measurement is dated before the new date of birth, so past measurements keep the old details. Save the change for new measurements only?</item>
+        <item quantity="other">%1$d past measurements are dated before the new date of birth, so past measurements keep the old details. Save the change for new measurements only?</item>
+    </plurals>
+    <string name="profile_born_later">Born after this measurement was taken</string>
+    <string name="profile_delete">Delete profile</string>
+    <string name="profile_delete_title">Delete %1$s?</string>
+    <string name="profile_delete_text_empty">The profile has no measurements.</string>
+    <plurals name="profile_delete_text">
+        <item quantity="one">%1$d measurement will be deleted with the profile. This cannot be undone.</item>
+        <item quantity="other">%1$d measurements will be deleted with the profile. This cannot be undone.</item>
+    </plurals>
+
+    <string name="measurement_new">New measurement</string>
+    <string name="measurement_edit">Measurement</string>
+    <string name="measurement_date">Date</string>
+    <string name="measurement_time">Time</string>
+    <string name="measurement_weight">Weight</string>
+    <string name="measurement_before_birth">The date is before the date of birth.</string>
+    <string name="measurement_height">Height at that time</string>
+    <string name="measurement_circumferences">Circumferences (optional)</string>
+    <string name="measurement_waist">Waist</string>
+    <string name="measurement_hip">Hips</string>
+    <string name="measurement_neck">Neck</string>
+    <string name="measurement_note">Note</string>
+    <string name="measurement_tags">Tags</string>
+    <string name="measurement_new_tag">New tag</string>
+    <string name="measurement_add_tag">Add tag</string>
+    <string name="measurement_delete">Delete measurement</string>
+    <string name="measurement_delete_title">Delete measurement?</string>
+    <string name="measurement_delete_text">This cannot be undone.</string>
+    <string name="measurement_transfer">Move to another profile</string>
+    <string name="measurement_transfer_title">Move to profile</string>
+    <string name="measurement_transfer_text">Your changes are saved first. Sex and date of birth will be taken from the chosen profile, height from its measurement closest in time.</string>
+    <string name="measurement_transfer_no_profiles">There are no other profiles.</string>
+    <string name="measurement_transferred">Moved to %1$s. Check the height.</string>
+
+    <string name="inbox_title">Inbox</string>
+    <string name="inbox_empty">No unassigned weighings.</string>
+    <string name="inbox_not_assigned">Not assigned to a profile yet</string>
+    <string name="inbox_assign">Assign</string>
+    <string name="inbox_assign_title">Whose weighing is it?</string>
 </resources>

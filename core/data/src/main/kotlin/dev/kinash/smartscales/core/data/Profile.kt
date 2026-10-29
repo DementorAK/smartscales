@@ -32,6 +32,9 @@ data class Profile(
 
     /** Snapshot for a new measurement taken now. */
     fun snapshot(): PersonSnapshot = PersonSnapshot(heightCm, sex, birthDate)
+
+    /** Whether a measurement dated [date] can belong to this person: it is not before the birth date. */
+    fun isBornBy(date: LocalDate): Boolean = !birthDate.isAfter(date)
 }
 
 internal fun ProfileEntity.toProfile() =

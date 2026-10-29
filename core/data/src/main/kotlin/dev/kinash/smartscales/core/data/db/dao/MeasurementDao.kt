@@ -17,6 +17,10 @@ import dev.kinash.smartscales.core.model.Sex
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
+
+/** When and where a measurement was taken, for checks by local date. */
+data class TakenAt(val takenAt: Instant, val zone: ZoneId)
 
 @Dao
 interface MeasurementDao {
@@ -29,6 +33,9 @@ interface MeasurementDao {
     fun observeInbox(): Flow<List<MeasurementWithDetails>>
 
     @Transaction
+    @Query("SELECT COUNT(*) FROM measurement WHERE profileId IS NULL")
+    fun observeInboxCount(): Flow<Int>
+
     @Query("SELECT * FROM measurement WHERE id = :id")
     suspend fun get(id: Long): MeasurementWithDetails?
 
@@ -74,6 +81,9 @@ interface MeasurementDao {
     /** Replaces sex and birth date in all measurements of the profile; heights stay as they were. */
     @Query("UPDATE measurement SET sex = :sex, birthDate = :birthDate WHERE profileId = :profileId")
     suspend fun updatePersonForProfile(profileId: Long, sex: Sex, birthDate: LocalDate)
+
+    @Query("SELECT takenAt, zone FROM measurement WHERE profileId = :profileId AND takenAt < :before")
+    suspend fun takenBefore(profileId: Long, before: Instant): List<TakenAt>
 
     /** Height from the profile's measurement closest in time to [takenAt], not counting [excludeId]. */
     @Query(

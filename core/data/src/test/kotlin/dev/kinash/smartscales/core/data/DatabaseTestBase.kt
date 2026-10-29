@@ -9,13 +9,16 @@ import dev.kinash.smartscales.core.model.PersonSnapshot
 import dev.kinash.smartscales.core.model.Sex
 import org.junit.After
 import org.junit.Before
+import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.ZoneOffset
 
 /** In-memory database on Robolectric, recreated for every test. */
 abstract class DatabaseTestBase {
     protected lateinit var database: SmartScalesDatabase
+    protected val clock: Clock = Clock.fixed(Instant.parse("2026-10-28T09:00:00Z"), ZoneOffset.UTC)
 
     @Before
     fun createDatabase() {

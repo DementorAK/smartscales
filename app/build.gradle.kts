@@ -62,6 +62,18 @@ android {
     buildFeatures {
         compose = true
     }
+    // UI tests run on the JVM under Robolectric, so CI needs no emulator
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+        unitTests.all {
+            // Robolectric reaches into FileDescriptor and loads its native SQLite on JDK 25
+            it.jvmArgs(
+                "--add-exports=java.base/jdk.internal.access=ALL-UNNAMED",
+                "--add-opens=java.base/java.io=ALL-UNNAMED",
+                "--enable-native-access=ALL-UNNAMED",
+            )
+        }
+    }
     lint {
         // All UI text must live in string resources so the app can be translated:
         // HardcodedText covers XML, ComposeHardcodedText (from :lint) covers Compose
@@ -95,6 +107,18 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
 
     testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+    // Espresso bundled with ui-test is too old for the Android 17 runtime
+    testImplementation(libs.androidx.espresso.core)
+    testImplementation(libs.hilt.android.testing)
+    kspTest(libs.hilt.compiler)
+    // The test database and settings replace DataModule
+    testImplementation(libs.androidx.room.runtime)
+    testImplementation(libs.androidx.datastore.preferences)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)

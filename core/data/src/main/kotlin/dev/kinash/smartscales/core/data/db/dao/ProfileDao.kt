@@ -30,6 +30,9 @@ interface ProfileDao {
     @Query("SELECT * FROM profile_goal WHERE profileId = :profileId")
     fun observeGoals(profileId: Long): Flow<List<ProfileGoalEntity>>
 
+    @Query("SELECT * FROM profile_goal WHERE profileId = :profileId AND indicatorId = :indicatorId")
+    suspend fun getGoal(profileId: Long, indicatorId: String): ProfileGoalEntity?
+
     @Upsert
     suspend fun upsertGoal(goal: ProfileGoalEntity)
 

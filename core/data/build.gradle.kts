@@ -22,7 +22,21 @@ android {
 
     // Exported Room schemas are used by migration tests
     sourceSets {
+        getByName("test").assets.directories.add("$projectDir/schemas")
         getByName("androidTest").assets.directories.add("$projectDir/schemas")
+    }
+
+    // Database tests run on the JVM under Robolectric, so CI needs no emulator
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+        unitTests.all {
+            // Robolectric reaches into FileDescriptor and loads its native SQLite on JDK 25
+            it.jvmArgs(
+                "--add-exports=java.base/jdk.internal.access=ALL-UNNAMED",
+                "--add-opens=java.base/java.io=ALL-UNNAMED",
+                "--enable-native-access=ALL-UNNAMED",
+            )
+        }
     }
 }
 
@@ -40,6 +54,10 @@ dependencies {
     ksp(libs.hilt.compiler)
     implementation(libs.kotlinx.coroutines.android)
     testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.androidx.room.testing)
     androidTestImplementation(libs.androidx.room.testing)
     androidTestImplementation(libs.androidx.junit)
 }

@@ -2,14 +2,21 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!--
+        Before Android 12 allowBackup="false" turns off every kind of backup, so fullBackupContent is not needed.
+        From Android 12 data_extraction_rules.xml keeps cloud backup off and allows device-to-device transfer.
+    -->
     <application
         android:name=".SmartScalesApp"
         android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.SmartScales">
+        android:theme="@style/Theme.SmartScales"
+        tools:ignore="DataExtractionRules"
+        tools:targetApi="31">
         <activity
             android:name=".MainActivity"
             android:exported="true"

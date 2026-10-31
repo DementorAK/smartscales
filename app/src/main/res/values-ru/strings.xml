@@ -23,7 +23,7 @@
     <string name="sex_female">Женский</string>
 
     <string name="history_no_profiles">Создайте профиль для каждого, кто будет взвешиваться.</string>
-    <string name="history_empty">Измерений пока нет. Добавьте первое кнопкой +.</string>
+    <string name="history_empty">Измерений пока нет. Нажмите «Взвеситься» и встаньте на весы или введите измерение вручную кнопкой с рукой вверху.</string>
     <string name="history_date_with_zone">%1$s (%2$s)</string>
 
     <string name="profile_new">Новый профиль</string>
@@ -34,11 +34,10 @@
     <string name="profile_birth_date">Дата рождения</string>
     <string name="profile_height">Рост</string>
     <string name="profile_weight_unit">Единица веса</string>
-    <string name="profile_length_unit">Единица длины</string>
     <string name="profile_goal_weight">Целевой вес (необязательно)</string>
-    <string name="profile_color">Цвет</string>
     <string name="profile_avatar">Аватар</string>
-    <string name="profile_avatar_hint">Эмодзи или буквы вместо первой буквы имени</string>
+    <string name="profile_avatar_hint">Эмодзи или до двух букв вместо первой буквы имени</string>
+    <string name="profile_units_hint">Единицы действуют для всего профиля: истории, графиков и целей.</string>
     <string name="profile_apply_to_past_title">Применить к прошлым измерениям?</string>
     <string name="profile_apply_to_past_text">Изменились пол или дата рождения. Заменить их и во всех прошлых измерениях профиля? Рост в прошлых измерениях не изменится.</string>
     <string name="profile_apply_to_past_yes">Заменить везде</string>
@@ -49,6 +48,7 @@
         <item quantity="many">%1$d прошлых измерений сделаны раньше новой даты рождения, поэтому в прошлых измерениях останутся старые данные. Сохранить изменение только для новых?</item>
         <item quantity="other">%1$d прошлых измерения сделаны раньше новой даты рождения, поэтому в прошлых измерениях останутся старые данные. Сохранить изменение только для новых?</item>
     </plurals>
+    <string name="profile_born_after_weighing">Взвешивание для этого профиля сделано раньше этой даты рождения.</string>
     <string name="profile_born_later">Дата рождения позже этого измерения</string>
     <string name="profile_delete">Удалить профиль</string>
     <string name="profile_delete_title">Удалить профиль «%1$s»?</string>
@@ -89,4 +89,67 @@
     <string name="inbox_not_assigned">Ещё не присвоено профилю</string>
     <string name="inbox_assign">Присвоить</string>
     <string name="inbox_assign_title">Чьё это взвешивание?</string>
+
+    <string name="unit_jin_value">%1$s цзинь</string>
+
+    <string name="weighing_title">Взвешивание</string>
+    <string name="weighing_open">Взвеситься</string>
+    <string name="weighing_no_scales">Весов пока нет. Добавьте свои весы, чтобы взвешиваться с ними.</string>
+    <string name="weighing_step_on">Встаньте на весы</string>
+    <string name="weighing_measuring">Измерение…</string>
+    <string name="weighing_impedance">Импеданс %1$s Ом</string>
+    <string name="weighing_needs_key">Эти весы шифруют вес. Введите их ключ в настройках весов.</string>
+    <string name="weighing_needs_connection">Для сохранения с этих весов нужно подключение, оно появится в следующих версиях. Вес показан для проверки.</string>
+    <string name="weighing_saved">Сохранено: %1$s</string>
+    <string name="weighing_saved_inbox">Сохранено во входящие</string>
+    <string name="weighing_not_me">Это не я</string>
+    <string name="weighing_to_inbox">Во входящие — решу позже</string>
+    <string name="weighing_key_check_title">Проверка ключа</string>
+    <string name="weighing_key_check_text">На дисплее весов тот же вес? С неверным ключом вес получается неправильным, поэтому после нового ключа приложение спрашивает один раз.</string>
+    <string name="weighing_key_check_yes">Тот же</string>
+    <string name="weighing_key_check_no">Другой</string>
+    <string name="weighing_wrong_key">Похоже, ключ V2 неверный. Взвешивание не сохранено: исправьте ключ в настройках весов и взвесьтесь ещё раз.</string>
+
+    <string name="scales_title">Мои весы</string>
+    <string name="scales_empty">Весы не добавлены.</string>
+    <string name="scales_add">Добавить весы</string>
+    <string name="scale_search_title">Добавление весов</string>
+    <string name="scale_search_hint">Встаньте на весы, чтобы они проснулись. Найденные рядом весы появятся ниже.</string>
+    <string name="scale_search_added">Уже добавлены</string>
+    <string name="scale_search_preview_only">Пока только просмотр веса</string>
+    <string name="scale_edit_title">Весы</string>
+    <string name="scale_name">Название</string>
+    <string name="scale_mac">MAC весов: %1$s</string>
+    <string name="scale_address">Адрес Bluetooth: %1$s</string>
+    <string name="scale_product">Модель: %1$d</string>
+    <string name="scale_v2_key">Ключ V2</string>
+    <string name="scale_v2_key_hint">8 шестнадцатеричных цифр, например 1A2B3C4D</string>
+    <string name="scale_factor">Коэффициент импеданса k</string>
+    <string name="scale_factor_hint">1, если не калибровали по другому анализатору</string>
+    <string name="scale_capabilities">Весы умеют</string>
+    <string name="scale_implemented">Сейчас поддерживается</string>
+    <string name="scale_nothing_yet">Пока ничего</string>
+    <string name="scale_unbind">Удалить весы</string>
+    <string name="scale_unbind_title">Удалить «%1$s»?</string>
+    <string name="scale_unbind_text">Взвешивания с этих весов останутся в истории. Если добавить весы снова, их настройки вернутся.</string>
+
+    <string name="cap_live_weight">Вес</string>
+    <string name="cap_body_composition">Состав тела</string>
+    <string name="cap_heart_rate">Пульс</string>
+    <string name="cap_user_sync">Пользователи на весах</string>
+    <string name="cap_history_read">Взвешивания, сохранённые на весах</string>
+    <string name="cap_time_sync">Часы</string>
+    <string name="cap_unit_config">Единица на дисплее</string>
+
+    <string name="bt_permission_text">Чтобы найти весы, приложению нужно разрешение на поиск устройств Bluetooth. Местоположение приложение не использует.</string>
+    <string name="bt_permission_text_legacy">Чтобы найти весы, приложению нужно разрешение на геолокацию: до Android 12 так Android разрешает поиск устройств Bluetooth. Местоположение приложение не использует.</string>
+    <string name="bt_permission_grant">Разрешить</string>
+    <string name="bt_permission_settings">Открыть настройки приложения</string>
+    <string name="bt_off">Bluetooth выключен.</string>
+    <string name="bt_settings">Настройки Bluetooth</string>
+    <string name="bt_location_off">Включите геолокацию: до Android 12 без неё телефон не находит устройства Bluetooth. Местоположение приложение не использует.</string>
+    <string name="bt_location_settings">Настройки геолокации</string>
+    <string name="bt_unsupported">На этом устройстве нет Bluetooth LE.</string>
+    <string name="bt_scan_failed">Поиск Bluetooth не удался (ошибка %1$d).</string>
+    <string name="bt_retry">Повторить</string>
 </resources>

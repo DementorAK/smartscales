@@ -13,6 +13,8 @@ import java.time.Instant
  * @property protocol driver identifier from :core:ble.
  * @property v2Key key for encrypted V2 advertisements, as entered or imported. Stored as plain text:
  *   it only opens weight and impedance of this scale, and the database is private to the app.
+ * @property v2KeyConfirmed the person confirmed that the weight decrypted with [v2Key] matches the scale
+ *   display. A wrong key gives a plausible weight, so weighings are not saved by themselves before that.
  * @property impedanceFactor calibration factor `k` applied to raw impedances before calculations.
  */
 data class ScaleBinding(
@@ -24,6 +26,7 @@ data class ScaleBinding(
     val protocolVersion: String? = null,
     val productId: Int? = null,
     val v2Key: String? = null,
+    val v2KeyConfirmed: Boolean = false,
     val impedanceFactor: Double = 1.0,
     val unbound: Boolean = false,
     val boundAt: Instant,
@@ -34,9 +37,11 @@ data class ScaleBinding(
 }
 
 internal fun ScaleBindingEntity.toScaleBinding() = ScaleBinding(
-    id, mac, bleAddress, name, protocol, protocolVersion, productId, v2Key, impedanceFactor, unbound, boundAt,
+    id, mac, bleAddress, name, protocol, protocolVersion, productId, v2Key, v2KeyConfirmed, impedanceFactor, unbound,
+    boundAt,
 )
 
 internal fun ScaleBinding.toEntity() = ScaleBindingEntity(
-    id, mac, bleAddress, name, protocol, protocolVersion, productId, v2Key, impedanceFactor, unbound, boundAt,
+    id, mac, bleAddress, name, protocol, protocolVersion, productId, v2Key, v2KeyConfirmed, impedanceFactor, unbound,
+    boundAt,
 )

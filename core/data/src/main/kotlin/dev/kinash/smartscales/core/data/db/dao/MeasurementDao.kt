@@ -19,6 +19,9 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
+/** Weight of a profile's latest measurement. */
+data class ProfileWeight(val profileId: Long, val weightKg: Double)
+
 /** When and where a measurement was taken, for checks by local date. */
 data class TakenAt(val takenAt: Instant, val zone: ZoneId)
 
@@ -36,8 +39,25 @@ interface MeasurementDao {
     @Query("SELECT COUNT(*) FROM measurement WHERE profileId IS NULL")
     fun observeInboxCount(): Flow<Int>
 
+    @Query(
+        """
+        SELECT profileId, weightKg FROM measurement AS m
+        WHERE profileId IS NOT NULL AND id = (
+            SELECT id FROM measurement WHERE profileId = m.profileId ORDER BY takenAt DESC, id DESC LIMIT 1
+        )
+        """,
+    )
+    suspend fun latestWeights(): List<ProfileWeight>
+
+    @Query("UPDATE measurement SET profileId = NULL, heightCm = NULL, sex = NULL, birthDate = NULL WHERE id = :id")
+    suspend fun moveToInbox(id: Long)
+
     @Query("SELECT * FROM measurement WHERE id = :id")
     suspend fun get(id: Long): MeasurementWithDetails?
+
+    @Transaction
+    @Query("SELECT * FROM measurement WHERE scaleBindingId = :bindingId ORDER BY takenAt DESC, id DESC LIMIT 1")
+    suspend fun latestFromScale(bindingId: Long): MeasurementWithDetails?
 
     @Insert
     suspend fun insert(measurement: MeasurementEntity): Long

@@ -2,6 +2,7 @@ package dev.kinash.smartscales.core.data
 
 import dev.kinash.smartscales.core.data.repository.MeasurementRepository
 import dev.kinash.smartscales.core.data.repository.ProfileRepository
+import dev.kinash.smartscales.core.data.repository.ScaleBindingRepository
 import dev.kinash.smartscales.core.model.Impedance
 import dev.kinash.smartscales.core.model.ManualFields
 import dev.kinash.smartscales.core.model.MeasurementSource
@@ -193,6 +194,80 @@ class MeasurementRepositoryTest : DatabaseTestBase() {
         measurements.add(measurement(profileId))
 
         assertEquals(2, measurements.observeInboxCount().first())
+    }
+
+    @Test
+    fun latestWeightsTakeNewestMeasurementOfEachProfile() = runTest {
+        val dmitry = profiles.add(profile())
+        val anna = profiles.add(profile(name = "Anna"))
+        profiles.add(profile(name = "Kid"))
+        measurements.add(measurement(dmitry, takenAt = "2026-10-01T07:00:00Z", weightKg = 82.0))
+        measurements.add(measurement(dmitry, takenAt = "2026-10-20T07:00:00Z", weightKg = 80.5))
+        measurements.add(measurement(anna, takenAt = "2026-10-10T07:00:00Z", weightKg = 61.0))
+        measurements.add(measurement(null, takenAt = "2026-10-25T07:00:00Z", weightKg = 70.0).copy(person = null))
+
+        assertEquals(mapOf(dmitry to 80.5, anna to 61.0), measurements.latestWeights())
+    }
+
+    @Test
+    fun latestFromScaleLooksInProfilesAndInbox() = runTest {
+        val scaleId = ScaleBindingRepository(database, clock).bind("AA:BB:CC:DD:EE:FF", null, "OKOK_V2", null, null)
+        assertNull(measurements.latestFromScale(scaleId))
+
+        val profileId = profiles.add(profile())
+        measurements.add(measurement(profileId, takenAt = "2026-10-26T07:00:00Z").copy(scaleBindingId = scaleId))
+        val inbox = measurements.add(
+            measurement(null, takenAt = "2026-10-27T07:00:00Z", weightKg = 70.0).copy(person = null, scaleBindingId = scaleId),
+        )
+        measurements.add(measurement(profileId, takenAt = "2026-10-28T07:00:00Z"))
+
+        assertEquals(inbox, measurements.latestFromScale(scaleId)!!.id)
+    }
+
+    @Test
+    fun newProfileClaimsWeighingFromInbox() = runTest {
+        val weighing = measurements.add(measurement(null).copy(person = null))
+
+        val profileId = measurements.claimForNewProfile(weighing) { profiles.add(profile()) }
+
+        assertEquals(profileId, measurements.get(weighing)!!.profileId)
+        assertEquals(0, measurements.observeInbox().first().size)
+    }
+
+    @Test
+    fun weighingSortedMeanwhileStaysWhereItIs() = runTest {
+        val anna = profiles.add(profile(name = "Anna"))
+        val weighing = measurements.add(measurement(anna))
+
+        measurements.claimForNewProfile(weighing) { profiles.add(profile()) }
+
+        assertEquals(anna, measurements.get(weighing)!!.profileId)
+    }
+
+    @Test
+    fun profileIsNotCreatedWhenItCannotTakeTheWeighing() = runTest {
+        val weighing = measurements.add(measurement(null, takenAt = "2026-10-27T07:00:00Z").copy(person = null))
+
+        val result = runCatching {
+            measurements.claimForNewProfile(weighing) { profiles.add(profile(birthDate = "2026-10-28")) }
+        }
+
+        assertTrue(result.exceptionOrNull() is IllegalArgumentException)
+        assertEquals(0, profiles.observeProfiles().first().size)
+        assertNull(measurements.get(weighing)!!.profileId)
+    }
+
+    @Test
+    fun notMeMovesWeighingToInbox() = runTest {
+        val profileId = profiles.add(profile())
+        val id = measurements.add(measurement(profileId))
+
+        measurements.moveToInbox(id)
+
+        val moved = measurements.get(id)!!
+        assertNull(moved.profileId)
+        assertNull(moved.person)
+        assertEquals(listOf(id), measurements.observeInbox().first().map { it.id })
     }
 
     @Test

@@ -25,7 +25,7 @@
     <string name="sex_female">Female</string>
 
     <string name="history_no_profiles">Create a profile for each person who will weigh themselves.</string>
-    <string name="history_empty">No measurements yet. Add one with the + button.</string>
+    <string name="history_empty">No measurements yet. Tap “Weigh” and step on the scale, or enter a measurement by hand with the hand button at the top.</string>
     <string name="history_date_with_zone">%1$s (%2$s)</string>
 
     <string name="profile_new">New profile</string>
@@ -36,11 +36,10 @@
     <string name="profile_birth_date">Date of birth</string>
     <string name="profile_height">Height</string>
     <string name="profile_weight_unit">Weight unit</string>
-    <string name="profile_length_unit">Length unit</string>
     <string name="profile_goal_weight">Goal weight (optional)</string>
-    <string name="profile_color">Colour</string>
     <string name="profile_avatar">Avatar</string>
-    <string name="profile_avatar_hint">An emoji or letters shown instead of the initial</string>
+    <string name="profile_avatar_hint">One emoji or up to two letters instead of the initial</string>
+    <string name="profile_units_hint">Units apply to the whole profile: history, charts and goals.</string>
     <string name="profile_apply_to_past_title">Apply to past measurements?</string>
     <string name="profile_apply_to_past_text">Sex or date of birth changed. Update them in all past measurements of this profile as well? Heights in past measurements stay as they are.</string>
     <string name="profile_apply_to_past_yes">Update all</string>
@@ -50,6 +49,7 @@
         <item quantity="other">%1$d past measurements are dated before the new date of birth, so past measurements keep the old details. Save the change for new measurements only?</item>
     </plurals>
     <string name="profile_born_later">Born after this measurement was taken</string>
+    <string name="profile_born_after_weighing">The weighing for this profile was taken before this date of birth.</string>
     <string name="profile_delete">Delete profile</string>
     <string name="profile_delete_title">Delete %1$s?</string>
     <string name="profile_delete_text_empty">The profile has no measurements.</string>
@@ -87,4 +87,67 @@
     <string name="inbox_not_assigned">Not assigned to a profile yet</string>
     <string name="inbox_assign">Assign</string>
     <string name="inbox_assign_title">Whose weighing is it?</string>
+
+    <string name="unit_jin_value">%1$s jin</string>
+
+    <string name="weighing_title">Weighing</string>
+    <string name="weighing_open">Weigh</string>
+    <string name="weighing_no_scales">No scales yet. Add your scale to weigh yourself with it.</string>
+    <string name="weighing_step_on">Step on the scale</string>
+    <string name="weighing_measuring">Measuring…</string>
+    <string name="weighing_impedance">Impedance %1$s Ω</string>
+    <string name="weighing_needs_key">This scale encrypts its weight. Enter its key in the scale settings.</string>
+    <string name="weighing_needs_connection">Saving from this scale needs a connection, which comes in a later version. The weight is shown for checking.</string>
+    <string name="weighing_saved">Saved for %1$s</string>
+    <string name="weighing_saved_inbox">Saved to the inbox</string>
+    <string name="weighing_not_me">Not me</string>
+    <string name="weighing_to_inbox">Inbox: decide later</string>
+    <string name="weighing_key_check_title">Check the key</string>
+    <string name="weighing_key_check_text">Does the scale display show the same weight? A wrong key gives a wrong weight, so the app asks once after a new key.</string>
+    <string name="weighing_key_check_yes">Same weight</string>
+    <string name="weighing_key_check_no">Different</string>
+    <string name="weighing_wrong_key">The V2 key is probably wrong. The weighing was not saved: fix the key in the scale settings and weigh yourself again.</string>
+
+    <string name="scales_title">My scales</string>
+    <string name="scales_empty">No scales added.</string>
+    <string name="scales_add">Add scale</string>
+    <string name="scale_search_title">Add scale</string>
+    <string name="scale_search_hint">Step on the scale to wake it up. Scales found nearby appear below.</string>
+    <string name="scale_search_added">Already added</string>
+    <string name="scale_search_preview_only">Weight preview only for now</string>
+    <string name="scale_edit_title">Scale</string>
+    <string name="scale_name">Name</string>
+    <string name="scale_mac">Scale MAC: %1$s</string>
+    <string name="scale_address">Bluetooth address: %1$s</string>
+    <string name="scale_product">Product: %1$d</string>
+    <string name="scale_v2_key">V2 key</string>
+    <string name="scale_v2_key_hint">8 hex digits, for example 1A2B3C4D</string>
+    <string name="scale_factor">Impedance factor k</string>
+    <string name="scale_factor_hint">1 unless calibrated against another analyser</string>
+    <string name="scale_capabilities">The scale can</string>
+    <string name="scale_implemented">Supported now</string>
+    <string name="scale_nothing_yet">Nothing yet</string>
+    <string name="scale_unbind">Remove scale</string>
+    <string name="scale_unbind_title">Remove %1$s?</string>
+    <string name="scale_unbind_text">Its weighings stay in the history. Adding the scale again restores its settings.</string>
+
+    <string name="cap_live_weight">Weight</string>
+    <string name="cap_body_composition">Body composition</string>
+    <string name="cap_heart_rate">Heart rate</string>
+    <string name="cap_user_sync">Users on the scale</string>
+    <string name="cap_history_read">Weighings stored on the scale</string>
+    <string name="cap_time_sync">Clock</string>
+    <string name="cap_unit_config">Unit on the display</string>
+
+    <string name="bt_permission_text">To find your scale the app needs permission to scan for Bluetooth devices. It does not use your location.</string>
+    <string name="bt_permission_text_legacy">To find your scale the app needs the location permission: before Android 12 that is how Android allows scanning for Bluetooth devices. The app does not use your location.</string>
+    <string name="bt_permission_grant">Allow</string>
+    <string name="bt_permission_settings">Open app settings</string>
+    <string name="bt_off">Bluetooth is off.</string>
+    <string name="bt_settings">Bluetooth settings</string>
+    <string name="bt_location_off">Turn on location: before Android 12 the phone finds no Bluetooth devices without it. The app does not use your location.</string>
+    <string name="bt_location_settings">Location settings</string>
+    <string name="bt_unsupported">This device has no Bluetooth LE.</string>
+    <string name="bt_scan_failed">Bluetooth scanning failed (error %1$d).</string>
+    <string name="bt_retry">Try again</string>
 </resources>

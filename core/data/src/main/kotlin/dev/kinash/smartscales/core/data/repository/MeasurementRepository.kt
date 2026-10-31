@@ -37,6 +37,15 @@ class MeasurementRepository @Inject constructor(
 
     suspend fun get(id: Long): Measurement? = dao.get(id)?.toMeasurement()
 
+    /** Weight of each profile's latest measurement, by profile id; profiles without measurements are absent. */
+    suspend fun latestWeights(): Map<Long, Double> = dao.latestWeights().associate { it.profileId to it.weightKg }
+
+    /** The newest weighing from this scale, in any profile or the inbox. */
+    suspend fun latestFromScale(bindingId: Long): Measurement? = dao.latestFromScale(bindingId)?.toMeasurement()
+
+    /** Takes a weighing away from its profile ("not me") and leaves it in the inbox without a snapshot. */
+    suspend fun moveToInbox(id: Long) = dao.moveToInbox(id)
+
     /** Saves a new measurement with its impedances, fields and tags; unknown tags are created. */
     suspend fun add(measurement: Measurement): Long = database.withTransaction {
         requireAfterBirth(measurement)
@@ -89,6 +98,18 @@ class MeasurementRepository @Inject constructor(
             )
         }
     }
+
+    /**
+     * Creates a profile with [createProfile] and moves the inbox weighing [measurementId] into it, in one
+     * transaction. A weighing sorted or deleted meanwhile stays where it is. Returns the new profile id.
+     */
+    suspend fun claimForNewProfile(measurementId: Long, createProfile: suspend () -> Long): Long =
+        database.withTransaction {
+            val profileId = createProfile()
+            val weighing = dao.get(measurementId)?.measurement
+            if (weighing != null && weighing.profileId == null) transfer(measurementId, profileId)
+            profileId
+        }
 
     /** Saves the edited [measurement] and moves it to [targetProfileId] in one transaction. */
     suspend fun updateAndTransfer(measurement: Measurement, targetProfileId: Long) {

@@ -40,8 +40,13 @@ Release builds are signed only when these variables are set, either as environme
 Parts of the scale driver architecture and scientific formula implementations are planned to be adapted from
 [openScale](https://github.com/oliexdev/openScale) (GPL-3.0). Adapted files keep their original copyright notices.
 
-Icons in `app/src/main/res/drawable/ic_*.xml` (except the launcher icon) are
-[Material Icons](https://github.com/google/material-design-icons) by Google (Apache License 2.0).
+Icons in `app/src/main/res/drawable/ic_*.xml` (except the launcher icon and `ic_scale.xml`) are
+[Material Icons](https://github.com/google/material-design-icons) by Google (Apache License 2.0); `ic_manual_entry.xml` is
+the "pan_tool" icon, scaled down, with a plus added.
+
+The scale driver interface in `:core:ble` (`ScaleDriver`, `DeviceSupport` with capabilities versus what is
+implemented, `ScaleDrivers`) follows the design of openScale's `ScaleDeviceHandler` and `ScaleFactory`;
+the code is written anew.
 
 ## License
 

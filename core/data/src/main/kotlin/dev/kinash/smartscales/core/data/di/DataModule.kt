@@ -11,6 +11,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import dev.kinash.smartscales.core.data.db.MIGRATIONS
 import dev.kinash.smartscales.core.data.db.SmartScalesDatabase
 import java.time.Clock
 import javax.inject.Singleton
@@ -21,7 +22,9 @@ object DataModule {
     @Provides
     @Singleton
     fun database(@ApplicationContext context: Context): SmartScalesDatabase =
-        Room.databaseBuilder(context, SmartScalesDatabase::class.java, SmartScalesDatabase.NAME).build()
+        Room.databaseBuilder(context, SmartScalesDatabase::class.java, SmartScalesDatabase.NAME)
+            .addMigrations(*MIGRATIONS)
+            .build()
 
     @Provides
     @Singleton

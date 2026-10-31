@@ -60,7 +60,12 @@ class InboxViewModel @Inject constructor(
 /** Weighings from the scale history that no profile claimed yet. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun InboxScreen(onBack: () -> Unit, onOpenMeasurement: (Long) -> Unit, viewModel: InboxViewModel = hiltViewModel()) {
+fun InboxScreen(
+    onBack: () -> Unit,
+    onOpenMeasurement: (Long) -> Unit,
+    onCreateProfile: (Long) -> Unit,
+    viewModel: InboxViewModel = hiltViewModel(),
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var assigning by rememberSaveable { mutableStateOf<Long?>(null) }
 
@@ -112,6 +117,10 @@ fun InboxScreen(onBack: () -> Unit, onOpenMeasurement: (Long) -> Unit, viewModel
                         assigning = null
                     },
                     isEnabled = { date != null && it.isBornBy(date) },
+                    onCreate = {
+                        assigning = null
+                        onCreateProfile(measurementId)
+                    },
                 )
             },
             confirmButton = {},

@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.kinash.smartscales.core.data.Profile
+import dev.kinash.smartscales.core.data.repository.MeasurementRepository
 import dev.kinash.smartscales.core.data.repository.ProfileRepository
 import dev.kinash.smartscales.core.data.repository.SettingsRepository
 import dev.kinash.smartscales.core.model.LengthUnit
@@ -15,6 +16,7 @@ import dev.kinash.smartscales.ui.ProfileEditRoute
 import dev.kinash.smartscales.ui.common.Prefill
 import dev.kinash.smartscales.ui.common.ProfileColors
 import dev.kinash.smartscales.ui.common.WeightInput
+import dev.kinash.smartscales.ui.common.avatarText
 import dev.kinash.smartscales.ui.common.lengthInput
 import dev.kinash.smartscales.ui.common.parseLength
 import dev.kinash.smartscales.ui.common.resolve
@@ -56,6 +58,8 @@ data class ProfileEditState(
     val applyToPast: ApplyToPastQuestion? = null,
     /** Number of measurements the profile deletion would remove, while the warning is shown. */
     val deleteWarning: Int? = null,
+    /** The new profile gets an inbox weighing taken before the birth date entered. */
+    val bornAfterWeighing: Boolean = false,
     /** A save or delete is running: further taps are ignored. */
     val saving: Boolean = false,
     val done: Boolean = false,
@@ -65,10 +69,12 @@ data class ProfileEditState(
 class ProfileEditViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val profiles: ProfileRepository,
+    private val measurements: MeasurementRepository,
     private val settings: SettingsRepository,
     private val clock: Clock,
 ) : ViewModel() {
-    private val profileId = savedStateHandle.toRoute<ProfileEditRoute>().profileId
+    private val route = savedStateHandle.toRoute<ProfileEditRoute>()
+    private val profileId = route.profileId
     private var stored: Profile? = null
     private var pending: Profile? = null
     private var heightPrefill: Prefill<String>? = null
@@ -108,7 +114,12 @@ class ProfileEditViewModel @Inject constructor(
     }
 
     fun edit(transform: (ProfileForm) -> ProfileForm) {
-        _state.update { it.copy(form = transform(it.form)) }
+        _state.update { state ->
+            val form = transform(state.form)
+            // The warning is about the date that was saved; a new date clears it
+            val bornAfterWeighing = state.bornAfterWeighing && form.birthDate == state.form.birthDate
+            state.copy(form = form, bornAfterWeighing = bornAfterWeighing)
+        }
     }
 
     /** Switches the unit and converts the height already typed. */
@@ -147,19 +158,25 @@ class ProfileEditViewModel @Inject constructor(
         }
         _state.update { it.copy(errors = errors) }
         if (errors.isNotEmpty()) return
+        val assignId = route.assignMeasurementId
+        if (profileId == null && assignId != null) {
+            _state.update { it.copy(saving = true) }
+            viewModelScope.launch {
+                val weighing = measurements.get(assignId)
+                val bornAfter = weighing != null && form.birthDate!!.isAfter(weighing.localDate)
+                _state.update {
+                    it.copy(
+                        saving = false,
+                        bornAfterWeighing = bornAfter,
+                        errors = if (bornAfter) setOf(ProfileField.BIRTH_DATE) else emptySet(),
+                    )
+                }
+                if (!bornAfter) persist(profileOf(form, heightCm!!), applyToPastMeasurements = false)
+            }
+            return
+        }
 
-        val profile = Profile(
-            id = profileId ?: 0,
-            name = form.name.trim(),
-            sex = form.sex!!,
-            birthDate = form.birthDate!!,
-            heightCm = heightCm!!,
-            weightUnit = form.weightUnit,
-            lengthUnit = form.lengthUnit,
-            color = form.color,
-            avatar = form.avatar.trim().ifEmpty { null },
-            createdAt = stored?.createdAt ?: clock.instant(),
-        )
+        val profile = profileOf(form, heightCm!!)
         val old = stored
         if (old != null && ProfileRepository.changesPastSnapshots(old, profile)) {
             pending = profile
@@ -172,6 +189,19 @@ class ProfileEditViewModel @Inject constructor(
             persist(profile, applyToPastMeasurements = false)
         }
     }
+
+    private fun profileOf(form: ProfileForm, heightCm: Double) = Profile(
+        id = profileId ?: 0,
+        name = form.name.trim(),
+        sex = form.sex!!,
+        birthDate = form.birthDate!!,
+        heightCm = heightCm,
+        weightUnit = form.weightUnit,
+        lengthUnit = form.lengthUnit,
+        color = form.color,
+        avatar = avatarText(form.avatar).ifEmpty { null },
+        createdAt = stored?.createdAt ?: clock.instant(),
+    )
 
     /** Answer to "apply to past measurements?"; past ones get the change only when nothing predates the birth date. */
     fun applyToPast(apply: Boolean) {
@@ -211,12 +241,16 @@ class ProfileEditViewModel @Inject constructor(
         val goalKg = goalKg(_state.value.form)
         _state.update { it.copy(saving = true) }
         viewModelScope.launch {
-            val id = if (profile.id == 0L) {
-                profiles.add(profile).also { settings.selectProfile(it) }
-            } else {
-                profiles.update(profile, applyToPastMeasurements)
-                profile.id
+            val assignId = route.assignMeasurementId
+            val id = when {
+                profile.id != 0L -> {
+                    profiles.update(profile, applyToPastMeasurements)
+                    profile.id
+                }
+                assignId != null -> measurements.claimForNewProfile(assignId) { profiles.add(profile) }
+                else -> profiles.add(profile)
             }
+            if (profile.id == 0L) settings.selectProfile(id)
             profiles.setGoal(id, ProfileRepository.WEIGHT_GOAL, goalKg)
             _state.update { it.copy(done = true) }
         }

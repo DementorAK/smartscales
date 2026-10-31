@@ -19,7 +19,10 @@ import dev.kinash.smartscales.core.data.db.entity.ProfileMainVariantEntity
 import dev.kinash.smartscales.core.data.db.entity.ScaleBindingEntity
 import dev.kinash.smartscales.core.data.db.entity.TagEntity
 
-/** Schemas are exported to `core/data/schemas`; every version change needs a migration with a test. */
+/**
+ * Schemas are exported to `core/data/schemas`; every version change needs a migration in [MIGRATIONS]
+ * with a test.
+ */
 @Database(
     entities = [
         ProfileEntity::class,
@@ -34,7 +37,7 @@ import dev.kinash.smartscales.core.data.db.entity.TagEntity
         MeasurementTagEntity::class,
         FormulaSetEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)

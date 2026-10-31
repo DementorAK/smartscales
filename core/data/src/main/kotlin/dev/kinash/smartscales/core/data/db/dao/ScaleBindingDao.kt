@@ -30,4 +30,10 @@ interface ScaleBindingDao {
 
     @Query("UPDATE scale_binding SET unbound = 1 WHERE id = :id")
     suspend fun unbind(id: Long)
+
+    @Query("UPDATE scale_binding SET bleAddress = :address WHERE id = :id")
+    suspend fun updateAddress(id: Long, address: String)
+
+    @Query("UPDATE scale_binding SET v2KeyConfirmed = 1 WHERE id = :id AND v2Key = :key")
+    suspend fun confirmKey(id: Long, key: String)
 }

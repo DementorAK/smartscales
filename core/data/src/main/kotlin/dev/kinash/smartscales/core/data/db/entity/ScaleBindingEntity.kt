@@ -19,6 +19,7 @@ data class ScaleBindingEntity(
     val protocolVersion: String? = null,
     val productId: Int? = null,
     val v2Key: String? = null,
+    val v2KeyConfirmed: Boolean = false,
     val impedanceFactor: Double = 1.0,
     val unbound: Boolean = false,
     val boundAt: Instant,

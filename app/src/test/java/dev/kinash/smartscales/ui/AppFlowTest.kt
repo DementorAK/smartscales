@@ -13,6 +13,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextClearance
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -73,11 +74,11 @@ class AppFlowTest {
         compose.onNodeWithTag("profile_name").assertExists()
 
         compose.onNodeWithTag("profile_name").performTextInput("Dmitry")
-        compose.onNodeWithText("Male").performClick()
-        compose.onNodeWithText("Date of birth").performClick()
+        compose.onNodeWithText("Male").performScrollTo().performClick()
+        compose.onNodeWithText("Date of birth").performScrollTo().performClick()
         compose.onNode(hasSetTextAction() and hasAnyAncestor(isDialog())).performTextInput("10281990")
         compose.onNodeWithText("OK").performClick()
-        compose.onNodeWithTag("profile_height").performTextInput("180")
+        compose.onNodeWithTag("profile_height").performScrollTo().performTextInput("180")
         compose.onNodeWithText("Save").performClick()
 
         waitFor(hasText("No measurements yet", substring = true))
@@ -104,7 +105,7 @@ class AppFlowTest {
         waitFor(hasText("80.0 kg"))
         compose.onNodeWithContentDescription("Edit profile").performClick()
         waitFor(hasText("Female"))
-        compose.onNodeWithText("Female").performClick()
+        compose.onNodeWithText("Female").performScrollTo().performClick()
         compose.onNodeWithText("Save").performClick()
         compose.onNodeWithText("Apply to past measurements?").assertExists()
         compose.onNodeWithText("Update all").performClick()
@@ -235,7 +236,7 @@ class AppFlowTest {
         waitFor(hasText("80.0 kg"))
         compose.onNodeWithContentDescription("Edit profile").performClick()
         waitFor(hasText("Date of birth"))
-        compose.onNodeWithText("Date of birth").performClick()
+        compose.onNodeWithText("Date of birth").performScrollTo().performClick()
         val input = compose.onNode(hasSetTextAction() and hasAnyAncestor(isDialog()))
         input.performTextClearance()
         input.performTextInput("01012021")

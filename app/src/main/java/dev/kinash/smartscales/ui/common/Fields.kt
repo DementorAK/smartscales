@@ -12,7 +12,10 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DisplayMode
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
@@ -29,11 +32,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.kinash.smartscales.R
+import dev.kinash.smartscales.core.model.LengthUnit
 import dev.kinash.smartscales.core.model.WeightUnit
 import java.time.Instant
 import java.time.LocalDate
@@ -42,22 +49,28 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
-/** Number field with a unit suffix. */
+/**
+ * Number field with a unit suffix. With [trailingUnit] the unit is shown at the end of the field instead:
+ * unlike a suffix it shows while the field is still empty, and it may be a button that changes the unit.
+ * Without a [label] the suffix shows all the time.
+ */
 @Composable
 fun NumberField(
     value: String,
     onValueChange: (String) -> Unit,
-    label: String,
+    label: String?,
     suffix: String,
     modifier: Modifier = Modifier,
     isError: Boolean = false,
     decimal: Boolean = true,
+    trailingUnit: (@Composable () -> Unit)? = null,
 ) {
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label) },
-        suffix = { Text(suffix) },
+        label = label?.let { { Text(it, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
+        suffix = if (trailingUnit == null) { { Text(suffix) } } else null,
+        trailingIcon = trailingUnit,
         isError = isError,
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = if (decimal) KeyboardType.Decimal else KeyboardType.Number),
@@ -65,7 +78,93 @@ fun NumberField(
     )
 }
 
-/** Weight in the profile's unit; stones take two fields, whole stones and pounds. */
+/** A unit symbol at the end of a field, see `trailingUnit` of [NumberField]. */
+@Composable
+fun UnitLabel(text: String) {
+    Text(text, Modifier.padding(end = ScreenPadding))
+}
+
+/** Unit button inside a field: shows [symbol] of the [selected] unit and offers [options] by [title]. */
+@Composable
+fun <T> UnitMenu(
+    selected: T,
+    options: List<T>,
+    onSelect: (T) -> Unit,
+    symbol: @Composable (T) -> String,
+    title: @Composable (T) -> String,
+) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        TextButton(onClick = { open = true }) {
+            Text(symbol(selected))
+            Icon(painterResource(R.drawable.ic_arrow_drop_down), contentDescription = null)
+        }
+        OptionsMenu(open, options, selected, title, onSelect, onDismiss = { open = false })
+    }
+}
+
+/** Unit button for lengths; see [UnitMenu]. */
+@Composable
+fun LengthUnitMenu(selected: LengthUnit, onSelect: (LengthUnit) -> Unit) = UnitMenu(
+    selected = selected,
+    options = LengthUnit.entries,
+    onSelect = onSelect,
+    symbol = { stringResource(it.symbol()) },
+    title = { stringResource(it.title()) },
+)
+
+/** Field that shows the [selected] option by [title] and offers [options] in a drop-down list. */
+@Composable
+fun <T> ChoiceField(
+    label: String,
+    selected: T,
+    options: List<T>,
+    onSelect: (T) -> Unit,
+    title: @Composable (T) -> String,
+    modifier: Modifier = Modifier,
+) {
+    var open by remember { mutableStateOf(false) }
+    Box(modifier) {
+        PickerField(
+            value = title(selected),
+            label = label,
+            onClick = { open = true },
+            modifier = Modifier.fillMaxWidth(),
+            isError = false,
+            trailingIcon = { Icon(painterResource(R.drawable.ic_arrow_drop_down), contentDescription = null) },
+        )
+        OptionsMenu(open, options, selected, title, onSelect, onDismiss = { open = false })
+    }
+}
+
+@Composable
+private fun <T> OptionsMenu(
+    open: Boolean,
+    options: List<T>,
+    selected: T,
+    title: @Composable (T) -> String,
+    onSelect: (T) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    DropdownMenu(expanded = open, onDismissRequest = onDismiss) {
+        options.forEach { option ->
+            DropdownMenuItem(
+                text = { Text(title(option)) },
+                onClick = {
+                    onDismiss()
+                    onSelect(option)
+                },
+                leadingIcon = if (option == selected) {
+                    { Icon(painterResource(R.drawable.ic_check), contentDescription = null) }
+                } else {
+                    null
+                },
+            )
+        }
+    }
+}
+
+/** Weight in the profile's unit, always shown; stones take two fields, whole stones and pounds. */
 @Composable
 fun WeightField(
     value: WeightInput,
@@ -76,7 +175,7 @@ fun WeightField(
     isError: Boolean = false,
 ) {
     if (unit == WeightUnit.STONE) {
-        Row(modifier, horizontalArrangement = Arrangement.spacedBy(FieldSpacing)) {
+        Row(modifier, horizontalArrangement = Arrangement.spacedBy(FieldSpacing), verticalAlignment = Alignment.Bottom) {
             NumberField(
                 value = value.main,
                 onValueChange = { onValueChange(value.copy(main = it)) },
@@ -84,15 +183,16 @@ fun WeightField(
                 suffix = stringResource(R.string.unit_st),
                 isError = isError,
                 decimal = false,
-                modifier = Modifier.weight(1f),
+                trailingUnit = { UnitLabel(stringResource(R.string.unit_st)) },
+                modifier = Modifier.weight(3f),
             )
             NumberField(
                 value = value.pounds,
                 onValueChange = { onValueChange(value.copy(pounds = it)) },
-                label = "",
+                label = null,
                 suffix = stringResource(R.string.unit_lb),
                 isError = isError,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(2f),
             )
         }
     } else {
@@ -102,6 +202,7 @@ fun WeightField(
             label = label,
             suffix = stringResource(unit.symbol()),
             isError = isError,
+            trailingUnit = { UnitLabel(stringResource(unit.symbol())) },
             modifier = modifier,
         )
     }
@@ -109,13 +210,21 @@ fun WeightField(
 
 /** Read-only field that opens [onClick] when tapped. */
 @Composable
-private fun PickerField(value: String, label: String, onClick: () -> Unit, modifier: Modifier, isError: Boolean) {
+private fun PickerField(
+    value: String,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier,
+    isError: Boolean,
+    trailingIcon: (@Composable () -> Unit)? = null,
+) {
     Box(modifier) {
         OutlinedTextField(
             value = value,
             onValueChange = {},
             readOnly = true,
             label = { Text(label) },
+            trailingIcon = trailingIcon,
             isError = isError,
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),

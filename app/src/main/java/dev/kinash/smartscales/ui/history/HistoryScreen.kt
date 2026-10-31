@@ -14,7 +14,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -49,6 +49,7 @@ fun HistoryScreen(
     onAddMeasurement: (profileId: Long) -> Unit,
     onOpenMeasurement: (Long) -> Unit,
     onOpenInbox: () -> Unit,
+    onWeigh: () -> Unit,
     viewModel: HistoryViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -66,6 +67,11 @@ fun HistoryScreen(
                     }
                 },
                 actions = {
+                    if (current != null) {
+                        IconButton(onClick = { onAddMeasurement(current.id) }) {
+                            Icon(painterResource(R.drawable.ic_manual_entry), stringResource(R.string.measurement_new))
+                        }
+                    }
                     if (ready != null && ready.inboxCount > 0) {
                         IconButton(onClick = onOpenInbox) {
                             BadgedBox(badge = { Badge { Text(ready.inboxCount.toString()) } }) {
@@ -81,12 +87,13 @@ fun HistoryScreen(
                 },
             )
         },
+        // Weighing on the scale is the main action; manual entry is the exception and sits in the top bar
         floatingActionButton = {
-            if (current != null) {
-                FloatingActionButton(onClick = { onAddMeasurement(current.id) }) {
-                    Icon(painterResource(R.drawable.ic_add), stringResource(R.string.measurement_new))
-                }
-            }
+            ExtendedFloatingActionButton(
+                onClick = onWeigh,
+                icon = { Icon(painterResource(R.drawable.ic_scale), contentDescription = null) },
+                text = { Text(stringResource(R.string.weighing_open)) },
+            )
         },
     ) { padding ->
         Box(

@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -62,6 +63,34 @@ class ScaleBindingRepositoryTest : DatabaseTestBase() {
 
         assertEquals(id, measurements.get(measurementId)!!.scaleBindingId)
         assertEquals(1.0, scales.get(id)!!.impedanceFactor, 0.0)
+    }
+
+    @Test
+    fun addressIsStoredInUpperCase() = runTest {
+        val id = scales.bind("AA:BB:CC:DD:EE:FF", null, "chipsea_ca20", null, null)
+        scales.updateAddress(id, "aa:bb:cc:dd:ee:01")
+        assertEquals("AA:BB:CC:DD:EE:01", scales.get(id)!!.bleAddress)
+
+        scales.update(scales.get(id)!!.copy(bleAddress = "aa:bb:cc:dd:ee:02"))
+        assertEquals("AA:BB:CC:DD:EE:02", scales.get(id)!!.bleAddress)
+    }
+
+    @Test
+    fun newKeyHasToBeConfirmedAgain() = runTest {
+        val id = scales.bind("AA:BB:CC:DD:EE:FF", null, "OKOK_V2", null, null)
+        scales.update(scales.get(id)!!.copy(v2Key = "12345678"))
+        scales.confirmKey(id, "12345678")
+        assertTrue(scales.get(id)!!.v2KeyConfirmed)
+
+        // Other changes keep the confirmation
+        scales.update(scales.get(id)!!.copy(name = "Bathroom"))
+        assertTrue(scales.get(id)!!.v2KeyConfirmed)
+
+        scales.update(scales.get(id)!!.copy(v2Key = "87654321"))
+        assertFalse(scales.get(id)!!.v2KeyConfirmed)
+        // A confirmation of the old key does not apply to the new one
+        scales.confirmKey(id, "12345678")
+        assertFalse(scales.get(id)!!.v2KeyConfirmed)
     }
 
     @Test(expected = IllegalArgumentException::class)

@@ -70,8 +70,27 @@ class ScaleBindingRepository @Inject constructor(
     /** Soft unpairing: the scale is hidden, its history and calibration stay. */
     suspend fun unbind(id: Long) = dao.unbind(id)
 
-    /** Saves name, address, V2 key or calibration factor. A new factor changes indicators of the whole history. */
-    suspend fun update(binding: ScaleBinding) = dao.update(binding.copy(mac = normalizeMac(binding.mac)).toEntity())
+    /**
+     * Saves name, address, V2 key or calibration factor. A new factor changes indicators of the whole history;
+     * a new key has to be confirmed again.
+     */
+    suspend fun update(binding: ScaleBinding) {
+        val stored = dao.get(binding.id)
+        val keyChanged = stored != null && stored.v2Key != binding.v2Key
+        dao.update(
+            binding.copy(
+                mac = normalizeMac(binding.mac),
+                bleAddress = binding.bleAddress?.let(::normalizeMac),
+                v2KeyConfirmed = binding.v2KeyConfirmed && !keyChanged,
+            ).toEntity(),
+        )
+    }
+
+    /** Remembers where Android sees the scale now, without touching other fields. */
+    suspend fun updateAddress(id: Long, bleAddress: String) = dao.updateAddress(id, normalizeMac(bleAddress))
+
+    /** The weight decrypted with [key] matched the display; ignored when the key was changed meanwhile. */
+    suspend fun confirmKey(id: Long, key: String) = dao.confirmKey(id, key)
 
     private fun normalizeMac(mac: String) = mac.uppercase()
 }

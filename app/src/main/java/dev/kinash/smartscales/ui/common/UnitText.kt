@@ -7,6 +7,8 @@ import dev.kinash.smartscales.R
 import dev.kinash.smartscales.core.model.LengthUnit
 import dev.kinash.smartscales.core.model.StonesAndPounds
 import dev.kinash.smartscales.core.model.WeightUnit
+import dev.kinash.smartscales.core.protocol.ScaleUnit
+import dev.kinash.smartscales.core.protocol.ScaleWeight
 
 /** Weight for display, for example "80.5 kg" or "12 st 9.5 lb". */
 @Composable
@@ -15,6 +17,18 @@ fun weightText(kg: Double, unit: WeightUnit): String = when (unit) {
     WeightUnit.POUND -> stringResource(R.string.unit_lb_value, formatNumber(unit.fromKilograms(kg), 1, 1))
     WeightUnit.STONE -> StonesAndPounds.fromKilograms(kg, poundDecimals = 1).let {
         stringResource(R.string.unit_st_lb_value, it.stones.toString(), formatNumber(it.pounds, 1, 1))
+    }
+}
+
+/** Weight as the scale shows it, in its own unit and precision, for example "176.4 lb". */
+@Composable
+fun scaleWeightText(weight: ScaleWeight): String {
+    val value = formatNumber(weight.value, weight.digits, weight.digits)
+    return when (weight.unit) {
+        ScaleUnit.KILOGRAM -> stringResource(R.string.unit_kg_value, value)
+        ScaleUnit.JIN -> stringResource(R.string.unit_jin_value, value)
+        ScaleUnit.POUND -> stringResource(R.string.unit_lb_value, value)
+        ScaleUnit.STONE -> stringResource(R.string.unit_st_lb_value, weight.stones.toString(), formatNumber(weight.pounds, 1, 1))
     }
 }
 

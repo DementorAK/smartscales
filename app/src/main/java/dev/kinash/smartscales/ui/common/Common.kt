@@ -1,5 +1,6 @@
 package dev.kinash.smartscales.ui.common
 
+import android.icu.text.BreakIterator
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,6 +38,24 @@ val ProfileColors: List<Int> = listOf(
     0xFF3F51B5, 0xFF009688, 0xFFE91E63, 0xFFFF9800, 0xFF8BC34A, 0xFF9C27B0, 0xFF795548, 0xFF607D8B,
 ).map { it.toInt() }
 
+/**
+ * What fits into the profile circle from the typed [text]: one emoji or other symbol, or up to two letters
+ * or digits. Counted in characters as the user sees them, so flags and emoji sequences stay whole.
+ */
+fun avatarText(text: String): String {
+    val iterator = BreakIterator.getCharacterInstance()
+    val trimmed = text.trim()
+    iterator.setText(trimmed)
+    val characters = generateSequence(iterator.first()) { iterator.next().takeIf { it != BreakIterator.DONE } }
+        .zipWithNext { start, end -> trimmed.substring(start, end) }
+        .toList()
+    val first = characters.firstOrNull() ?: return ""
+    if (!first.first().isLetterOrDigit()) return first
+    return characters.take(MAX_AVATAR_LETTERS).takeWhile { it.first().isLetterOrDigit() }.joinToString("")
+}
+
+private const val MAX_AVATAR_LETTERS = 2
+
 /** Circle in the profile colour with its avatar text or the first letter of the name. */
 @Composable
 fun ProfileAvatar(profile: Profile, modifier: Modifier = Modifier, size: Dp = 32.dp) {
@@ -63,6 +82,7 @@ fun ProfileAvatar(name: String, avatar: String?, color: Int, modifier: Modifier 
 /**
  * Profiles to choose from in a dialog, each as an outlined card that reacts to a tap. Profiles for which
  * [isEnabled] is false are shown dimmed with the reason: the person was born after the measurement.
+ * With [onCreate] the list ends with "New profile", the only choice while there are no profiles.
  */
 @Composable
 fun ProfileChoiceList(
@@ -70,6 +90,7 @@ fun ProfileChoiceList(
     onSelect: (Profile) -> Unit,
     modifier: Modifier = Modifier,
     isEnabled: (Profile) -> Boolean = { true },
+    onCreate: (() -> Unit)? = null,
 ) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(FieldSpacing)) {
         profiles.forEach { profile ->
@@ -81,6 +102,15 @@ fun ProfileChoiceList(
                     leadingContent = { ProfileAvatar(profile) },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     modifier = if (enabled) Modifier else Modifier.alpha(DisabledAlpha),
+                )
+            }
+        }
+        if (onCreate != null) {
+            OutlinedCard(onClick = onCreate, modifier = Modifier.fillMaxWidth()) {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.profile_new)) },
+                    leadingContent = { Icon(painterResource(R.drawable.ic_add), contentDescription = null) },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                 )
             }
         }

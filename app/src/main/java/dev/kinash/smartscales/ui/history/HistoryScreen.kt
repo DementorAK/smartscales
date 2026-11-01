@@ -50,6 +50,7 @@ fun HistoryScreen(
     onOpenMeasurement: (Long) -> Unit,
     onOpenInbox: () -> Unit,
     onWeigh: () -> Unit,
+    onOpenSettings: () -> Unit,
     viewModel: HistoryViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -84,6 +85,7 @@ fun HistoryScreen(
                             Icon(painterResource(R.drawable.ic_edit), stringResource(R.string.profile_edit))
                         }
                     }
+                    MoreMenu(onOpenSettings)
                 },
             )
         },
@@ -177,6 +179,26 @@ fun EmptyState(text: String, action: String? = null, onAction: () -> Unit = {}) 
         Text(text, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyLarge)
         if (action != null) {
             Button(onClick = onAction) { Text(action) }
+        }
+    }
+}
+
+/** Less frequent actions, so the top bar keeps room for the profile switcher. */
+@Composable
+private fun MoreMenu(onOpenSettings: () -> Unit) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { expanded = true }) {
+            Icon(painterResource(R.drawable.ic_more_vert), stringResource(R.string.more_actions))
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.settings_title)) },
+                onClick = {
+                    expanded = false
+                    onOpenSettings()
+                },
+            )
         }
     }
 }

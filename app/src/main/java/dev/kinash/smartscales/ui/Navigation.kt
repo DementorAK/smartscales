@@ -12,6 +12,7 @@ import dev.kinash.smartscales.ui.scale.BluetoothLogScreen
 import dev.kinash.smartscales.ui.scale.ScaleEditScreen
 import dev.kinash.smartscales.ui.scale.ScaleSearchScreen
 import dev.kinash.smartscales.ui.scale.ScalesScreen
+import dev.kinash.smartscales.ui.settings.SettingsScreen
 import dev.kinash.smartscales.ui.weighing.WeighingScreen
 import kotlinx.serialization.Serializable
 
@@ -44,6 +45,9 @@ data class ScaleEditRoute(val id: Long)
 @Serializable
 data object BluetoothLogRoute
 
+@Serializable
+data object SettingsRoute
+
 @Composable
 fun SmartScalesNavHost() {
     val navController = rememberNavController()
@@ -57,6 +61,7 @@ fun SmartScalesNavHost() {
                 onOpenMeasurement = { navController.navigate(MeasurementEditRoute(measurementId = it)) },
                 onOpenInbox = { navController.navigate(InboxRoute) },
                 onWeigh = { navController.navigate(WeighingRoute) },
+                onOpenSettings = { navController.navigate(SettingsRoute) },
             )
         }
         composable<WeighingRoute> {
@@ -79,6 +84,9 @@ fun SmartScalesNavHost() {
         }
         composable<ScaleSearchRoute> { ScaleSearchScreen(onDone = back) }
         composable<BluetoothLogRoute> { BluetoothLogScreen(onBack = back) }
+        composable<SettingsRoute> {
+            SettingsScreen(onBack = back, onOpenLog = { navController.navigate(BluetoothLogRoute) })
+        }
         composable<ScaleEditRoute> { ScaleEditScreen(onDone = back) }
         composable<InboxRoute> {
             InboxScreen(

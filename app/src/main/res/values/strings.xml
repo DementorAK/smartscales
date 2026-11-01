@@ -122,6 +122,11 @@
     <string name="scale_product">Product: %1$d</string>
     <string name="scale_v2_key">V2 key</string>
     <string name="scale_v2_key_hint">8 hex digits, for example 1A2B3C4D</string>
+    <string name="scale_v2_key_import">Import key from file</string>
+    <string name="scale_v2_key_imported">Key read from the file. Save to use it.</string>
+    <string name="scale_v2_key_not_found">No key for this scale in the file.</string>
+    <string name="scale_v2_key_other_scales">The file has keys for other scales only.</string>
+    <string name="scale_v2_key_unreadable">Cannot read the file.</string>
     <string name="scale_factor">Impedance factor k</string>
     <string name="scale_factor_hint">1 unless calibrated against another analyser</string>
     <string name="scale_capabilities">The scale can</string>

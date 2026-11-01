@@ -124,6 +124,11 @@
     <string name="scale_product">Модель: %1$d</string>
     <string name="scale_v2_key">Ключ V2</string>
     <string name="scale_v2_key_hint">8 шестнадцатеричных цифр, например 1A2B3C4D</string>
+    <string name="scale_v2_key_import">Импорт ключа из файла</string>
+    <string name="scale_v2_key_imported">Ключ прочитан из файла. Сохраните, чтобы применить.</string>
+    <string name="scale_v2_key_not_found">В файле нет ключа для этих весов.</string>
+    <string name="scale_v2_key_other_scales">В файле ключи только для других весов.</string>
+    <string name="scale_v2_key_unreadable">Не удалось прочитать файл.</string>
     <string name="scale_factor">Коэффициент импеданса k</string>
     <string name="scale_factor_hint">1, если не калибровали по другому анализатору</string>
     <string name="scale_capabilities">Весы умеют</string>

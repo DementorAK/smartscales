@@ -1,5 +1,9 @@
 package dev.kinash.smartscales.ui.scale
 
+import android.content.Context
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,6 +16,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -21,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -32,6 +38,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.kinash.smartscales.R
 import dev.kinash.smartscales.core.ble.DeviceCapability
 import dev.kinash.smartscales.core.ble.ProtocolDescription
@@ -40,6 +47,8 @@ import dev.kinash.smartscales.core.data.ScaleBinding
 import dev.kinash.smartscales.core.data.repository.ScaleBindingRepository
 import dev.kinash.smartscales.core.protocol.ChipseaProtocol
 import dev.kinash.smartscales.core.protocol.V2Cipher
+import dev.kinash.smartscales.core.protocol.V2KeyFile
+import dev.kinash.smartscales.core.protocol.V2KeyImport
 import dev.kinash.smartscales.ui.ScaleEditRoute
 import dev.kinash.smartscales.ui.common.BackButton
 import dev.kinash.smartscales.ui.common.ConfirmDialog
@@ -49,16 +58,28 @@ import dev.kinash.smartscales.ui.common.ScreenPadding
 import dev.kinash.smartscales.ui.common.formatNumber
 import dev.kinash.smartscales.ui.common.parseNumber
 import dev.kinash.smartscales.ui.common.resolve
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
+import java.io.InputStream
 import javax.inject.Inject
 
 data class ScaleForm(val name: String = "", val v2Key: String = "", val factor: String = "")
 
 enum class ScaleField { V2_KEY, FACTOR }
+
+/** The result of importing the V2 key from a file, shown under the key field until it is edited. */
+enum class KeyImportNote(val isError: Boolean) {
+    IMPORTED(false),
+    NOT_FOUND(true),
+    OTHER_SCALES(true),
+    UNREADABLE(true),
+}
 
 data class ScaleEditState(
     val binding: ScaleBinding? = null,
@@ -66,6 +87,7 @@ data class ScaleEditState(
     val description: ProtocolDescription? = null,
     val form: ScaleForm = ScaleForm(),
     val errors: Set<ScaleField> = emptySet(),
+    val keyNote: KeyImportNote? = null,
     val confirmUnbind: Boolean = false,
     val saving: Boolean = false,
     val done: Boolean = false,
@@ -79,9 +101,13 @@ class ScaleEditViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val bindings: ScaleBindingRepository,
     private val drivers: ScaleDrivers,
+    @param:ApplicationContext private val context: Context,
 ) : ViewModel() {
     private val id = savedStateHandle.toRoute<ScaleEditRoute>().id
     private var factorPrefill: Prefill<String>? = null
+
+    /** A file picked before the scale was loaded, as after the process was restarted behind the picker. */
+    private var pendingImport: Uri? = null
 
     private val _state = MutableStateFlow(ScaleEditState())
     val state: StateFlow<ScaleEditState> = _state.asStateFlow()
@@ -103,10 +129,52 @@ class ScaleEditViewModel @Inject constructor(
                     form = ScaleForm(binding.name.orEmpty(), binding.v2Key.orEmpty(), factor),
                 )
             }
+            pendingImport?.let { uri ->
+                pendingImport = null
+                importKey(uri)
+            }
         }
     }
 
-    fun edit(transform: (ScaleForm) -> ScaleForm) = _state.update { it.copy(form = transform(it.form)) }
+    fun edit(transform: (ScaleForm) -> ScaleForm) = _state.update { state ->
+        val form = transform(state.form)
+        state.copy(form = form, keyNote = state.keyNote.takeIf { form.v2Key == state.form.v2Key })
+    }
+
+    /**
+     * Reads the V2 key of this scale from a file the person picked. The key goes to the field and is saved
+     * with the form, so a wrong file changes nothing until Save.
+     */
+    fun importKey(uri: Uri) {
+        val mac = _state.value.binding?.mac
+        if (mac == null) {
+            pendingImport = uri
+            return
+        }
+        viewModelScope.launch {
+            val text = withContext(Dispatchers.IO) {
+                runCatching {
+                    context.contentResolver.openInputStream(uri)?.use { stream ->
+                        val bytes = stream.readUpTo(MAX_KEY_FILE_BYTES + 1)
+                        if (bytes.size > MAX_KEY_FILE_BYTES) null else bytes.toString(Charsets.UTF_8)
+                    }
+                }.getOrNull()
+            }
+            val result = text?.let { V2KeyFile.find(it, mac) }
+            _state.update { state ->
+                when (result) {
+                    is V2KeyImport.Found -> state.copy(
+                        form = state.form.copy(v2Key = result.key),
+                        errors = state.errors - ScaleField.V2_KEY,
+                        keyNote = KeyImportNote.IMPORTED,
+                    )
+                    V2KeyImport.OtherScales -> state.copy(keyNote = KeyImportNote.OTHER_SCALES)
+                    V2KeyImport.NotFound -> state.copy(keyNote = KeyImportNote.NOT_FOUND)
+                    null -> state.copy(keyNote = KeyImportNote.UNREADABLE)
+                }
+            }
+        }
+    }
 
     fun save() {
         val state = _state.value
@@ -126,7 +194,8 @@ class ScaleEditViewModel @Inject constructor(
             bindings.update(
                 binding.copy(
                     name = form.name.trim().ifEmpty { null },
-                    v2Key = key.ifEmpty { null },
+                    // One form for one key, so writing it differently does not ask to confirm it again
+                    v2Key = V2Cipher.normalizeKey(key),
                     impedanceFactor = factor!!,
                 ),
             )
@@ -150,6 +219,9 @@ class ScaleEditViewModel @Inject constructor(
     companion object {
         /** A wider correction than this means a wrong setup rather than electrode geometry. */
         val FACTOR_RANGE = 0.5..2.0
+
+        /** A key file is a few lines; anything larger is not one. */
+        const val MAX_KEY_FILE_BYTES = 1024 * 1024
     }
 }
 
@@ -160,6 +232,9 @@ fun ScaleEditScreen(onDone: () -> Unit, viewModel: ScaleEditViewModel = hiltView
     LaunchedEffect(state.done) { if (state.done) onDone() }
     val binding = state.binding
     val form = state.form
+    val keyFilePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let(viewModel::importKey)
+    }
 
     Scaffold(
         topBar = {
@@ -208,7 +283,14 @@ fun ScaleEditScreen(onDone: () -> Unit, viewModel: ScaleEditViewModel = hiltView
                     value = form.v2Key,
                     onValueChange = { key -> viewModel.edit { it.copy(v2Key = key) } },
                     label = { Text(stringResource(R.string.scale_v2_key)) },
-                    supportingText = { Text(stringResource(R.string.scale_v2_key_hint)) },
+                    // A failed import leaves the key as it was, so only the message is red, not the field
+                    supportingText = {
+                        val note = state.keyNote
+                        Text(
+                            stringResource(note?.text() ?: R.string.scale_v2_key_hint),
+                            color = if (note?.isError == true) MaterialTheme.colorScheme.error else Color.Unspecified,
+                        )
+                    },
                     isError = ScaleField.V2_KEY in state.errors,
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(
@@ -217,6 +299,10 @@ fun ScaleEditScreen(onDone: () -> Unit, viewModel: ScaleEditViewModel = hiltView
                     ),
                     modifier = Modifier.fillMaxWidth(),
                 )
+                // Any type: key files come as text, XML or JSON, and file managers label them differently
+                OutlinedButton(onClick = { keyFilePicker.launch(arrayOf("*/*")) }) {
+                    Text(stringResource(R.string.scale_v2_key_import))
+                }
             }
             OutlinedTextField(
                 value = form.factor,
@@ -244,6 +330,25 @@ fun ScaleEditScreen(onDone: () -> Unit, viewModel: ScaleEditViewModel = hiltView
             onDismiss = viewModel::dismissUnbind,
         )
     }
+}
+
+private fun KeyImportNote.text(): Int = when (this) {
+    KeyImportNote.IMPORTED -> R.string.scale_v2_key_imported
+    KeyImportNote.NOT_FOUND -> R.string.scale_v2_key_not_found
+    KeyImportNote.OTHER_SCALES -> R.string.scale_v2_key_other_scales
+    KeyImportNote.UNREADABLE -> R.string.scale_v2_key_unreadable
+}
+
+/** Up to [limit] bytes; `readNBytes` needs API 33. */
+private fun InputStream.readUpTo(limit: Int): ByteArray {
+    val out = ByteArrayOutputStream()
+    val buffer = ByteArray(8 * 1024)
+    while (out.size() < limit) {
+        val read = read(buffer, 0, minOf(buffer.size, limit - out.size()))
+        if (read < 0) break
+        out.write(buffer, 0, read)
+    }
+    return out.toByteArray()
 }
 
 @Composable

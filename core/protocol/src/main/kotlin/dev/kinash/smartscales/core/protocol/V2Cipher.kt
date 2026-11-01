@@ -34,6 +34,13 @@ object V2Cipher {
         return ByteArray(KEY_SIZE) { hex.substring(it * 2, it * 2 + 2).toInt(16).toByte() }
     }
 
+    /**
+     * The stored form of a key: its [KEY_SIZE] bytes as 8 upper-case hex digits, so the same key typed with
+     * spaces or with more digits is the same key. Null when [parseKey] rejects the text.
+     */
+    fun normalizeKey(text: String): String? =
+        parseKey(text)?.joinToString("") { "%02X".format(it.toInt() and 0xFF) }
+
     private fun rotateRight(x: Int, n: Int) = ((x shr n) or (x shl (15 - n))) and MASK
 
     private fun rotateLeft(x: Int, n: Int) = ((x shl n) or (x shr (15 - n))) and MASK

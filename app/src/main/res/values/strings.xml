@@ -150,4 +150,28 @@
     <string name="bt_unsupported">This device has no Bluetooth LE.</string>
     <string name="bt_scan_failed">Bluetooth scanning failed (error %1$d).</string>
     <string name="bt_retry">Try again</string>
+    <string name="btlog_title">Bluetooth log</string>
+    <string name="btlog_open">Log</string>
+    <string name="btlog_intro">Records Bluetooth frames from scales exactly as received. If your scale is not found or shows wrong values, switch recording on, weigh yourself and send the file to the app author.</string>
+    <string name="btlog_record">Record</string>
+    <string name="btlog_all_devices">All devices nearby</string>
+    <string name="btlog_all_devices_hint">For a scale the app does not recognise: while this screen is open, every device that sends data is recorded. Not remembered after the app closes.</string>
+    <plurals name="btlog_count">
+        <item quantity="one">%1$d frame</item>
+        <item quantity="other">%1$d frames</item>
+    </plurals>
+    <string name="btlog_empty">No frames recorded.</string>
+    <string name="btlog_rssi">%1$d dBm</string>
+    <string name="btlog_export">Save to file</string>
+    <string name="btlog_export_title">Before you share it</string>
+    <string name="btlog_export_text">The file holds weights and impedances from your scale and names the phone model. Device addresses are replaced with aliases. With \"All devices nearby\" it also has the names of other devices around. Send it only to people you trust.</string>
+    <string name="btlog_hide_addresses">Hide addresses inside frames</string>
+    <string name="btlog_hide_addresses_hint">The scale\'s own MAC is zeroed in the frames. Leave this on unless the app author asks for it.</string>
+    <string name="weighing_log_recording">Bluetooth log is recording</string>
+    <string name="btlog_export_confirm">Save</string>
+    <string name="btlog_exported">Log saved</string>
+    <string name="btlog_export_failed">Could not save the log</string>
+    <string name="btlog_clear">Clear</string>
+    <string name="btlog_clear_title">Clear the log?</string>
+    <string name="btlog_clear_text">All recorded frames will be deleted.</string>
 </resources>

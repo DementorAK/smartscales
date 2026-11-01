@@ -14,6 +14,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -67,6 +68,7 @@ class ScalesViewModel @Inject constructor(bindings: ScaleBindingRepository, driv
 @Composable
 fun ScalesScreen(
     onBack: () -> Unit,
+    onOpenLog: () -> Unit,
     onAddScale: () -> Unit,
     onOpenScale: (Long) -> Unit,
     viewModel: ScalesViewModel = hiltViewModel(),
@@ -74,7 +76,13 @@ fun ScalesScreen(
     val scales by viewModel.scales.collectAsStateWithLifecycle()
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text(stringResource(R.string.scales_title)) }, navigationIcon = { BackButton(onBack) })
+            TopAppBar(
+                title = { Text(stringResource(R.string.scales_title)) },
+                navigationIcon = { BackButton(onBack) },
+                actions = {
+                    TextButton(onClick = onOpenLog) { Text(stringResource(R.string.btlog_open)) }
+                },
+            )
         },
         floatingActionButton = {
             FloatingActionButton(onClick = onAddScale) {

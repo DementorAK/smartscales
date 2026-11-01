@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.kinash.smartscales.core.ble.AdvertisementScanner
+import dev.kinash.smartscales.core.ble.BluetoothLog
 import dev.kinash.smartscales.core.ble.KeyProvider
 import dev.kinash.smartscales.core.ble.ProtocolDescription
 import dev.kinash.smartscales.core.ble.ScaleDrivers
@@ -110,7 +111,11 @@ class WeighingViewModel @Inject constructor(
     private val measurements: MeasurementRepository,
     private val settings: SettingsRepository,
     private val clock: Clock,
+    log: BluetoothLog,
 ) : ViewModel() {
+    /** The Bluetooth log records this session's frames. */
+    val logRecording: StateFlow<Boolean> = log.recording
+
     private val readings = MutableStateFlow<Map<String, Pair<ScaleStatus, ScaleReading>>>(emptyMap())
     private val session = MutableStateFlow(WeighingState())
     private val bound: StateFlow<List<ScaleBinding>?> =

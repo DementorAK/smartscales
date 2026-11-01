@@ -8,6 +8,7 @@ import dev.kinash.smartscales.ui.history.HistoryScreen
 import dev.kinash.smartscales.ui.inbox.InboxScreen
 import dev.kinash.smartscales.ui.measurement.MeasurementEditScreen
 import dev.kinash.smartscales.ui.profile.ProfileEditScreen
+import dev.kinash.smartscales.ui.scale.BluetoothLogScreen
 import dev.kinash.smartscales.ui.scale.ScaleEditScreen
 import dev.kinash.smartscales.ui.scale.ScaleSearchScreen
 import dev.kinash.smartscales.ui.scale.ScalesScreen
@@ -40,6 +41,9 @@ data object ScaleSearchRoute
 @Serializable
 data class ScaleEditRoute(val id: Long)
 
+@Serializable
+data object BluetoothLogRoute
+
 @Composable
 fun SmartScalesNavHost() {
     val navController = rememberNavController()
@@ -62,16 +66,19 @@ fun SmartScalesNavHost() {
                 onAddScale = { navController.navigate(ScaleSearchRoute) },
                 onOpenScale = { navController.navigate(ScaleEditRoute(it)) },
                 onCreateProfile = { navController.navigate(ProfileEditRoute(assignMeasurementId = it)) },
+                onOpenLog = { navController.navigate(BluetoothLogRoute) },
             )
         }
         composable<ScalesRoute> {
             ScalesScreen(
                 onBack = back,
+                onOpenLog = { navController.navigate(BluetoothLogRoute) },
                 onAddScale = { navController.navigate(ScaleSearchRoute) },
                 onOpenScale = { navController.navigate(ScaleEditRoute(it)) },
             )
         }
         composable<ScaleSearchRoute> { ScaleSearchScreen(onDone = back) }
+        composable<BluetoothLogRoute> { BluetoothLogScreen(onBack = back) }
         composable<ScaleEditRoute> { ScaleEditScreen(onDone = back) }
         composable<InboxRoute> {
             InboxScreen(

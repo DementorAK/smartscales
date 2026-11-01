@@ -1,14 +1,18 @@
 package dev.kinash.smartscales.ui
 
+import android.content.Context
 import dagger.Module
 import dagger.Provides
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
 import dev.kinash.smartscales.core.ble.AdvertisementScanner
+import dev.kinash.smartscales.core.ble.BluetoothLog
 import dev.kinash.smartscales.core.ble.ChipseaAdvertisementDriver
+import dev.kinash.smartscales.core.ble.LoggingScanner
 import dev.kinash.smartscales.core.ble.ScaleDrivers
-import dev.kinash.smartscales.core.ble.WeighingTracker
 import dev.kinash.smartscales.core.ble.ScannedAdvertisement
+import dev.kinash.smartscales.core.ble.WeighingTracker
 import dev.kinash.smartscales.di.BleModule
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
@@ -16,6 +20,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onSubscription
+import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Singleton
 
@@ -53,8 +58,15 @@ object TestBleModule {
     @Singleton
     fun fake(): FakeScanner = FakeScanner()
 
+    /** Through the log, as in the app; Robolectric gives each test new app folders, so the log starts empty. */
     @Provides
-    fun scanner(fake: FakeScanner): AdvertisementScanner = fake
+    @Singleton
+    fun scanner(fake: FakeScanner, log: BluetoothLog, drivers: ScaleDrivers): AdvertisementScanner =
+        LoggingScanner(fake, log, drivers)
+
+    @Provides
+    @Singleton
+    fun log(@ApplicationContext context: Context): BluetoothLog = BluetoothLog(File(context.filesDir, "bluetooth-log"))
 
     @Provides
     @Singleton

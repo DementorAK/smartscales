@@ -8,17 +8,26 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import dev.kinash.smartscales.core.ble.AdvertisementScanner
 import dev.kinash.smartscales.core.ble.BleScanner
+import dev.kinash.smartscales.core.ble.BluetoothLog
 import dev.kinash.smartscales.core.ble.ChipseaAdvertisementDriver
+import dev.kinash.smartscales.core.ble.LoggingScanner
 import dev.kinash.smartscales.core.ble.ScaleDrivers
 import dev.kinash.smartscales.core.ble.WeighingTracker
+import java.io.File
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 object BleModule {
+    /** Every scan in the app goes through the log, which records only while switched on. */
     @Provides
     @Singleton
-    fun scanner(@ApplicationContext context: Context): AdvertisementScanner = BleScanner(context)
+    fun scanner(@ApplicationContext context: Context, log: BluetoothLog, drivers: ScaleDrivers): AdvertisementScanner =
+        LoggingScanner(BleScanner(context), log, drivers)
+
+    @Provides
+    @Singleton
+    fun log(@ApplicationContext context: Context): BluetoothLog = BluetoothLog(File(context.filesDir, "bluetooth-log"))
 
     @Provides
     @Singleton

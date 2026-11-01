@@ -61,6 +61,8 @@ android {
     }
     buildFeatures {
         compose = true
+        // The app version goes into the header of the Bluetooth log
+        buildConfig = true
     }
     // UI tests run on the JVM under Robolectric, so CI needs no emulator
     testOptions {

@@ -152,4 +152,30 @@
     <string name="bt_unsupported">На этом устройстве нет Bluetooth LE.</string>
     <string name="bt_scan_failed">Поиск Bluetooth не удался (ошибка %1$d).</string>
     <string name="bt_retry">Повторить</string>
+    <string name="btlog_title">Журнал Bluetooth</string>
+    <string name="btlog_open">Журнал</string>
+    <string name="btlog_intro">Записывает кадры Bluetooth от весов как есть. Если ваши весы не находятся или показывают не то, включите запись, взвесьтесь и отправьте файл автору приложения.</string>
+    <string name="btlog_record">Записывать</string>
+    <string name="btlog_all_devices">Все устройства поблизости</string>
+    <string name="btlog_all_devices_hint">Для весов, которые приложение не узнаёт: пока открыт этот экран, записываются все устройства, передающие данные. После закрытия приложения не запоминается.</string>
+    <plurals name="btlog_count">
+        <item quantity="one">%1$d кадр</item>
+        <item quantity="few">%1$d кадра</item>
+        <item quantity="many">%1$d кадров</item>
+        <item quantity="other">%1$d кадра</item>
+    </plurals>
+    <string name="btlog_empty">Кадров не записано.</string>
+    <string name="btlog_rssi">%1$d дБм</string>
+    <string name="btlog_export">Сохранить в файл</string>
+    <string name="btlog_export_title">Перед отправкой</string>
+    <string name="btlog_export_text">В файле — вес и импеданс с ваших весов и модель телефона. Адреса устройств заменены псевдонимами. В режиме «Все устройства поблизости» там будут и имена других устройств вокруг. Отправляйте файл только тем, кому доверяете.</string>
+    <string name="btlog_hide_addresses">Скрыть адреса внутри кадров</string>
+    <string name="btlog_hide_addresses_hint">Собственный MAC весов в кадрах заменяется нулями. Не выключайте, если автор приложения об этом не просит.</string>
+    <string name="weighing_log_recording">Идёт запись журнала Bluetooth</string>
+    <string name="btlog_export_confirm">Сохранить</string>
+    <string name="btlog_exported">Журнал сохранён</string>
+    <string name="btlog_export_failed">Не удалось сохранить журнал</string>
+    <string name="btlog_clear">Очистить</string>
+    <string name="btlog_clear_title">Очистить журнал?</string>
+    <string name="btlog_clear_text">Все записанные кадры будут удалены.</string>
 </resources>

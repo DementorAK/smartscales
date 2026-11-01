@@ -3,7 +3,9 @@
 Free, open-source Android app for Chipsea / OKOK Bluetooth body composition scales.
 No ads, no accounts, no paid features.
 
-> Status: early development — not usable yet.
+> Status: early development (0.3.0). Family profiles, manual entries and weighing with Chipsea broadcast scales
+> (`C0`, including encrypted V2 with a key entered by hand or imported from a file, and `CA 20`) work. Scales that need a
+> GATT connection only show a weight preview for now, and body composition is not calculated yet.
 
 ## Planned features
 

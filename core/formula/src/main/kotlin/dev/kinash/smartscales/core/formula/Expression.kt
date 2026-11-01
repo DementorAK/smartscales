@@ -16,7 +16,7 @@ import kotlin.math.truncate
 enum class ValueType { NUMBER, BOOLEAN }
 
 /** A mistake in a formula, at [position] (0-based character index in the text). */
-class FormulaException(message: String, val position: Int) : Exception("$message at ${position + 1}")
+class FormulaException(val reason: String, val position: Int) : Exception("$reason at ${position + 1}")
 
 /**
  * An expression of the formula language, parsed from text.

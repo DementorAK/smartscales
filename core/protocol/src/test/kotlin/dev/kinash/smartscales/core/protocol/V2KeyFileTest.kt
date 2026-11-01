@@ -67,6 +67,13 @@ class V2KeyFileTest {
     }
 
     @Test
+    fun dateOfEightDigitsGivesWayToTheKey() {
+        assertEquals(found, V2KeyFile.find("mac,date,key\naa:bb:cc:dd:ee:ff,20261101,1a2b3c4d", mac))
+        // A key of decimal digits only is still a key when nothing else is there
+        assertEquals(V2KeyImport.Found("12345678"), V2KeyFile.find("aa:bb:cc:dd:ee:ff,12345678", mac))
+    }
+
+    @Test
     fun macWithDashesOrNoSeparators() {
         assertEquals(found, V2KeyFile.find("AA-BB-CC-DD-EE-FF 1a2b3c4d", mac))
         assertEquals(found, V2KeyFile.find("aabbccddeeff=1a2b3c4d", mac))

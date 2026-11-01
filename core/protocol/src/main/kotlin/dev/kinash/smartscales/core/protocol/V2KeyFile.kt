@@ -22,7 +22,8 @@ sealed interface V2KeyImport {
  * Next to the scale's MAC the key is looked for after it on the same line, then before it, then on the next
  * line unless that line names another scale. Without any MAC the file must hold exactly one key.
  *
- * A key is a hex group of exactly 8 digits; longer groups count only when there is no such one, and never
+ * A key is a hex group of exactly 8 digits, one with a letter before one of decimal digits only (it may be a
+ * date); longer groups count only when there is no 8-digit one, and never
  * when they have 12 digits (a MAC without separators) or decimal digits only (a time, a record id).
  */
 object V2KeyFile {
@@ -46,11 +47,14 @@ object V2KeyFile {
     /** The first key in [text], preferring exactly 8 digits. */
     private fun bestKey(text: String): String? = candidates(text).firstOrNull()
 
-    /** Distinct keys in [text] of the best kind present: 8-digit groups if any, otherwise longer ones. */
+    /**
+     * Distinct keys in [text] of the best kind present: 8-digit groups with a letter, then 8 decimal digits
+     * (which may also be a date such as 20261101), then longer groups.
+     */
     private fun candidates(text: String): List<String> {
         val groups = HEX_GROUP.findAll(text).map { it.value }.toList()
         val exact = groups.filter { it.length == V2Cipher.KEY_SIZE * 2 }
-        val chosen = exact.ifEmpty {
+        val chosen = exact.filterNot { it.all(Char::isDigit) }.ifEmpty { exact }.ifEmpty {
             groups.filter { it.length % 2 == 0 && it.length != MAC_DIGITS && !it.all(Char::isDigit) }
         }
         return chosen.mapNotNull(V2Cipher::normalizeKey).distinct()

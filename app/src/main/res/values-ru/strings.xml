@@ -206,4 +206,9 @@
     <string name="profile_formulas">Формулы</string>
     <string name="profile_formula_default">(по умолчанию)</string>
     <string name="profile_formulas_hint">Какой опубликованной формулой считается каждый показатель. Смена пересчитывает всю историю. Безжировая масса по импедансу даёт жир, когда весы измеряют импеданс. Если для взвешивания у формулы нет данных, например импеданса, берётся следующая по списку.</string>
+    <string name="card_weight">Вес</string>
+    <string name="card_height">Рост</string>
+    <string name="card_percentile">Перцентиль: %1$s</string>
+    <string name="card_percentile_below">ниже %1$s</string>
+    <string name="card_percentile_above">выше %1$s</string>
 </resources>

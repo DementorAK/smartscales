@@ -18,7 +18,7 @@ them and names the sources. The app calculates body composition from version 0.4
 - **No value rather than a wrong value.** When an indicator lacks data (no impedance, a circumference not entered), it
   is not shown for that measurement; it never shows zero.
 - **Adults only for body composition.** Body composition, basal metabolic rate and normal weight are calculated from
-  age 18. Children get BMI only; percentiles for children are planned.
+  age 18. Children get BMI, weight and height with growth chart percentiles (see [Children](#children)).
 - **No upper age limit.** Equations are used beyond the age range of their study samples (for example, Wu 2015 studied
   ages 16–75). Switching equations at an age boundary would put a jump in a person's history, and the error of going
   beyond the sample is small compared with the uncertainty of the methods themselves.
@@ -168,6 +168,26 @@ increased risk.
 Skeletal muscle index, fat-free mass index, fat mass index, body water and basal metabolic rate are shown without
 ranges.
 
+## Children
+
+Under 18, SmartScales shows BMI, weight and height against the **CDC 2000 growth charts** [20] instead of adult ranges
+and body composition. The app includes the CDC data files for ages 2 to 20 (BMI-for-age, weight-for-age and
+stature-for-age), a work of the U.S. government in the public domain, unchanged.
+
+- The charts give, for each sex and month of age, the values L, M and S of the LMS method [21]. A measurement x has
+  the z-score `((x / M)^L − 1) / (L · S)` (or `ln(x / M) / S` when L is 0), and its percentile is the standard normal
+  distribution of z. L, M and S between tabulated ages are interpolated linearly; age is counted in months with a
+  fraction from the birth date.
+- **BMI-for-age weight status** (CDC): below the 5th percentile underweight; 5th to below 85th healthy weight; 85th to
+  below 95th overweight; 95th and above obesity.
+- BMI is placed on the chart as shown, to one decimal, like the adult ranges; weight and height as measured.
+- **Above the 95th percentile** the CDC 2000 charts are extrapolated and understate how far a very high BMI is from
+  the norm, which is why CDC published extended BMI-for-age charts in 2022 that express it as a percentage of the 95th
+  percentile. SmartScales uses the 2000 charts: every BMI from the 95th percentile up is shown as obesity, with the
+  percentile capped as "above 99" rather than as a precise number.
+- **Under 2 years**: weight and height only, without BMI or percentiles.
+- From 18 years the adult indicators and ranges apply.
+
 ## Not included
 
 - **Visceral fat level, bone mass, protein, body age and body score.** Manufacturers' scales use their own proprietary
@@ -229,3 +249,6 @@ of it. A set with errors is not activated, and the app points to the place of ea
     2010;23:247–269. https://doi.org/10.1017/S0954422410000144
 19. Ashwell M. Charts based on body mass index and waist-to-height ratio to assess the health risks of obesity: a
     review. The Open Obesity Journal 2011;3:78–84. https://doi.org/10.2174/1876823701103010078
+20. Kuczmarski R.J., Ogden C.L., Guo S.S. et al. 2000 CDC Growth Charts for the United States: methods and
+    development. Vital Health Stat 11. 2002;(246):1–190. Data files: https://www.cdc.gov/growthcharts/cdc-data-files.htm
+21. Cole T.J. The LMS method for constructing normalized growth standards. Eur J Clin Nutr 1990;44:45–60.

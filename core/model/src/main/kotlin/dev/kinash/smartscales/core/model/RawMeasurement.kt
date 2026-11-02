@@ -59,6 +59,13 @@ data class RawMeasurement(
     val ageMonths: Double
         get() = person.ageMonthsAt(localDate)
 
+    /**
+     * [ageMonths], or null when the birth date is after the measurement date (old or imported data): the one
+     * place where calculations take the age, so such a measurement has no age-based values instead of failing.
+     */
+    val ageMonthsOrNull: Double?
+        get() = if (localDate.isBefore(person.birthDate)) null else ageMonths
+
     /** Foot-to-foot impedance of a 4-electrode scale, if any. */
     val footToFootImpedance: Impedance?
         get() = impedances.firstOrNull { it.channel == Impedance.FOOT_TO_FOOT }

@@ -5,6 +5,7 @@ import dev.kinash.smartscales.core.data.repository.MeasurementRepository
 import dev.kinash.smartscales.core.data.repository.ProfileRepository
 import dev.kinash.smartscales.core.data.repository.ScaleBindingRepository
 import dev.kinash.smartscales.core.formula.BuiltinFormulas
+import dev.kinash.smartscales.core.formula.ChildGrowth
 import dev.kinash.smartscales.core.formula.FormulaModel
 import dev.kinash.smartscales.core.formula.MeasurementInputs
 import dev.kinash.smartscales.core.model.Impedance
@@ -15,8 +16,13 @@ import kotlinx.coroutines.flow.flowOn
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** A measurement with its indicators; [results] is null in the inbox, where the person is not known. */
-class MeasuredIndicators(val measurement: Measurement, val results: FormulaModel.Results?)
+/**
+ * A measurement with its indicators; [results] is null in the inbox, where the person is not known. [growth] is
+ * the child's position on the CDC charts, for a child under 18; like the formulas, it is worked out when first asked.
+ */
+class MeasuredIndicators(val measurement: Measurement, val results: FormulaModel.Results?, growthOf: () -> ChildGrowth? = { null }) {
+    val growth: ChildGrowth? by lazy(growthOf)
+}
 
 /**
  * Indicators of measurements, computed from their raw data each time the data, the profile's choice of variants
@@ -58,7 +64,13 @@ class Indicators @Inject constructor(
                 )
                 model.evaluate(inputs, primary)
             }
-            MeasuredIndicators(measurement, results)
+            MeasuredIndicators(measurement, results) {
+                val age = raw?.ageMonthsOrNull ?: return@MeasuredIndicators null
+                ChildGrowth.of(
+                    raw.person.sex, age, raw.weightKg, raw.person.heightCm,
+                    bmi = results?.value("bmi"), bmiPrecision = model.indicators["bmi"]?.def?.precision ?: 1,
+                )
+            }
         }
     }.flowOn(Dispatchers.Default)
 }

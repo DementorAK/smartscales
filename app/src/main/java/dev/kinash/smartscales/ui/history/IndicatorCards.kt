@@ -24,7 +24,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.kinash.smartscales.R
+import dev.kinash.smartscales.core.data.Measurement
 import dev.kinash.smartscales.core.data.Profile
+import dev.kinash.smartscales.core.formula.ChildGrowth
 import dev.kinash.smartscales.core.formula.FormulaModel
 import dev.kinash.smartscales.core.formula.IndicatorUnit
 import dev.kinash.smartscales.core.formula.LocalizedText
@@ -47,6 +49,8 @@ data class IndicatorCard(
     val unit: IndicatorUnit,
     val precision: Int,
     val zone: FormulaModel.Zone?,
+    /** Position on the CDC growth chart, for children. */
+    val percentile: Double? = null,
 )
 
 /**
@@ -54,6 +58,29 @@ data class IndicatorCard(
  * value comes from the profile's variant.
  */
 val DEFAULT_CARDS = listOf("bmi", "bf", "fat_mass", "fat_free_mass", "tbw_percent", "smm_janssen", "bmr", "whtr")
+
+/** Card ids for children's weight and height, which formula sets do not define. */
+const val CHILD_WEIGHT_CARD = "child_weight"
+const val CHILD_HEIGHT_CARD = "child_height"
+
+/**
+ * A child's cards (requirements §3): BMI with its CDC percentile and weight status from 2 years, weight and height
+ * with their percentiles; body composition is not calculated for children.
+ */
+fun childCards(model: FormulaModel, results: FormulaModel.Results, growth: ChildGrowth, measurement: Measurement): List<IndicatorCard> {
+    val person = measurement.person ?: return emptyList()
+    val bmi = model.indicators["bmi"]?.def?.takeIf { "bmi" !in model.hidden }
+    return listOfNotNull(
+        bmi?.let { def ->
+            results.value("bmi")?.let { value ->
+                val zone = growth.bmiLevel?.let { FormulaModel.Zone(it, null, approximate = false) }
+                IndicatorCard("bmi", def.name, null, value, def.unit, def.precision, zone, growth.bmiPercentile)
+            }
+        },
+        IndicatorCard(CHILD_WEIGHT_CARD, emptyMap(), null, measurement.weightKg, IndicatorUnit.KG, 1, null, growth.weightPercentile),
+        IndicatorCard(CHILD_HEIGHT_CARD, emptyMap(), null, person.heightCm, IndicatorUnit.CM, 1, null, growth.heightPercentile),
+    )
+}
 
 /** Indicators whose value follows a group's variant: their card names the method, as the group's card does. */
 private val FOLLOWS_GROUP = mapOf("fat_mass" to "bf", "fat_free_mass" to "bf")
@@ -91,9 +118,12 @@ private fun IndicatorCardView(card: IndicatorCard, profile: Profile, modifier: M
     val language = currentLanguage()
     OutlinedCard(modifier) {
         Column(Modifier.padding(ScreenPadding), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(card.title.text(language), style = MaterialTheme.typography.labelLarge)
+            Text(cardTitle(card, language), style = MaterialTheme.typography.labelLarge)
             Text(indicatorValueText(card.value, card.unit, card.precision, profile), style = MaterialTheme.typography.titleLarge)
             card.zone?.let { ZoneLine(it, language) }
+            card.percentile?.let {
+                Text(stringResource(R.string.card_percentile, percentileText(it)), style = MaterialTheme.typography.bodyMedium)
+            }
             card.variant?.let {
                 Text(
                     it.text(language),
@@ -105,6 +135,22 @@ private fun IndicatorCardView(card: IndicatorCard, profile: Profile, modifier: M
             }
         }
     }
+}
+
+/** Children's weight and height come from the app, the other titles from the formula set. */
+@Composable
+private fun cardTitle(card: IndicatorCard, language: String): String = when (card.id) {
+    CHILD_WEIGHT_CARD -> stringResource(R.string.card_weight)
+    CHILD_HEIGHT_CARD -> stringResource(R.string.card_height)
+    else -> card.title.text(language)
+}
+
+/** Whole percentiles; the ends of the chart as "below 1" and "above 99", where a number would claim too much. */
+@Composable
+private fun percentileText(percentile: Double): String = when {
+    percentile < 1 -> stringResource(R.string.card_percentile_below, "1")
+    percentile > 99 -> stringResource(R.string.card_percentile_above, "99")
+    else -> formatNumber(percentile, 0, 0)
 }
 
 /** The zone in words as well as colour, so it reads without telling colours apart. */

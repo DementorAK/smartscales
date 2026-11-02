@@ -20,6 +20,7 @@
       "unit": "kg_m2",
       "precision": 1,
       "formula": "weight / (height / 100)^2",
+      "when": "age >= 2",
       "zones": [
         {
           "when": "age >= 18",

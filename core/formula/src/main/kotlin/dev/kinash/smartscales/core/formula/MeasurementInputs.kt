@@ -22,8 +22,7 @@ object MeasurementInputs {
         val male = raw.person.sex == Sex.MALE
         values["weight"] = raw.weightKg
         values["height"] = raw.person.heightCm
-        // A birth date after the measurement (old or imported data) gives no age rather than an exception
-        values["age"] = if (raw.localDate.isBefore(raw.person.birthDate)) null else raw.ageMonths / MONTHS_PER_YEAR
+        values["age"] = raw.ageMonthsOrNull?.let { it / MONTHS_PER_YEAR }
         values["sex"] = if (male) 1.0 else 0.0
         values["male"] = male
         values["female"] = !male

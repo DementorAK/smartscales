@@ -71,6 +71,9 @@ Parts of the scale driver code are planned to be adapted from [openScale](https:
 (GPL-3.0). Adapted files keep their original copyright notices. The body composition equations are written from the
 original publications listed in [docs/FORMULAS.md](docs/FORMULAS.md).
 
+Children's growth percentiles use the [CDC 2000 growth charts](https://www.cdc.gov/growthcharts/cdc-data-files.htm)
+(public domain); the data files are included unchanged in `core/formula/src/main/resources/.../cdc/`.
+
 Icons in `app/src/main/res/drawable/ic_*.xml` (except the launcher icon and `ic_scale.xml`) are
 [Material Icons](https://github.com/google/material-design-icons) by Google (Apache License 2.0); `ic_manual_entry.xml` is
 the "pan_tool" icon, scaled down, with a plus added.

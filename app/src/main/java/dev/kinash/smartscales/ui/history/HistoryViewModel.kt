@@ -49,8 +49,11 @@ class HistoryViewModel @Inject constructor(
     }.flatMapLatest { (all, current) ->
         val history = current?.let { indicators.observeHistory(it.id) } ?: flowOf(emptyList())
         combine(history, measurements.observeInboxCount()) { items, inboxCount ->
-            val newest = items.firstOrNull()?.results
-            val cards = newest?.let { indicatorCards(indicators.model, it) }.orEmpty()
+            val newest = items.firstOrNull()
+            val cards = newest?.results?.let { results ->
+                newest.growth?.let { childCards(indicators.model, results, it, newest.measurement) }
+                    ?: indicatorCards(indicators.model, results)
+            }.orEmpty()
             HistoryState.Ready(all, current, items.map { it.measurement }, inboxCount, cards)
         }.flowOn(Dispatchers.Default)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HistoryState.Loading)

@@ -60,7 +60,8 @@ class MeasurementInputsTest {
         // Indicators that need age have no value instead of failing
         val results = FormulaModel.build(listOf(BuiltinFormulas.layer)).evaluate(inputs)
         assertNull(results.group("bf"))
-        assertEquals(80.0 / 1.8 / 1.8, results.value("bmi")!!, 1e-9)
+        // BMI applies from 2 years, so without an age it has no value either
+        assertNull(results.value("bmi"))
     }
 
     @Test

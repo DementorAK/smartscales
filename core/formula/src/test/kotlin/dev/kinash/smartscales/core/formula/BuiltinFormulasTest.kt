@@ -175,6 +175,8 @@ class BuiltinFormulasTest {
         assertNull(results.value("fat_mass"))
         assertNull(results.value("fat_free_mass"))
         assertNull(results.value("smm_janssen"))
+        // Under 2 there is no BMI: weight and height only
+        assertNull(model.evaluate(child + mapOf("age" to 1.5, "weight" to 11.0, "height" to 82.0)).value("bmi"))
     }
 
     @Test

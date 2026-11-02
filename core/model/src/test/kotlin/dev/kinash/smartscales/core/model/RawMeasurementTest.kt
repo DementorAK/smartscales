@@ -86,4 +86,11 @@ class RawMeasurementTest {
     fun nonPositiveHeartRateIsRejected() {
         measurement(heartRateBpm = 0)
     }
+
+    @Test
+    fun ageBeforeBirthIsMissingInsteadOfFailing() {
+        val unborn = measurement(takenAt = "1990-01-01T07:00:00Z")
+        assertNull(unborn.ageMonthsOrNull)
+        assertEquals(measurement().ageMonths, measurement().ageMonthsOrNull!!, 0.0)
+    }
 }

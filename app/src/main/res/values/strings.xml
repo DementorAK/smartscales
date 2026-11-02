@@ -202,4 +202,9 @@
     <string name="profile_formulas">Formulas</string>
     <string name="profile_formula_default">(default)</string>
     <string name="profile_formulas_hint">Which published equation each indicator uses. Changing it recalculates the whole history. Fat-free mass by impedance gives body fat when the scale measures impedance. When an equation has no data for a weighing, for example no impedance, the next one in the list is used.</string>
+    <string name="card_weight">Weight</string>
+    <string name="card_height">Height</string>
+    <string name="card_percentile">Percentile: %1$s</string>
+    <string name="card_percentile_below">below %1$s</string>
+    <string name="card_percentile_above">above %1$s</string>
 </resources>

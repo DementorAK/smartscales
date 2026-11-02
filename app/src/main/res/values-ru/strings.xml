@@ -203,4 +203,7 @@
     <string name="zone_high">Высокий</string>
     <string name="zone_very_high">Очень высокий</string>
     <string name="zone_approximate">%1$s (ориентировочно)</string>
+    <string name="profile_formulas">Формулы</string>
+    <string name="profile_formula_default">(по умолчанию)</string>
+    <string name="profile_formulas_hint">Какой опубликованной формулой считается каждый показатель. Смена пересчитывает всю историю. Безжировая масса по импедансу даёт жир, когда весы измеряют импеданс. Если для взвешивания у формулы нет данных, например импеданса, берётся следующая по списку.</string>
 </resources>

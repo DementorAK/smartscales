@@ -53,7 +53,7 @@ data class IndicatorCard(
  * The cards every profile sees until profiles choose their own in 0.6: an indicator id, or a group id whose
  * value comes from the profile's variant.
  */
-private val DEFAULT_CARDS = listOf("bmi", "bf", "fat_mass", "fat_free_mass", "tbw_percent", "smm_janssen", "bmr", "whtr")
+val DEFAULT_CARDS = listOf("bmi", "bf", "fat_mass", "fat_free_mass", "tbw_percent", "smm_janssen", "bmr", "whtr")
 
 /** Indicators whose value follows a group's variant: their card names the method, as the group's card does. */
 private val FOLLOWS_GROUP = mapOf("fat_mass" to "bf", "fat_free_mass" to "bf")

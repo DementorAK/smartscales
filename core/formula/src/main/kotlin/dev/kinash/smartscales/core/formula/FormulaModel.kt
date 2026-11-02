@@ -133,6 +133,25 @@ class FormulaModel private constructor(
 
     data class Zone(val level: ZoneLevel, val label: LocalizedText?, val approximate: Boolean)
 
+    /**
+     * Indicators and groups the value of [id] (an indicator or a group) can depend on, directly or through
+     * others; a group depends on all its variants. Inputs are not included.
+     */
+    fun dependencies(id: String): Set<String> {
+        val found = LinkedHashSet<String>()
+        val queue = ArrayDeque(listOf(id))
+        while (queue.isNotEmpty()) {
+            val next = queue.removeFirst()
+            val refs = groups[next] ?: indicators[next]?.let { indicator ->
+                val names = indicator.formula.names().keys + indicator.applies?.names()?.keys.orEmpty() +
+                    indicator.zoneConditions.flatMap { it?.names()?.keys.orEmpty() }
+                names.filter { it !in indicator.def.params && (it in indicators || it in groups) }
+            }.orEmpty()
+            for (ref in refs) if (found.add(ref)) queue.addLast(ref)
+        }
+        return found
+    }
+
     /** The primary variant first, then the others in layer order. */
     internal fun variantsInOrder(group: String, primary: Map<String, String>): List<String> {
         val variants = groups[group].orEmpty()

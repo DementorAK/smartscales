@@ -151,5 +151,10 @@ class ProfileRepositoryTest : DatabaseTestBase() {
         assertEquals(mapOf("bf" to "bf_gallagher", "ffm" to "ffm_sun"), profiles.observeMainVariants(profileId).first())
         profiles.setMainVariant(profileId, "ffm", null)
         assertEquals(mapOf("bf" to "bf_gallagher"), profiles.observeMainVariants(profileId).first())
+
+        // Several at once: groups not chosen go back to the default; groups not listed stay as they are
+        profiles.setMainVariant(profileId, "lbm", "lbm_hume")
+        profiles.setMainVariants(profileId, listOf("bf", "tbw"), mapOf("tbw" to "tbw_bell"))
+        assertEquals(mapOf("tbw" to "tbw_bell", "lbm" to "lbm_hume"), profiles.observeMainVariants(profileId).first())
     }
 }

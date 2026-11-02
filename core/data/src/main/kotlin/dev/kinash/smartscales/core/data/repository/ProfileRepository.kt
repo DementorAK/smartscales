@@ -32,6 +32,16 @@ class ProfileRepository @Inject constructor(
     fun observeMainVariants(profileId: Long): Flow<Map<String, String>> =
         dao.observeMainVariants(profileId).map { list -> list.associate { it.groupId to it.indicatorId } }
 
+    /**
+     * Sets the choice for each of [groups] at once: a group in [choices] gets that variant, the others go back
+     * to the formula set's default. One transaction, so the history is recalculated once.
+     */
+    suspend fun setMainVariants(profileId: Long, groups: Collection<String>, choices: Map<String, String>) {
+        database.withTransaction {
+            for (group in groups) setMainVariant(profileId, group, choices[group])
+        }
+    }
+
     /** Chooses the main variant of [group]; null goes back to the formula set's default. */
     suspend fun setMainVariant(profileId: Long, group: String, indicatorId: String?) {
         if (indicatorId == null) {

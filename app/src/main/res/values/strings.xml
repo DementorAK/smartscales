@@ -199,4 +199,7 @@
     <string name="zone_high">High</string>
     <string name="zone_very_high">Very high</string>
     <string name="zone_approximate">%1$s (approximate)</string>
+    <string name="profile_formulas">Formulas</string>
+    <string name="profile_formula_default">(default)</string>
+    <string name="profile_formulas_hint">Which published equation each indicator uses. Changing it recalculates the whole history. Fat-free mass by impedance gives body fat when the scale measures impedance. When an equation has no data for a weighing, for example no impedance, the next one in the list is used.</string>
 </resources>

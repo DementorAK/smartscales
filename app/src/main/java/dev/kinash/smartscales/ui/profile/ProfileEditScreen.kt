@@ -31,6 +31,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
@@ -43,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.kinash.smartscales.R
+import dev.kinash.smartscales.core.formula.text
 import dev.kinash.smartscales.core.model.Sex
 import dev.kinash.smartscales.core.model.WeightUnit
 import dev.kinash.smartscales.ui.common.BackButton
@@ -190,6 +192,30 @@ fun ProfileEditScreen(onDone: () -> Unit, viewModel: ProfileEditViewModel = hilt
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            if (state.variantGroups.isNotEmpty()) {
+                SectionLabel(stringResource(R.string.profile_formulas))
+                val language = LocalConfiguration.current.locales[0].language
+                val defaultMark = stringResource(R.string.profile_formula_default)
+                state.variantGroups.forEach { group ->
+                    val options = group.options(form.sex)
+                    ChoiceField(
+                        label = group.name.text(language),
+                        selected = form.variants[group.id]?.takeIf { it in options } ?: group.default,
+                        options = options,
+                        onSelect = { viewModel.setVariant(group, it) },
+                        title = { id ->
+                            val name = group.method(id, language)
+                            if (id == group.default) "$name $defaultMark" else name
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                Text(
+                    stringResource(R.string.profile_formulas_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 

@@ -6,7 +6,10 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dev.kinash.smartscales.MainActivity
@@ -18,7 +21,9 @@ import dev.kinash.smartscales.core.data.repository.ScaleBindingRepository
 import dev.kinash.smartscales.core.model.Impedance
 import dev.kinash.smartscales.core.model.MeasurementSource
 import dev.kinash.smartscales.core.model.Sex
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -112,6 +117,51 @@ class IndicatorCardsFlowTest {
         weighing(day = 3, ohms = 600.0, scale = scale)
         weighing(day = 4, ohms = 450.0, scale = scale)
         waitFor(hasText("23.6 %"))
+    }
+
+    @Test
+    fun profileChoosesTheBodyFatEquation() {
+        weighing(day = 2, ohms = null)
+        waitFor(hasText("Body fat (Gallagher 2000, from BMI)"))
+
+        chooseBodyFat("Deurenberg 1991, from BMI")
+        // Deurenberg 1991 for the review's man: 21.5 %
+        waitFor(hasText("21.5 %"))
+        compose.onAllNodesWithText("Body fat (Deurenberg 1991, from BMI)").assertCountEquals(3)
+        assertEquals(mapOf("bf" to "bf_deurenberg"), runBlocking { profiles.observeMainVariants(profileId).first() })
+
+        // Back to the first variant: the choice is cleared, not stored
+        chooseBodyFat("From fat-free mass (default)")
+        waitFor(hasText("19.9 %"))
+        assertEquals(emptyMap<String, String>(), runBlocking { profiles.observeMainVariants(profileId).first() })
+    }
+
+    @Test
+    fun choiceTheSetNoLongerOffersIsDroppedInsteadOfFailing() {
+        weighing(day = 2, ohms = null)
+        runBlocking {
+            profiles.setMainVariant(profileId, "bf", "bf_gone")
+            // Equations for women, chosen before the profile's sex was set to male
+            profiles.setMainVariant(profileId, "tbw", "tbw_bell")
+        }
+        waitFor(hasText("Body fat (Gallagher 2000, from BMI)"))
+        compose.onNodeWithContentDescription("Edit profile").performClick()
+        waitFor(hasText("Formulas"))
+        compose.onNodeWithText("From fat-free mass (default)").performScrollTo().assertExists()
+        compose.onNodeWithText("Save").performClick()
+        waitFor(hasText("Body mass index"))
+        compose.waitUntil(timeoutMillis = 5_000) {
+            runBlocking { profiles.observeMainVariants(profileId).first() }.isEmpty()
+        }
+    }
+
+    private fun chooseBodyFat(option: String) {
+        compose.onNodeWithContentDescription("Edit profile").performClick()
+        waitFor(hasText("Formulas"))
+        compose.onNodeWithText("Body fat").performScrollTo().performClick()
+        compose.onNodeWithText(option).performClick()
+        compose.onNodeWithText("Save").performClick()
+        waitFor(hasText("Body mass index"))
     }
 
     private fun weighing(day: Int, ohms: Double?, scale: Long? = null) = runBlocking {

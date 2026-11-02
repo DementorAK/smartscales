@@ -53,6 +53,17 @@ class MeasurementInputsTest {
     }
 
     @Test
+    fun birthDateAfterTheMeasurementGivesNoAge() {
+        val unborn = raw.copy(person = raw.person.copy(birthDate = LocalDate.parse("2027-01-01")))
+        val inputs = MeasurementInputs.of(unborn)
+        assertNull(inputs["age"])
+        // Indicators that need age have no value instead of failing
+        val results = FormulaModel.build(listOf(BuiltinFormulas.layer)).evaluate(inputs)
+        assertNull(results.group("bf"))
+        assertEquals(80.0 / 1.8 / 1.8, results.value("bmi")!!, 1e-9)
+    }
+
+    @Test
     fun builtInSetOnTheseInputs() {
         val model = FormulaModel.build(listOf(BuiltinFormulas.layer))
         val results = model.evaluate(MeasurementInputs.of(raw))

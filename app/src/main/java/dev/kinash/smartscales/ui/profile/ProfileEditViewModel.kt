@@ -9,9 +9,14 @@ import dev.kinash.smartscales.core.data.Profile
 import dev.kinash.smartscales.core.data.repository.MeasurementRepository
 import dev.kinash.smartscales.core.data.repository.ProfileRepository
 import dev.kinash.smartscales.core.data.repository.SettingsRepository
+import dev.kinash.smartscales.core.formula.FormulaModel
+import dev.kinash.smartscales.core.formula.LocalizedText
+import dev.kinash.smartscales.core.formula.text
 import dev.kinash.smartscales.core.model.LengthUnit
 import dev.kinash.smartscales.core.model.Sex
 import dev.kinash.smartscales.core.model.WeightUnit
+import dev.kinash.smartscales.indicators.Indicators
+import dev.kinash.smartscales.ui.history.DEFAULT_CARDS
 import dev.kinash.smartscales.ui.ProfileEditRoute
 import dev.kinash.smartscales.ui.common.Prefill
 import dev.kinash.smartscales.ui.common.ProfileColors
@@ -23,6 +28,7 @@ import dev.kinash.smartscales.ui.common.resolve
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Clock
@@ -40,7 +46,41 @@ data class ProfileForm(
     val color: Int = ProfileColors.first(),
     val avatar: String = "",
     val goal: WeightInput = WeightInput(),
+    /** Variant chosen for an indicator group; a group left out uses the formula set's first variant. */
+    val variants: Map<String, String> = emptyMap(),
 )
+
+/**
+ * An indicator group the profile can choose a variant for, with its variants in the set's order. [sexOnly]
+ * marks variants that apply to one sex only, such as equations for women.
+ */
+data class VariantGroup(
+    val id: String,
+    val name: LocalizedText,
+    val variants: List<Pair<String, LocalizedText>>,
+    val sexOnly: Map<String, Sex> = emptyMap(),
+) {
+    val default: String get() = variants.first().first
+
+    /** Variants to offer a person of [sex]: those for one sex only are not offered to the other. */
+    fun options(sex: Sex?): List<String> =
+        variants.map { it.first }.filter { sex == null || (sexOnly[it] ?: sex) == sex }
+
+    /** Whether [variant] is one of this group's and can be chosen for [sex]. */
+    fun allows(variant: String, sex: Sex?): Boolean = variant in options(sex)
+
+    /**
+     * The variant's name without the group's: under the label "Body fat", "Body fat (Gallagher 2000, from BMI)"
+     * reads as "Gallagher 2000, from BMI". A name that does not start with the group's is shown whole.
+     */
+    fun method(variant: String, language: String): String {
+        val full = variants.firstOrNull { it.first == variant }?.second?.text(language) ?: return variant
+        val group = name.text(language)
+        val rest = full.removePrefix(group).trim()
+        if (rest == full || !rest.startsWith("(") || !rest.endsWith(")")) return full
+        return rest.removeSurrounding("(", ")").trim().replaceFirstChar { it.uppercase() }
+    }
+}
 
 enum class ProfileField { NAME, SEX, BIRTH_DATE, HEIGHT, GOAL }
 
@@ -54,6 +94,7 @@ data class ProfileEditState(
     val isNew: Boolean,
     val loaded: Boolean = false,
     val form: ProfileForm = ProfileForm(),
+    val variantGroups: List<VariantGroup> = emptyList(),
     val errors: Set<ProfileField> = emptySet(),
     val applyToPast: ApplyToPastQuestion? = null,
     /** Number of measurements the profile deletion would remove, while the warning is shown. */
@@ -72,6 +113,7 @@ class ProfileEditViewModel @Inject constructor(
     private val measurements: MeasurementRepository,
     private val settings: SettingsRepository,
     private val clock: Clock,
+    indicators: Indicators,
 ) : ViewModel() {
     private val route = savedStateHandle.toRoute<ProfileEditRoute>()
     private val profileId = route.profileId
@@ -80,7 +122,13 @@ class ProfileEditViewModel @Inject constructor(
     private var heightPrefill: Prefill<String>? = null
     private var goalPrefill: Prefill<WeightInput>? = null
 
-    private val _state = MutableStateFlow(ProfileEditState(isNew = profileId == null, loaded = profileId == null))
+    private val _state = MutableStateFlow(
+        ProfileEditState(
+            isNew = profileId == null,
+            loaded = profileId == null,
+            variantGroups = variantGroups(indicators.model, DEFAULT_CARDS),
+        ),
+    )
     val state: StateFlow<ProfileEditState> = _state.asStateFlow()
 
     init {
@@ -107,6 +155,11 @@ class ProfileEditViewModel @Inject constructor(
                     color = profile.color,
                     avatar = profile.avatar.orEmpty(),
                     goal = goal,
+                    // A stored choice the formula sets no longer offer (a variant renamed, a set switched off)
+                    // is dropped here, and saving clears it
+                    variants = profiles.observeMainVariants(profile.id).first().filter { (group, variant) ->
+                        _state.value.variantGroups.any { it.id == group && it.allows(variant, profile.sex) }
+                    },
                 )
                 _state.update { it.copy(loaded = true, form = form) }
             }
@@ -140,6 +193,12 @@ class ProfileEditViewModel @Inject constructor(
         val goal = WeightInput.of(kg, unit)
         goalPrefill = kg?.let { Prefill(goal, it) }
         edit { it.copy(weightUnit = unit, goal = goal) }
+    }
+
+    /** Chooses the variant of [group]; its first variant means "as the formula set says" and is not stored. */
+    fun setVariant(group: VariantGroup, variant: String) = edit { form ->
+        val variants = if (variant == group.default) form.variants - group.id else form.variants + (group.id to variant)
+        form.copy(variants = variants)
     }
 
     fun save() {
@@ -252,6 +311,13 @@ class ProfileEditViewModel @Inject constructor(
             }
             if (profile.id == 0L) settings.selectProfile(id)
             profiles.setGoal(id, ProfileRepository.WEIGHT_GOAL, goalKg)
+            // Every offered group is written, so a choice set back to the first variant or not offered to the
+            // profile's sex is cleared; one transaction, one recalculation of the history
+            val groups = _state.value.variantGroups
+            val choices = _state.value.form.variants.filter { (group, variant) ->
+                groups.any { it.id == group && it.allows(variant, profile.sex) }
+            }
+            profiles.setMainVariants(id, groups.map { it.id }, choices)
             _state.update { it.copy(done = true) }
         }
     }
@@ -261,6 +327,51 @@ class ProfileEditViewModel @Inject constructor(
     private fun goalKg(form: ProfileForm): Double? = goalPrefill.resolve(form.goal) { it.toKilograms(form.weightUnit) }
 
     companion object {
+        /** Groups in the order a person thinks of them; groups of other sets follow in their own order. */
+        private val GROUP_ORDER = listOf("bf", "ffm", "tbw", "bmr", "lbm")
+
+        /**
+         * Groups with more than one variant that change something on the screens: a group among [shown] or one
+         * the shown values depend on (fat-free mass by impedance feeds body fat). Lean body mass is on no card
+         * until profiles choose their cards in 0.6, so its choice would change nothing visible.
+         */
+        fun variantGroups(model: FormulaModel, shown: List<String>): List<VariantGroup> {
+            val used = shown.flatMap { listOf(it) + model.dependencies(it) }.toSet()
+            return model.groups
+                .filter { (id, variants) -> variants.size > 1 && id in used }
+                .entries
+                .sortedBy { (id, _) -> GROUP_ORDER.indexOf(id).takeIf { it >= 0 } ?: GROUP_ORDER.size }
+                .map { (id, variants) ->
+                    VariantGroup(
+                        id = id,
+                        name = model.groupNames[id] ?: model.indicators.getValue(variants.first()).def.name,
+                        variants = variants.map { it to model.indicators.getValue(it).def.name },
+                        sexOnly = variants.mapNotNull { v -> sexOnly(model, v)?.let { v to it } }.toMap(),
+                    )
+                }
+        }
+
+        /**
+         * The sex a variant is for, or null when it is for both: tried on a typical adult of each sex with every
+         * standard input, a variant that gives a value for one sex only is for that sex. A variant that needs
+         * inputs the try does not have gives no value for either and counts as for both.
+         */
+        private fun sexOnly(model: FormulaModel, variant: String): Sex? {
+            val forMen = model.evaluate(typicalAdult(Sex.MALE)).value(variant) != null
+            val forWomen = model.evaluate(typicalAdult(Sex.FEMALE)).value(variant) != null
+            return when {
+                forMen && !forWomen -> Sex.MALE
+                forWomen && !forMen -> Sex.FEMALE
+                else -> null
+            }
+        }
+
+        private fun typicalAdult(sex: Sex): Map<String, Any?> = mapOf(
+            "weight" to 70.0, "height" to 170.0, "age" to 40.0, "sex" to if (sex == Sex.MALE) 1.0 else 0.0,
+            "male" to (sex == Sex.MALE), "female" to (sex == Sex.FEMALE), "impedance" to 500.0,
+            "heart_rate" to 70.0, "waist" to 85.0, "hips" to 100.0, "neck" to 37.0,
+        )
+
         val HEIGHT_RANGE_CM = 30.0..250.0
         val WEIGHT_RANGE_KG = 1.0..400.0
         const val MIN_BIRTH_YEAR = 1900

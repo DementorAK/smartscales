@@ -61,6 +61,16 @@ class BuiltinFormulasTest {
     }
 
     @Test
+    fun dependenciesFollowFormulasAndGroups() {
+        // Fat mass follows the body fat group, which can take fat-free mass by impedance, which can take body water
+        val fatMass = model.dependencies("fat_mass")
+        assertTrue(fatMass.containsAll(listOf("bf", "bf_bia", "ffm", "ffm_wu", "ffm_bell", "tbw_bell", "bmi")))
+        assertTrue("lbm" !in fatMass)
+        assertTrue("lbm" !in model.dependencies("bmr"))
+        assertEquals(emptySet<String>(), model.dependencies("bmi"))
+    }
+
+    @Test
     fun everyGroupHasAName() {
         assertEquals(model.groups.keys, model.groupNames.keys)
         model.groupNames.values.forEach { assertTrue(it.toString(), it.keys.containsAll(listOf("en", "ru"))) }

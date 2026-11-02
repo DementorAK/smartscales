@@ -242,6 +242,19 @@ class FormulaModelTest {
     }
 
     @Test
+    fun boundCanBelongToTheZoneBelow() {
+        val strict = model(
+            set(
+                "strict",
+                """"patches": [{"id": "bmi", "zones": [{"bounds": [25], "levels": ["normal", "elevated"], "atBound": "below"}]}]""",
+            ),
+        )
+        // 81 kg at 180 cm is a BMI of exactly 25.0
+        assertEquals(ZoneLevel.NORMAL, strict.evaluate(man + ("weight" to 81.0)).zone("bmi")!!.level)
+        assertEquals(ZoneLevel.ELEVATED, model().evaluate(man + ("weight" to 81.0)).zone("bmi")!!.level)
+    }
+
+    @Test
     fun parameterUsedOnlyInZonesIsUsed() {
         val zoned = model(
             set(

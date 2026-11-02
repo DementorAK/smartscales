@@ -1,0 +1,400 @@
+{
+  "format": 1,
+  "id": "builtin",
+  "name": {"en": "Published equations", "ru": "Опубликованные формулы"},
+  "description": {
+    "en": "Equations from peer-reviewed studies. Floor scales measure foot to foot, so absolute values differ from laboratory methods; the trend for one person on one scale is reliable.",
+    "ru": "Формулы из рецензируемых исследований. Напольные весы измеряют от стопы до стопы, поэтому абсолютные значения отличаются от лабораторных; динамика одного человека на одних весах надёжна."
+  },
+  "indicators": [
+    {
+      "id": "bmi",
+      "name": {"en": "Body mass index", "ru": "Индекс массы тела"},
+      "unit": "kg_m2",
+      "precision": 1,
+      "formula": "weight / (height / 100)^2",
+      "zones": [
+        {
+          "when": "age >= 18",
+          "bounds": [18.5, 25, 30, 35, 40],
+          "levels": ["low", "normal", "elevated", "high", "very_high", "very_high"],
+          "labels": [
+            {"en": "Underweight", "ru": "Недостаток веса"},
+            {"en": "Normal", "ru": "Норма"},
+            {"en": "Overweight", "ru": "Избыточный вес"},
+            {"en": "Obesity class I", "ru": "Ожирение I степени"},
+            {"en": "Obesity class II", "ru": "Ожирение II степени"},
+            {"en": "Obesity class III", "ru": "Ожирение III степени"}
+          ]
+        }
+      ],
+      "source": {"text": "WHO. Obesity: preventing and managing the global epidemic. WHO Technical Report Series 894, 2000", "url": "https://iris.who.int/handle/10665/42330"}
+    },
+    {
+      "id": "ideal_weight_min",
+      "name": {"en": "Normal weight from", "ru": "Нормальный вес от"},
+      "unit": "kg",
+      "precision": 1,
+      "formula": "bmi_low * (height / 100)^2",
+      "params": {"bmi_low": 18.5},
+      "when": "age >= 18",
+      "source": {"text": "BMI 18.5, WHO 2000", "url": "https://iris.who.int/handle/10665/42330"}
+    },
+    {
+      "id": "ideal_weight_max",
+      "name": {"en": "Normal weight up to", "ru": "Нормальный вес до"},
+      "unit": "kg",
+      "precision": 1,
+      "formula": "bmi_high * (height / 100)^2",
+      "params": {"bmi_high": 24.9},
+      "when": "age >= 18",
+      "source": {"text": "BMI 24.9, WHO 2000", "url": "https://iris.who.int/handle/10665/42330"}
+    },
+
+    {
+      "id": "ffm_wu",
+      "group": "ffm",
+      "name": {"en": "Fat-free mass by impedance (Wu 2015, foot to foot)", "ru": "Безжировая масса по импедансу (Wu 2015, стопа–стопа)"},
+      "unit": "kg",
+      "precision": 1,
+      "formula": "c0 + c_weight * weight + c_index * height^2 / impedance + c_age * age + c_sex * sex",
+      "params": {"c0": 13.055, "c_weight": 0.204, "c_index": 0.394, "c_age": -0.136, "c_sex": 8.125},
+      "when": "has(impedance) and age >= 18",
+      "source": {"text": "Wu C.S. et al. Nutrition Journal 2015;14:52. doi:10.1186/s12937-015-0041-0", "url": "https://doi.org/10.1186/s12937-015-0041-0"},
+      "description": {
+        "en": "Derived for foot-to-foot scales against DXA in 554 adults aged 16–75 (Taiwan). Used beyond 75 too, so the history stays continuous.",
+        "ru": "Выведена для весов «стопа–стопа» по DXA на 554 взрослых 16–75 лет (Тайвань). Применяется и после 75, чтобы история не прерывалась."
+      }
+    },
+    {
+      "id": "ffm_sun",
+      "group": "ffm",
+      "name": {"en": "Fat-free mass by impedance (Sun 2003)", "ru": "Безжировая масса по импедансу (Sun 2003)"},
+      "unit": "kg",
+      "precision": 1,
+      "formula": "if(male, m0 + m_index * height^2 / impedance + m_weight * weight + m_z * impedance, f0 + f_index * height^2 / impedance + f_weight * weight + f_z * impedance)",
+      "params": {"m0": -10.68, "m_index": 0.65, "m_weight": 0.26, "m_z": 0.02, "f0": -9.53, "f_index": 0.69, "f_weight": 0.17, "f_z": 0.02},
+      "when": "has(impedance) and age >= 18",
+      "source": {"text": "Sun S.S. et al. Am J Clin Nutr 2003;77:331–340. doi:10.1093/ajcn/77.2.331", "url": "https://doi.org/10.1093/ajcn/77.2.331"},
+      "description": {
+        "en": "Derived for hand-to-foot analysers from resistance, ages 12–94; a floor scale gives foot-to-foot impedance, so values are shifted.",
+        "ru": "Выведена для анализаторов «рука–нога» по сопротивлению, 12–94 года; весы дают импеданс «стопа–стопа», поэтому значения смещены."
+      }
+    },
+    {
+      "id": "ffm_bell",
+      "group": "ffm",
+      "name": {"en": "Fat-free mass by impedance (Franco-Villoria 2016, women)", "ru": "Безжировая масса по импедансу (Franco-Villoria 2016, женщины)"},
+      "unit": "kg",
+      "precision": 1,
+      "formula": "tbw_bell / hydration",
+      "params": {"hydration": 0.732},
+      "when": "has(impedance) and female and age >= 18",
+      "source": {"text": "Franco-Villoria M., Wright C.M. et al. BMJ Open 2016;6:e008922. doi:10.1136/bmjopen-2015-008922 (LM = TBW / 0.732; the paper's combined 0.898 is an arithmetic slip for 0.902)", "url": "https://doi.org/10.1136/bmjopen-2015-008922"},
+      "description": {
+        "en": "Body water by the foot-to-foot equation, divided by the usual 73.2 % water content of fat-free mass. Checked on mothers aged 24–53 in England; adult women only.",
+        "ru": "Вода тела по уравнению «стопа–стопа», делённая на обычную долю воды в безжировой массе 73,2 %. Проверено на матерях 24–53 лет в Англии; только взрослые женщины."
+      }
+    },
+    {
+      "id": "lbm_boer",
+      "group": "lbm",
+      "name": {"en": "Lean body mass (Boer 1984)", "ru": "Тощая масса (Boer 1984)"},
+      "unit": "kg",
+      "precision": 1,
+      "formula": "if(male, m_weight * weight + m_height * height + m0, f_weight * weight + f_height * height + f0)",
+      "params": {"m_weight": 0.407, "m_height": 0.267, "m0": -19.2, "f_weight": 0.252, "f_height": 0.473, "f0": -48.3},
+      "when": "age >= 18",
+      "source": {"text": "Boer P. Am J Physiol 1984;247:F632–F636. doi:10.1152/ajprenal.1984.247.4.F632", "url": "https://doi.org/10.1152/ajprenal.1984.247.4.F632"},
+      "description": {
+        "en": "From weight and height only. Lean body mass, a separate estimate: it is not taken as fat-free mass.",
+        "ru": "Только по весу и росту. Тощая масса — отдельная оценка, за безжировую массу не принимается."
+      }
+    },
+    {
+      "id": "lbm_hume",
+      "group": "lbm",
+      "name": {"en": "Lean body mass (Hume 1966)", "ru": "Тощая масса (Hume 1966)"},
+      "unit": "kg",
+      "precision": 1,
+      "formula": "if(male, m_weight * weight + m_height * height + m0, f_weight * weight + f_height * height + f0)",
+      "params": {"m_weight": 0.32810, "m_height": 0.33929, "m0": -29.5336, "f_weight": 0.29569, "f_height": 0.41813, "f0": -43.2933},
+      "when": "age >= 18",
+      "source": {"text": "Hume R. J Clin Pathol 1966;19:389–391. doi:10.1136/jcp.19.4.389", "url": "https://doi.org/10.1136/jcp.19.4.389"}
+    },
+
+    {
+      "id": "bf_bia",
+      "group": "bf",
+      "name": {"en": "Body fat (from fat-free mass)", "ru": "Жир (по безжировой массе)"},
+      "unit": "percent",
+      "precision": 1,
+      "formula": "(weight - ffm) / weight * 100",
+      "when": "has(impedance) and age >= 18",
+      "zones": [
+        {"when": "male and age < 40", "bounds": [8, 20, 25], "levels": ["low", "normal", "elevated", "high"]},
+        {"when": "male and age < 60", "bounds": [11, 22, 28], "levels": ["low", "normal", "elevated", "high"]},
+        {"when": "male", "bounds": [13, 25, 30], "levels": ["low", "normal", "elevated", "high"]},
+        {"when": "female and age < 40", "bounds": [21, 33, 39], "levels": ["low", "normal", "elevated", "high"]},
+        {"when": "female and age < 60", "bounds": [23, 34, 40], "levels": ["low", "normal", "elevated", "high"]},
+        {"bounds": [24, 36, 42], "levels": ["low", "normal", "elevated", "high"]}
+      ],
+      "source": {"text": "Fat mass = weight − fat-free mass"},
+      "description": {
+        "en": "Uses the fat-free mass variant chosen in the profile; Wu 2015 by default. Ranges: Gallagher 2000, Table 4 (body fat matching BMI 18.5, 25 and 30 by sex and age).",
+        "ru": "Берёт вариант безжировой массы, выбранный в профиле; по умолчанию Wu 2015. Нормы: Gallagher 2000, таблица 4 (жир, соответствующий ИМТ 18,5, 25 и 30, по полу и возрасту)."
+      }
+    },
+    {
+      "id": "bf_gallagher",
+      "group": "bf",
+      "name": {"en": "Body fat (Gallagher 2000, from BMI)", "ru": "Жир (Gallagher 2000, по ИМТ)"},
+      "unit": "percent",
+      "precision": 1,
+      "formula": "c0 + c_bmi / bmi + c_age * age + c_sex * sex + c_sex_age * sex * age + c_sex_bmi * sex / bmi",
+      "params": {"c0": 64.5, "c_bmi": -848, "c_age": 0.079, "c_sex": -16.4, "c_sex_age": 0.05, "c_sex_bmi": 39.0},
+      "when": "age >= 18",
+      "zones": [
+        {"when": "male and age < 40", "bounds": [8, 20, 25], "levels": ["low", "normal", "elevated", "high"]},
+        {"when": "male and age < 60", "bounds": [11, 22, 28], "levels": ["low", "normal", "elevated", "high"]},
+        {"when": "male", "bounds": [13, 25, 30], "levels": ["low", "normal", "elevated", "high"]},
+        {"when": "female and age < 40", "bounds": [21, 33, 39], "levels": ["low", "normal", "elevated", "high"]},
+        {"when": "female and age < 60", "bounds": [23, 34, 40], "levels": ["low", "normal", "elevated", "high"]},
+        {"bounds": [24, 36, 42], "levels": ["low", "normal", "elevated", "high"]}
+      ],
+      "source": {"text": "Gallagher D. et al. Am J Clin Nutr 2000;72:694–701. doi:10.1093/ajcn/72.3.694", "url": "https://doi.org/10.1093/ajcn/72.3.694"},
+      "description": {
+        "en": "Equation 5: four-compartment model, white and African American adults; used when there is no impedance. Ranges: Gallagher 2000, Table 4 (body fat matching BMI 18.5, 25 and 30 by sex and age).",
+        "ru": "Уравнение 5: четырёхкомпонентная модель, белые и афроамериканцы; когда импеданса нет. Нормы: Gallagher 2000, таблица 4 (жир, соответствующий ИМТ 18,5, 25 и 30, по полу и возрасту)."
+      }
+    },
+    {
+      "id": "bf_deurenberg",
+      "group": "bf",
+      "name": {"en": "Body fat (Deurenberg 1991, from BMI)", "ru": "Жир (Deurenberg 1991, по ИМТ)"},
+      "unit": "percent",
+      "precision": 1,
+      "formula": "c_bmi * bmi + c_age * age + c_sex * sex + c0",
+      "params": {"c_bmi": 1.2, "c_age": 0.23, "c_sex": -10.8, "c0": -5.4},
+      "when": "age >= 18",
+      "zones": [
+        {"when": "male and age < 40", "bounds": [8, 20, 25], "levels": ["low", "normal", "elevated", "high"]},
+        {"when": "male and age < 60", "bounds": [11, 22, 28], "levels": ["low", "normal", "elevated", "high"]},
+        {"when": "male", "bounds": [13, 25, 30], "levels": ["low", "normal", "elevated", "high"]},
+        {"when": "female and age < 40", "bounds": [21, 33, 39], "levels": ["low", "normal", "elevated", "high"]},
+        {"when": "female and age < 60", "bounds": [23, 34, 40], "levels": ["low", "normal", "elevated", "high"]},
+        {"bounds": [24, 36, 42], "levels": ["low", "normal", "elevated", "high"]}
+      ],
+      "source": {"text": "Deurenberg P. et al. Br J Nutr 1991;65:105–114. doi:10.1079/BJN19910073", "url": "https://doi.org/10.1079/BJN19910073"},
+      "description": {
+        "en": "From BMI, age and sex. Ranges: Gallagher 2000, Table 4 (body fat matching BMI 18.5, 25 and 30 by sex and age).",
+        "ru": "По ИМТ, возрасту и полу. Нормы: Gallagher 2000, таблица 4 (жир, соответствующий ИМТ 18,5, 25 и 30, по полу и возрасту)."
+      }
+    },
+    {
+      "id": "bf_navy",
+      "group": "bf",
+      "name": {"en": "Body fat (US Navy, from circumferences)", "ru": "Жир (метод ВМС США, по обхватам)"},
+      "unit": "percent",
+      "precision": 1,
+      "formula": "100 * (siri_a / if(male, m_log * log10(waist - neck) + m_height * log10(height) + m0, f_log * log10(waist + hips - neck) + f_height * log10(height) + f0) - siri_b)",
+      "params": {"m_log": -0.19077, "m_height": 0.15456, "m0": 1.0324, "f_log": -0.35004, "f_height": 0.22100, "f0": 1.29579, "siri_a": 4.95, "siri_b": 4.50},
+      "when": "age >= 18 and has(waist) and has(neck) and (male or has(hips))",
+      "zones": [
+        {"when": "male and age < 40", "bounds": [8, 20, 25], "levels": ["low", "normal", "elevated", "high"]},
+        {"when": "male and age < 60", "bounds": [11, 22, 28], "levels": ["low", "normal", "elevated", "high"]},
+        {"when": "male", "bounds": [13, 25, 30], "levels": ["low", "normal", "elevated", "high"]},
+        {"when": "female and age < 40", "bounds": [21, 33, 39], "levels": ["low", "normal", "elevated", "high"]},
+        {"when": "female and age < 60", "bounds": [23, 34, 40], "levels": ["low", "normal", "elevated", "high"]},
+        {"bounds": [24, 36, 42], "levels": ["low", "normal", "elevated", "high"]}
+      ],
+      "source": {"text": "Hodgdon J.A., Beckett M.B. Prediction of percent body fat for U.S. Navy men (Report 84-11) and women (Report 84-29) from body circumferences and height. Naval Health Research Center, 1984. Body density in cm, percent fat by Siri 1961", "url": "https://apps.dtic.mil/sti/pdfs/ADA143890.pdf"},
+      "description": {
+        "en": "Needs waist and neck, and hips for women. The method measures men's waist at the navel and women's at the narrowest point; a man measuring the narrowest point gets too little fat. Ranges: Gallagher 2000, Table 4 (body fat matching BMI 18.5, 25 and 30 by sex and age).",
+        "ru": "Нужны талия и шея, у женщин ещё бёдра. Метод мерит талию у мужчин на уровне пупка, у женщин — в самом узком месте; если мужчина мерит самое узкое место, жир получится заниженным. Нормы: Gallagher 2000, таблица 4 (жир, соответствующий ИМТ 18,5, 25 и 30, по полу и возрасту)."
+      }
+    },
+    {
+      "id": "fat_mass",
+      "name": {"en": "Fat mass", "ru": "Жировая масса"},
+      "unit": "kg",
+      "precision": 1,
+      "formula": "weight * bf / 100",
+      "source": {"text": "Weight × body fat"},
+      "description": {
+        "en": "From the body fat variant chosen in the profile.",
+        "ru": "По варианту жира, выбранному в профиле."
+      }
+    },
+    {
+      "id": "fat_free_mass",
+      "name": {"en": "Fat-free mass", "ru": "Безжировая масса"},
+      "unit": "kg",
+      "precision": 1,
+      "formula": "weight - fat_mass",
+      "source": {"text": "Weight − fat mass"},
+      "description": {
+        "en": "Weight minus fat mass, so fat and fat-free mass always add up to the weight, whichever body fat equation is used.",
+        "ru": "Вес минус жировая масса: жир и безжировая масса всегда дают в сумме вес, какой бы ни была формула жира."
+      }
+    },
+
+    {
+      "id": "tbw_sun",
+      "group": "tbw",
+      "name": {"en": "Body water (Sun 2003)", "ru": "Вода тела (Sun 2003)"},
+      "unit": "liter",
+      "precision": 1,
+      "formula": "if(male, m0 + m_index * height^2 / impedance + m_weight * weight, f0 + f_index * height^2 / impedance + f_weight * weight)",
+      "params": {"m0": 1.20, "m_index": 0.45, "m_weight": 0.18, "f0": 3.75, "f_index": 0.45, "f_weight": 0.11},
+      "when": "has(impedance) and age >= 18",
+      "source": {"text": "Sun S.S. et al. Am J Clin Nutr 2003;77:331–340. doi:10.1093/ajcn/77.2.331", "url": "https://doi.org/10.1093/ajcn/77.2.331"}
+    },
+    {
+      "id": "tbw_bell",
+      "group": "tbw",
+      "name": {"en": "Body water (Bell 1998, women)", "ru": "Вода тела (Bell 1998, женщины)"},
+      "unit": "liter",
+      "precision": 1,
+      "formula": "c_index * height^2 / impedance",
+      "params": {"c_index": 0.66},
+      "when": "has(impedance) and female and age >= 18",
+      "source": {"text": "Franco-Villoria M., Wright C.M. et al. BMJ Open 2016;6:e008922, doi:10.1136/bmjopen-2015-008922, after Bell N.A., McClure P.D., Hill R.J., Davies P.S.W. Eur J Clin Nutr 1998;52:856–859, doi:10.1038/sj.ejcn.1600661", "url": "https://doi.org/10.1136/bmjopen-2015-008922"},
+      "description": {
+        "en": "Foot-to-foot equation (Tanita); adult women only, as in the study that applied it.",
+        "ru": "Уравнение «стопа–стопа» (Tanita); только взрослые женщины, как в исследовании, где его применили."
+      }
+    },
+    {
+      "id": "tbw_percent",
+      "name": {"en": "Body water", "ru": "Вода тела"},
+      "unit": "percent",
+      "precision": 1,
+      "formula": "tbw * density / weight * 100",
+      "params": {"density": 0.995},
+      "source": {"text": "Litres of body water × 0.995 kg/l ÷ weight"}
+    },
+
+    {
+      "id": "smm_janssen",
+      "name": {"en": "Skeletal muscle mass (Janssen 2000)", "ru": "Скелетные мышцы (Janssen 2000)"},
+      "unit": "kg",
+      "precision": 1,
+      "formula": "c_index * height^2 / impedance + c_sex * sex + c_age * age + c0",
+      "params": {"c_index": 0.401, "c_sex": 3.825, "c_age": -0.071, "c0": 5.102},
+      "when": "has(impedance) and age >= 18",
+      "source": {"text": "Janssen I. et al. J Appl Physiol 2000;89:465–471. doi:10.1152/jappl.2000.89.2.465", "url": "https://doi.org/10.1152/jappl.2000.89.2.465"},
+      "description": {
+        "en": "Derived for hand-to-foot analysers against MRI, ages 18–86; on a floor scale values are shifted.",
+        "ru": "Выведена для анализаторов «рука–нога» по МРТ, 18–86 лет; на напольных весах значения смещены."
+      }
+    },
+    {
+      "id": "smi",
+      "name": {"en": "Skeletal muscle index", "ru": "Индекс скелетных мышц"},
+      "unit": "kg_m2",
+      "precision": 1,
+      "formula": "smm_janssen / (height / 100)^2",
+      "source": {"text": "Janssen I. et al. Am J Epidemiol 2004;159:413–421. doi:10.1093/aje/kwh058", "url": "https://doi.org/10.1093/aje/kwh058"}
+    },
+    {
+      "id": "ffmi",
+      "name": {"en": "Fat-free mass index", "ru": "Индекс безжировой массы"},
+      "unit": "kg_m2",
+      "precision": 1,
+      "formula": "fat_free_mass / (height / 100)^2",
+      "source": {"text": "VanItallie T.B. et al. Am J Clin Nutr 1990;52:953–959. doi:10.1093/ajcn/52.6.953", "url": "https://doi.org/10.1093/ajcn/52.6.953"}
+    },
+    {
+      "id": "fmi",
+      "name": {"en": "Fat mass index", "ru": "Индекс жировой массы"},
+      "unit": "kg_m2",
+      "precision": 1,
+      "formula": "fat_mass / (height / 100)^2",
+      "source": {"text": "VanItallie T.B. et al. Am J Clin Nutr 1990;52:953–959. doi:10.1093/ajcn/52.6.953", "url": "https://doi.org/10.1093/ajcn/52.6.953"}
+    },
+
+    {
+      "id": "bmr_katch",
+      "group": "bmr",
+      "name": {"en": "Basal metabolic rate (Katch–McArdle)", "ru": "Основной обмен (Katch–McArdle)"},
+      "unit": "kcal",
+      "precision": 0,
+      "formula": "c0 + c_ffm * fat_free_mass",
+      "params": {"c0": 370, "c_ffm": 21.6},
+      "when": "has(impedance) and age >= 18",
+      "source": {"text": "McArdle W.D., Katch F.I., Katch V.L. Exercise Physiology: Energy, Nutrition, and Human Performance, 5th ed., 2001 (the original derivation was not found)"},
+      "description": {
+        "en": "From fat-free mass, so it needs impedance.",
+        "ru": "По безжировой массе, поэтому нужен импеданс."
+      }
+    },
+    {
+      "id": "bmr_mifflin",
+      "group": "bmr",
+      "name": {"en": "Basal metabolic rate (Mifflin–St Jeor)", "ru": "Основной обмен (Mifflin–St Jeor)"},
+      "unit": "kcal",
+      "precision": 0,
+      "formula": "c_weight * weight + c_height * height + c_age * age + if(male, m0, f0)",
+      "params": {"c_weight": 10, "c_height": 6.25, "c_age": -5, "m0": 5, "f0": -161},
+      "when": "age >= 18",
+      "source": {"text": "Mifflin M.D., St Jeor S.T. et al. Am J Clin Nutr 1990;51:241–247. doi:10.1093/ajcn/51.2.241", "url": "https://doi.org/10.1093/ajcn/51.2.241"}
+    },
+    {
+      "id": "bmr_cunningham",
+      "group": "bmr",
+      "name": {"en": "Basal metabolic rate (Cunningham 1980)", "ru": "Основной обмен (Cunningham 1980)"},
+      "unit": "kcal",
+      "precision": 0,
+      "formula": "c0 + c_ffm * fat_free_mass",
+      "params": {"c0": 500, "c_ffm": 22},
+      "when": "has(impedance) and age >= 18",
+      "source": {"text": "Cunningham J.J. Am J Clin Nutr 1980;33:2372–2374. doi:10.1093/ajcn/33.11.2372", "url": "https://doi.org/10.1093/ajcn/33.11.2372"}
+    },
+
+    {
+      "id": "waist_circumference",
+      "name": {"en": "Waist", "ru": "Талия"},
+      "unit": "cm",
+      "precision": 1,
+      "formula": "waist",
+      "zones": [
+        {"when": "age >= 18 and male", "bounds": [94, 102], "levels": ["normal", "elevated", "high"], "atBound": "below"},
+        {"when": "age >= 18 and female", "bounds": [80, 88], "levels": ["normal", "elevated", "high"], "atBound": "below"}
+      ],
+      "source": {"text": "WHO. Waist circumference and waist–hip ratio: report of a WHO expert consultation, 2008 (published 2011), Table A1: increased risk above 94 cm (men) / 80 cm (women), substantially increased above 102 / 88 cm; from Han et al. 1995 via WHO 2000", "url": "https://iris.who.int/handle/10665/44583"},
+      "description": {
+        "en": "Risk thresholds for people of European origin. WHO cites them as an example, not as its recommendation.",
+        "ru": "Пороги риска для людей европейского происхождения. ВОЗ приводит их как пример, а не как свою рекомендацию."
+      }
+    },
+    {
+      "id": "whtr",
+      "name": {"en": "Waist-to-height ratio", "ru": "Отношение талии к росту"},
+      "unit": "none",
+      "precision": 2,
+      "formula": "waist / height",
+      "zones": [
+        {"bounds": [0.5, 0.6], "levels": ["normal", "elevated", "high"]}
+      ],
+      "source": {"text": "0.5: Browning L.M., Hsieh S.D., Ashwell M. Nutr Res Rev 2010;23:247–269, doi:10.1017/S0954422410000144. 0.6: Ashwell M. The Open Obesity Journal 2011;3:78–84, doi:10.2174/1876823701103010078", "url": "https://doi.org/10.1017/S0954422410000144"},
+      "description": {
+        "en": "0.5 comes from a systematic review; 0.6 was chosen for simplicity, like BMI 30.",
+        "ru": "Граница 0,5 — из систематического обзора; 0,6 выбрана для простоты, как ИМТ 30."
+      }
+    },
+    {
+      "id": "whr",
+      "name": {"en": "Waist-to-hip ratio", "ru": "Отношение талии к бёдрам"},
+      "unit": "none",
+      "precision": 2,
+      "formula": "waist / hips",
+      "zones": [
+        {"when": "age >= 18 and male", "bounds": [0.90], "levels": ["normal", "elevated"]},
+        {"when": "age >= 18 and female", "bounds": [0.85], "levels": ["normal", "elevated"]}
+      ],
+      "source": {"text": "WHO. Waist circumference and waist–hip ratio: report of a WHO expert consultation, 2008", "url": "https://iris.who.int/handle/10665/44583"}
+    }
+  ],
+  "hidden": ["ffm"]
+}

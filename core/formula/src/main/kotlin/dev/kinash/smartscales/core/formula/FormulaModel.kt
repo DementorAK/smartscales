@@ -97,7 +97,8 @@ class FormulaModel private constructor(
 
         /**
          * The zone of the indicator's value, or null without a value or a matching rule. The value is rounded
-         * to the indicator's precision first, so a BMI of 24.96 shown as 25.0 is in the zone from 25 up.
+         * to the indicator's precision first, so a BMI of 24.96 shown as 25.0 is in the zone from 25 up; a value
+         * exactly at a bound goes to the side the rule's `atBound` says.
          */
         fun zone(id: String): Zone? {
             val value = value(id) ?: return null
@@ -107,7 +108,9 @@ class FormulaModel private constructor(
             for ((i, rule) in indicator.def.zones.withIndex()) {
                 val condition = indicator.zoneConditions[i]
                 if (condition != null && condition.evaluate(nameValue) != true) continue
-                val index = rule.bounds.indexOfFirst { shown < it }.let { if (it < 0) rule.bounds.size else it }
+                val index = rule.bounds.indexOfFirst { bound ->
+                    if (rule.atBound == BoundSide.ABOVE) shown < bound else shown <= bound
+                }.let { if (it < 0) rule.bounds.size else it }
                 return Zone(rule.levels[index], rule.labels?.get(index), indicator.def.approximateZones)
             }
             return null

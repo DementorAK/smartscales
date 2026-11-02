@@ -18,6 +18,34 @@ No ads, no accounts, no paid features.
 - Local storage, CSV import/export, Health Connect, Google Drive backup
 - Android 8.0+, Material 3, 12 languages
 
+## How body composition is calculated
+
+SmartScales stores only raw measurements (weight, impedance, circumferences, and height, sex and birth date at the time)
+and calculates every indicator from them, so the whole history is recalculated when an equation changes. The built-in
+equations all come from peer-reviewed studies and official reports:
+
+| Indicator | With impedance | Without impedance |
+|---|---|---|
+| Body fat | from fat-free mass by Wu et al. 2015, an equation for foot-to-foot scales | Gallagher et al. 2000 |
+| Body water | Sun et al. 2003 | — |
+| Skeletal muscle | Janssen et al. 2000 | — |
+| Basal metabolic rate | Katch–McArdle | Mifflin–St Jeor 1990 |
+| BMI, waist-to-height and waist-to-hip ratios | WHO, Ashwell | WHO, Ashwell |
+
+Alternative equations (Sun 2003 and Franco-Villoria 2016 for fat-free mass, Deurenberg 1991 and the US Navy method for
+body fat, Boer and Hume for lean body mass, Cunningham 1980 for metabolic rate) can be chosen per profile. Reference
+ranges come from WHO (BMI, waist) and Gallagher et al. 2000 (body fat by sex and age). Body composition is calculated
+for adults only.
+
+Floor scales measure impedance from foot to foot, while most published equations were developed with hand-to-foot
+laboratory analysers. Absolute values therefore differ from laboratory methods, but the trend for one person on one
+scale is meaningful. Each scale has an optional impedance calibration factor.
+
+Every equation, coefficient, reference range and source is listed in [docs/FORMULAS.md](docs/FORMULAS.md). You can add
+your own formula sets as JSON files on top of the built-in one.
+
+> SmartScales is not a medical device. Its values are estimates for following your own trend, not a diagnosis.
+
 ## Project structure
 
 | Module | Kind | Contents |
@@ -39,8 +67,9 @@ Release builds are signed only when these variables are set, either as environme
 
 ## Credits
 
-Parts of the scale driver architecture and scientific formula implementations are planned to be adapted from
-[openScale](https://github.com/oliexdev/openScale) (GPL-3.0). Adapted files keep their original copyright notices.
+Parts of the scale driver code are planned to be adapted from [openScale](https://github.com/oliexdev/openScale)
+(GPL-3.0). Adapted files keep their original copyright notices. The body composition equations are written from the
+original publications listed in [docs/FORMULAS.md](docs/FORMULAS.md).
 
 Icons in `app/src/main/res/drawable/ic_*.xml` (except the launcher icon and `ic_scale.xml`) are
 [Material Icons](https://github.com/google/material-design-icons) by Google (Apache License 2.0); `ic_manual_entry.xml` is

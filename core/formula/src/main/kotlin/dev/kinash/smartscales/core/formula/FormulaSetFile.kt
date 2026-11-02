@@ -113,7 +113,7 @@ data class IndicatorPatch(
 /**
  * Ranges of an indicator for the people [applies] matches (for example, `male and age < 40`): below
  * `bounds[0]` is `levels[0]`, from `bounds[i-1]` up to `bounds[i]` is `levels[i]`, from the last bound up is the
- * last level. The first rule that applies is used.
+ * last level; a value at a bound goes to the side [atBound] says. The first rule that applies is used.
  */
 @Serializable
 data class ZoneRule(
@@ -122,7 +122,19 @@ data class ZoneRule(
     val levels: List<ZoneLevel>,
     /** Names of the zones, one per level, when the level alone is not enough ("Obesity class II"). */
     val labels: List<LocalizedText>? = null,
+    /** Which zone a value exactly at a bound is in: the one above (`≥ bound`, the default) or below (`> bound`). */
+    val atBound: BoundSide = BoundSide.ABOVE,
 )
+
+/** The side of a zone bound that the bound itself belongs to. */
+@Serializable
+enum class BoundSide {
+    /** A value equal to the bound is in the zone above it: the source says "≥ 25". */
+    @SerialName("above") ABOVE,
+
+    /** A value equal to the bound is in the zone below it: the source says "> 94". */
+    @SerialName("below") BELOW,
+}
 
 /** How a value compares with the norm; the app gives each a colour. */
 @Serializable

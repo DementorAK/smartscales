@@ -140,4 +140,16 @@ class ProfileRepositoryTest : DatabaseTestBase() {
 
         assertEquals(listOf(ProfileMainVariantEntity(profileId, "ffm", "ffm_sun")), dao.observeMainVariants(profileId).first())
     }
+
+    @Test
+    fun mainVariantChoice() = runTest {
+        val profileId = profiles.add(profile())
+        assertEquals(emptyMap<String, String>(), profiles.observeMainVariants(profileId).first())
+        profiles.setMainVariant(profileId, "bf", "bf_navy")
+        profiles.setMainVariant(profileId, "ffm", "ffm_sun")
+        profiles.setMainVariant(profileId, "bf", "bf_gallagher")
+        assertEquals(mapOf("bf" to "bf_gallagher", "ffm" to "ffm_sun"), profiles.observeMainVariants(profileId).first())
+        profiles.setMainVariant(profileId, "ffm", null)
+        assertEquals(mapOf("bf" to "bf_gallagher"), profiles.observeMainVariants(profileId).first())
+    }
 }

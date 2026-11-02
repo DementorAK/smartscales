@@ -34,9 +34,10 @@ For this reason the default fat-free mass equation is one developed for foot-to-
 scale also has an **impedance calibration factor `k`** (default 1): the impedance is multiplied by `k` before any
 equation. It can be fitted from one measurement on a laboratory analyser, such as DXA.
 
-Some scales always report the same impedance whoever stands on them, a placeholder rather than a measurement. When all
-weighings from a scale carry the same impedance, from the second one on, SmartScales treats that scale's impedance as
-missing and uses the equations without impedance.
+Some scales always report the same impedance whoever stands on them, a placeholder rather than a measurement. A body
+does not give exactly the same impedance time after time, so when a scale has sent exactly the same value in three or
+more weighings, SmartScales treats that value as missing and uses the equations without impedance for those
+weighings. Other values from the same scale keep their impedance.
 
 ## Notation
 

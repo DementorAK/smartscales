@@ -5,6 +5,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasScrollToNodeAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
@@ -14,6 +15,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -89,7 +91,7 @@ class AppFlowTest {
         compose.onNodeWithTag("measurement_weight").performTextInput("80,5")
         compose.onNodeWithText("Save").performClick()
 
-        waitFor(hasText("80.5 kg"))
+        waitForRow("80.5 kg")
         val profile = runBlocking { profiles.observeProfiles().first().single() }
         assertEquals(LocalDate.parse("1990-10-28"), profile.birthDate)
         val saved = runBlocking { measurements.observeHistory(profile.id).first().single() }
@@ -102,7 +104,7 @@ class AppFlowTest {
         val profileId = addProfile("Dmitry")
         val measurementId = addMeasurement(profileId)
 
-        waitFor(hasText("80.0 kg"))
+        waitForRow("80.0 kg")
         compose.onNodeWithContentDescription("Edit profile").performClick()
         waitFor(hasText("Female"))
         compose.onNodeWithText("Female").performScrollTo().performClick()
@@ -110,7 +112,7 @@ class AppFlowTest {
         compose.onNodeWithText("Apply to past measurements?").assertExists()
         compose.onNodeWithText("Update all").performClick()
 
-        waitFor(hasText("80.0 kg"))
+        waitForRow("80.0 kg")
         assertEquals(Sex.FEMALE, runBlocking { measurements.get(measurementId) }!!.person!!.sex)
     }
 
@@ -140,7 +142,7 @@ class AppFlowTest {
 
         compose.onNodeWithText("Anna").performClick()
         compose.onNodeWithText("Dmitry").performClick()
-        waitFor(hasText("80.0 kg"))
+        waitForRow("80.0 kg")
         compose.onNodeWithText("80.0 kg").performClick()
         waitFor(hasText("Height at that time"))
         // An edit made before moving is saved, not lost
@@ -191,7 +193,7 @@ class AppFlowTest {
         runBlocking { profiles.setGoal(profileId, ProfileRepository.WEIGHT_GOAL, 70.123) }
         val measurementId = addMeasurement(profileId, weightKg = 80.123, waistCm = 85.3)
 
-        waitFor(hasText("12 st 8.6 lb"))
+        waitForRow("12 st 8.6 lb")
         compose.onNodeWithText("12 st 8.6 lb").performClick()
         waitFor(hasText("Height at that time"))
         compose.onNodeWithText("Note").performTextInput("only the note")
@@ -217,7 +219,7 @@ class AppFlowTest {
         val dmitry = addProfile("Dmitry")
         addProfile("Kid", birthDate = "2026-10-28")
         val measurementId = addMeasurement(dmitry, takenAt = "2026-10-27T07:00:00Z")
-        waitFor(hasText("80.0 kg"))
+        waitForRow("80.0 kg")
 
         compose.onNodeWithText("80.0 kg").performClick()
         compose.onNodeWithContentDescription("Move to another profile").performClick()
@@ -233,7 +235,7 @@ class AppFlowTest {
         val profileId = addProfile("Dmitry")
         val measurementId = addMeasurement(profileId, takenAt = "2020-06-01T07:00:00Z")
 
-        waitFor(hasText("80.0 kg"))
+        waitForRow("80.0 kg")
         compose.onNodeWithContentDescription("Edit profile").performClick()
         waitFor(hasText("Date of birth"))
         compose.onNodeWithText("Date of birth").performScrollTo().performClick()
@@ -246,13 +248,25 @@ class AppFlowTest {
         compose.onNodeWithText("Update all").assertDoesNotExist()
         compose.onNodeWithText("Only new ones").performClick()
 
-        waitFor(hasText("80.0 kg"))
+        waitForRow("80.0 kg")
         assertEquals(LocalDate.parse("2021-01-01"), runBlocking { profiles.get(profileId) }!!.birthDate)
         assertEquals(LocalDate.parse("1990-10-28"), runBlocking { measurements.get(measurementId) }!!.person!!.birthDate)
     }
 
     /** Database work runs on Room's threads, so screens update a little later than the click. */
     private fun waitFor(matcher: SemanticsMatcher) = compose.waitUntilExactlyOneExists(matcher, timeoutMillis = 5_000)
+
+    /**
+     * Waits for a history row and scrolls the list to it: the indicator cards of the newest measurement come first
+     * and can push the rows below the small test screen, where the lazy list does not compose them.
+     */
+    private fun waitForRow(text: String) {
+        compose.waitUntil(timeoutMillis = 5_000) {
+            compose.onAllNodes(hasScrollToNodeAction()).fetchSemanticsNodes().isNotEmpty() &&
+                runCatching { compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasText(text)) }.isSuccess
+        }
+        waitFor(hasText(text))
+    }
 
     private fun addProfile(
         name: String,

@@ -61,6 +61,13 @@ class BuiltinFormulasTest {
     }
 
     @Test
+    fun everyGroupHasAName() {
+        assertEquals(model.groups.keys, model.groupNames.keys)
+        model.groupNames.values.forEach { assertTrue(it.toString(), it.keys.containsAll(listOf("en", "ru"))) }
+        assertEquals("Body fat", model.groupName("bf", "bf_gallagher").text("en"))
+    }
+
+    @Test
     fun everyIndicatorNamesItsSource() {
         BuiltinFormulas.file.indicators.forEach { assertTrue(it.id, !it.source?.text.isNullOrBlank()) }
     }

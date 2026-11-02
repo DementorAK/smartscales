@@ -8,12 +8,15 @@ import dev.kinash.smartscales.core.data.Profile
 import dev.kinash.smartscales.core.data.repository.MeasurementRepository
 import dev.kinash.smartscales.core.data.repository.ProfileRepository
 import dev.kinash.smartscales.core.data.repository.SettingsRepository
+import dev.kinash.smartscales.indicators.Indicators
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -27,6 +30,8 @@ sealed interface HistoryState {
         val current: Profile?,
         val measurements: List<Measurement>,
         val inboxCount: Int,
+        /** Indicators of the newest measurement. */
+        val cards: List<IndicatorCard> = emptyList(),
     ) : HistoryState
 }
 
@@ -35,16 +40,19 @@ class HistoryViewModel @Inject constructor(
     profiles: ProfileRepository,
     private val measurements: MeasurementRepository,
     private val settings: SettingsRepository,
+    private val indicators: Indicators,
 ) : ViewModel() {
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val state: StateFlow<HistoryState> = combine(profiles.observeProfiles(), settings.selectedProfileId) { all, id ->
         all to (all.firstOrNull { it.id == id } ?: all.firstOrNull())
     }.flatMapLatest { (all, current) ->
-        val history = current?.let { measurements.observeHistory(it.id) } ?: flowOf(emptyList())
+        val history = current?.let { indicators.observeHistory(it.id) } ?: flowOf(emptyList())
         combine(history, measurements.observeInboxCount()) { items, inboxCount ->
-            HistoryState.Ready(all, current, items, inboxCount)
-        }
+            val newest = items.firstOrNull()?.results
+            val cards = newest?.let { indicatorCards(indicators.model, it) }.orEmpty()
+            HistoryState.Ready(all, current, items.map { it.measurement }, inboxCount, cards)
+        }.flowOn(Dispatchers.Default)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HistoryState.Loading)
 
     fun selectProfile(id: Long) {

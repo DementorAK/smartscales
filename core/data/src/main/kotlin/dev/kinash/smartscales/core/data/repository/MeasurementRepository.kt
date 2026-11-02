@@ -33,6 +33,18 @@ class MeasurementRepository @Inject constructor(
 
     fun observeInboxCount(): Flow<Int> = dao.observeInboxCount()
 
+    /**
+     * Placeholder impedance values by scale (requirements §2.2): a foot-to-foot value is a placeholder when the
+     * same scale sent exactly that value in at least [PLACEHOLDER_REPEATS] weighings. A body does not give the
+     * same impedance to a tenth of an ohm time after time, while a scale that does not measure sends its constant
+     * (600.0 Ω on the author's scale) every time. Each value is judged on its own: a rare other value does not
+     * make the constant real, and two equal values in a row on a real scale do not hide its impedance.
+     */
+    fun observePlaceholderImpedances(): Flow<Map<Long, Set<Double>>> =
+        dao.observeRepeatedImpedances(PLACEHOLDER_REPEATS).map { rows ->
+            rows.groupBy({ it.scaleBindingId }, { it.ohms }).mapValues { it.value.toSet() }
+        }
+
     fun observeTags(): Flow<List<String>> = dao.observeTags().map { tags -> tags.map { it.name } }
 
     suspend fun get(id: Long): Measurement? = dao.get(id)?.toMeasurement()
@@ -134,5 +146,10 @@ class MeasurementRepository @Inject constructor(
             .filter(String::isNotEmpty)
             .map { name -> dao.getTag(normalizeTagName(name))?.id ?: dao.insertTag(TagEntity(name = name)) }
         dao.insertTagLinks(tagIds.map { MeasurementTagEntity(id, it) })
+    }
+
+    companion object {
+        /** Weighings with the same impedance that make it a placeholder: the first two still count as measured. */
+        const val PLACEHOLDER_REPEATS = 3
     }
 }

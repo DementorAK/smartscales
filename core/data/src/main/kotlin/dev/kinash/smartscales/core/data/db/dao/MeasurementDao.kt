@@ -22,6 +22,9 @@ import java.time.ZoneId
 /** Weight of a profile's latest measurement. */
 data class ProfileWeight(val profileId: Long, val weightKg: Double)
 
+/** A foot-to-foot impedance value that a scale sent in several weighings. */
+data class RepeatedImpedance(val scaleBindingId: Long, val ohms: Double)
+
 /** When and where a measurement was taken, for checks by local date. */
 data class TakenAt(val takenAt: Instant, val zone: ZoneId)
 
@@ -38,6 +41,18 @@ interface MeasurementDao {
     @Transaction
     @Query("SELECT COUNT(*) FROM measurement WHERE profileId IS NULL")
     fun observeInboxCount(): Flow<Int>
+
+    /** Foot-to-foot impedance values that a scale sent in at least [times] weighings. */
+    @Query(
+        """
+        SELECT m.scaleBindingId AS scaleBindingId, i.ohms AS ohms
+        FROM measurement m JOIN impedance i ON i.measurementId = m.id
+        WHERE m.scaleBindingId IS NOT NULL AND i.channel = 0 AND i.frequencyIndex = 0
+        GROUP BY m.scaleBindingId, i.ohms
+        HAVING COUNT(*) >= :times
+        """,
+    )
+    fun observeRepeatedImpedances(times: Int): Flow<List<RepeatedImpedance>>
 
     @Query(
         """

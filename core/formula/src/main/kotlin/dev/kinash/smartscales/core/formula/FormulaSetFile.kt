@@ -27,6 +27,8 @@ data class FormulaSetFile(
     val name: LocalizedText,
     val description: LocalizedText? = null,
     val inputs: List<InputDef> = emptyList(),
+    /** Names of indicator groups, shown where the group's value is shown whichever variant gave it. */
+    val groups: List<GroupDef> = emptyList(),
     val indicators: List<IndicatorDef> = emptyList(),
     val patches: List<IndicatorPatch> = emptyList(),
     val hidden: List<String> = emptyList(),
@@ -68,6 +70,10 @@ data class InputDef(
     /** `cm` or `kg` for values shown in the profile's units; formulas always get centimetres and kilograms. */
     val unit: IndicatorUnit = IndicatorUnit.NONE,
 )
+
+/** The name of an indicator group, such as "Body fat" for `bf`; a layer above may rename it. */
+@Serializable
+data class GroupDef(val id: String, val name: LocalizedText)
 
 /** One indicator, such as fat-free mass by Wu 2015. */
 @Serializable

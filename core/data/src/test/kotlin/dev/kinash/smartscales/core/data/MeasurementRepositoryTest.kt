@@ -281,4 +281,32 @@ class MeasurementRepositoryTest : DatabaseTestBase() {
         assertEquals(ZoneId.of("America/New_York"), raw.zone)
         assertEquals(35, raw.ageYears)
     }
+
+    @Test
+    fun impedanceValueRepeatedThreeTimesIsAPlaceholder() = runTest {
+        val bindings = ScaleBindingRepository(database, clock)
+        val fake = bindings.bind("AA:BB:CC:DD:EE:01", null, "OKOK_V2", null, null)
+        val real = bindings.bind("AA:BB:CC:DD:EE:02", null, "OKOK_V2", null, null)
+        val profileId = profiles.add(profile())
+        suspend fun weighing(scale: Long, ohms: Double) = measurements.add(
+            measurement(profileId).copy(source = MeasurementSource.SCALE, scaleBindingId = scale, impedances = listOf(Impedance(0, ohms))),
+        )
+
+        // The first two weighings with a value still count as measured
+        weighing(fake, 600.0)
+        weighing(fake, 600.0)
+        assertEquals(emptyMap<Long, Set<Double>>(), measurements.observePlaceholderImpedances().first())
+        weighing(fake, 600.0)
+        assertEquals(mapOf(fake to setOf(600.0)), measurements.observePlaceholderImpedances().first())
+
+        // A rare other value does not make the constant real, and it is not a placeholder itself
+        weighing(fake, 512.0)
+        assertEquals(mapOf(fake to setOf(600.0)), measurements.observePlaceholderImpedances().first())
+
+        // Two equal values in a row on a real scale hide nothing
+        weighing(real, 480.0)
+        weighing(real, 480.0)
+        weighing(real, 476.5)
+        assertEquals(mapOf(fake to setOf(600.0)), measurements.observePlaceholderImpedances().first())
+    }
 }

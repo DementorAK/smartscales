@@ -255,6 +255,21 @@ class FormulaModelTest {
     }
 
     @Test
+    fun groupNamesAndTheirFallback() {
+        // The base set names no group: the variant's own name is used
+        assertEquals("Lean body mass (Boer 1984)", model().groupName("ffm", "ffm_boer").text("en"))
+        val named = model(
+            set(
+                "names",
+                """"groups": [{"id": "ffm", "name": {"en": "Fat-free mass"}}, {"id": "nothing", "name": {"en": "x"}}, {"id": "bad", "name": {"ru": "x"}}]""",
+            ),
+        )
+        assertEquals("Fat-free mass", named.groupName("ffm", "ffm_boer").text("en"))
+        assertTrue(named.warnings.any { it.message.contains("'nothing'") })
+        assertTrue(named.issues.any { it.path == "groups[2].name" })
+    }
+
+    @Test
     fun parameterUsedOnlyInZonesIsUsed() {
         val zoned = model(
             set(

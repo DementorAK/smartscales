@@ -112,6 +112,10 @@ fun HistoryScreen(
                 )
                 ready.measurements.isEmpty() -> EmptyState(text = stringResource(R.string.history_empty))
                 else -> LazyColumn {
+                    if (ready.cards.isNotEmpty()) {
+                        item(key = "cards") { IndicatorCards(ready.cards, current) }
+                        item(key = "cards-divider") { HorizontalDivider() }
+                    }
                     items(ready.measurements, key = { it.id }) { measurement ->
                         MeasurementRow(measurement, current.weightUnit, onClick = { onOpenMeasurement(measurement.id) })
                         HorizontalDivider()

@@ -4,6 +4,7 @@ import androidx.room.withTransaction
 import dev.kinash.smartscales.core.data.Profile
 import dev.kinash.smartscales.core.data.db.SmartScalesDatabase
 import dev.kinash.smartscales.core.data.db.entity.ProfileGoalEntity
+import dev.kinash.smartscales.core.data.db.entity.ProfileMainVariantEntity
 import dev.kinash.smartscales.core.data.toEntity
 import dev.kinash.smartscales.core.data.toProfile
 import kotlinx.coroutines.flow.Flow
@@ -26,6 +27,19 @@ class ProfileRepository @Inject constructor(
     suspend fun get(id: Long): Profile? = dao.get(id)?.toProfile()
 
     suspend fun add(profile: Profile): Long = dao.insert(profile.copy(id = 0).toEntity())
+
+    /** The variant the profile chose for each indicator group, by group id; groups without a choice are absent. */
+    fun observeMainVariants(profileId: Long): Flow<Map<String, String>> =
+        dao.observeMainVariants(profileId).map { list -> list.associate { it.groupId to it.indicatorId } }
+
+    /** Chooses the main variant of [group]; null goes back to the formula set's default. */
+    suspend fun setMainVariant(profileId: Long, group: String, indicatorId: String?) {
+        if (indicatorId == null) {
+            dao.deleteMainVariant(profileId, group)
+        } else {
+            dao.upsertMainVariant(ProfileMainVariantEntity(profileId, group, indicatorId))
+        }
+    }
 
     /**
      * Saves the profile. With [applyToPastMeasurements] its sex and birth date also replace the snapshot

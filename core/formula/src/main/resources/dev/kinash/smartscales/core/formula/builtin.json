@@ -6,6 +6,13 @@
     "en": "Equations from peer-reviewed studies. Floor scales measure foot to foot, so absolute values differ from laboratory methods; the trend for one person on one scale is reliable.",
     "ru": "Формулы из рецензируемых исследований. Напольные весы измеряют от стопы до стопы, поэтому абсолютные значения отличаются от лабораторных; динамика одного человека на одних весах надёжна."
   },
+  "groups": [
+    {"id": "ffm", "name": {"en": "Fat-free mass by impedance", "ru": "Безжировая масса по импедансу"}},
+    {"id": "bf", "name": {"en": "Body fat", "ru": "Жир"}},
+    {"id": "lbm", "name": {"en": "Lean body mass", "ru": "Тощая масса"}},
+    {"id": "tbw", "name": {"en": "Body water", "ru": "Вода тела"}},
+    {"id": "bmr", "name": {"en": "Basal metabolic rate", "ru": "Основной обмен"}}
+  ],
   "indicators": [
     {
       "id": "bmi",

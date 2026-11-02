@@ -50,12 +50,18 @@ class FormulaModel private constructor(
     val indicators: Map<String, Indicator>,
     /** Variants of each group in layer order: the first is the primary one unless a profile chooses another. */
     val groups: Map<String, List<String>>,
+    /** Names of groups that sets gave one; a group without a name is shown by its variant's name. */
+    val groupNames: Map<String, LocalizedText>,
     val inputs: Map<String, InputDef>,
     val hidden: Set<String>,
     val issues: List<FormulaIssue>,
     val warnings: List<FormulaIssue>,
 ) {
     val isValid: Boolean get() = issues.isEmpty()
+
+    /** What to call a group's value: the group's name, or the name of the [variant] that gave it. */
+    fun groupName(group: String, variant: String): LocalizedText =
+        groupNames[group] ?: indicators.getValue(variant).def.name
 
     /**
      * Values of all indicators for one measurement. [values] gives the inputs (missing ones are null);
@@ -175,6 +181,7 @@ class FormulaModel private constructor(
         val entries = LinkedHashMap<String, Entry>()
         val inputs = LinkedHashMap<String, Pair<InputDef, Origin>>()
         val hidden = LinkedHashMap<String, String>()
+        val groupNames = LinkedHashMap<String, Pair<LocalizedText, String>>()
         val setIds = HashSet<String>()
 
         fun build(): FormulaModel {
@@ -190,7 +197,13 @@ class FormulaModel private constructor(
             for ((id, set) in hidden) {
                 if (id !in entries && id !in groups) warnings += FormulaIssue(set, "hidden", "Nothing called '$id' to hide")
             }
-            return FormulaModel(indicators, groups, inputs.mapValues { it.value.first }, hidden.keys, issues, warnings)
+            for ((id, named) in groupNames) {
+                if (id !in groups) warnings += FormulaIssue(named.second, "groups", "No indicators in group '$id' to name")
+            }
+            return FormulaModel(
+                indicators, groups, groupNames.mapValues { it.value.first }, inputs.mapValues { it.value.first },
+                hidden.keys, issues, warnings,
+            )
         }
 
         private fun merge(layer: FormulaLayer) {
@@ -199,6 +212,11 @@ class FormulaModel private constructor(
             if (checkId(set, "id", set) && !setIds.add(set)) issues += FormulaIssue(set, "id", "Another enabled set has the id '$set'")
             checkText(set, "name", file.name)
             file.description?.let { checkText(set, "description", it) }
+            for ((i, group) in file.groups.withIndex()) {
+                if (!checkId(set, "groups[$i].id", group.id)) continue
+                checkText(set, "groups[$i].name", group.name)
+                groupNames[group.id] = group.name to set
+            }
             for ((i, input) in file.inputs.withIndex()) {
                 val path = "inputs[$i]"
                 if (!checkId(set, "$path.id", input.id)) continue

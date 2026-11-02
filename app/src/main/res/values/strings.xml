@@ -188,4 +188,15 @@
     <string name="settings_debug">Debugging</string>
     <string name="settings_btlog_hint">Record frames from your scale to send them to the app author when the scale is not recognised or shows wrong values.</string>
     <string name="settings_match_threshold_hint">A weighing goes straight to a profile when only that profile\'s last weight is this close. Otherwise the app asks whose it is. A smaller value asks more often; a larger one may pick the wrong person when weights in the family are close.</string>
+    <string name="unit_percent_value">%1$s %%</string>
+    <string name="unit_liter_value">%1$s l</string>
+    <string name="unit_kcal_value">%1$s kcal</string>
+    <string name="unit_kg_m2_value">%1$s kg/m²</string>
+    <string name="zone_very_low">Very low</string>
+    <string name="zone_low">Low</string>
+    <string name="zone_normal">Normal</string>
+    <string name="zone_elevated">Elevated</string>
+    <string name="zone_high">High</string>
+    <string name="zone_very_high">Very high</string>
+    <string name="zone_approximate">%1$s (approximate)</string>
 </resources>

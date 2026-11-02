@@ -192,4 +192,15 @@
     <string name="settings_debug">Отладка</string>
     <string name="settings_btlog_hint">Записать кадры с весов, чтобы отправить их автору приложения, если весы не распознаются или показывают неверные значения.</string>
     <string name="settings_match_threshold_hint">Взвешивание сразу записывается в профиль, если только у него последний вес настолько близок. Иначе приложение спрашивает, чьё оно. Меньше — спрашивает чаще; больше — может ошибиться, если в семье близкий вес.</string>
+    <string name="unit_percent_value">%1$s %%</string>
+    <string name="unit_liter_value">%1$s л</string>
+    <string name="unit_kcal_value">%1$s ккал</string>
+    <string name="unit_kg_m2_value">%1$s кг/м²</string>
+    <string name="zone_very_low">Очень низкий</string>
+    <string name="zone_low">Низкий</string>
+    <string name="zone_normal">Норма</string>
+    <string name="zone_elevated">Повышенный</string>
+    <string name="zone_high">Высокий</string>
+    <string name="zone_very_high">Очень высокий</string>
+    <string name="zone_approximate">%1$s (ориентировочно)</string>
 </resources>

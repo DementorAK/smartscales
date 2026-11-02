@@ -24,6 +24,9 @@ class ScaleBindingRepository @Inject constructor(
 
     suspend fun get(id: Long): ScaleBinding? = dao.get(id)?.toScaleBinding()
 
+    /** All scales, removed ones too: their calibration still applies to the weighings taken on them. */
+    fun observeAll(): Flow<List<ScaleBinding>> = dao.observeAll().map { list -> list.map { it.toScaleBinding() } }
+
     suspend fun getByMac(mac: String): ScaleBinding? = dao.getByMac(normalizeMac(mac))?.toScaleBinding()
 
     /**

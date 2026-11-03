@@ -248,7 +248,7 @@ fun MeasurementEditScreen(onDone: () -> Unit, viewModel: MeasurementEditViewMode
     }
 }
 
-private fun circumferenceLabel(field: String): Int = when (field) {
+fun circumferenceLabel(field: String): Int = when (field) {
     ManualFields.WAIST_CM -> R.string.measurement_waist
     ManualFields.HIP_CM -> R.string.measurement_hip
     else -> R.string.measurement_neck

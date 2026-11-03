@@ -18,8 +18,19 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
     }
 }
 
+/** 2 → 3: `profile_manual_value`, the circumferences a profile keeps for its weighings. */
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL(
+            "CREATE TABLE IF NOT EXISTS `profile_manual_value` (`profileId` INTEGER NOT NULL, `fieldId` TEXT NOT NULL, " +
+                "`value` REAL NOT NULL, PRIMARY KEY(`profileId`, `fieldId`), " +
+                "FOREIGN KEY(`profileId`) REFERENCES `profile`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        )
+    }
+}
+
 /** All migrations, for the database builder and the migration tests. */
-val MIGRATIONS = arrayOf(MIGRATION_1_2)
+val MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
 
 private fun SQLiteConnection.hasColumn(table: String, column: String): Boolean =
     prepare("PRAGMA table_info(`$table`)").use { statement ->

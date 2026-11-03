@@ -220,4 +220,8 @@
     <string name="card_impedance">Impedance: %1$s Ω</string>
     <string name="card_impedance_placeholder">Impedance %1$s Ω: a placeholder from the scale, not used</string>
     <string name="card_impedance_none">No impedance</string>
+    <string name="profile_circumferences">Circumferences</string>
+    <string name="profile_circumferences_hint">Weighings take these values, so they are not typed each time; past weighings keep their own. Measure in the morning, standing relaxed, after a normal breath out, with the tape snug but not pressing. Waist: midway between the lowest rib and the top of the hip bone. Hips: around the widest part of the buttocks. Neck: just below the larynx.</string>
+    <string name="profile_circumferences_hint_male">Weighings take these values, so they are not typed each time; past weighings keep their own. Measure in the morning, standing relaxed, after a normal breath out, with the tape snug but not pressing. Waist: midway between the lowest rib and the top of the hip bone, not at the belt line. Neck: just below the Adam\'s apple, the tape sloping slightly down to the front. Hips: around the widest part of the buttocks; for men they give only the waist-to-hip ratio.</string>
+    <string name="profile_circumferences_hint_female">Weighings take these values, so they are not typed each time; past weighings keep their own. Measure in the morning, standing relaxed, after a normal breath out, with the tape snug but not pressing. Waist: midway between the lowest rib and the top of the hip bone. Hips: around the widest part of the buttocks, feet together. Neck: just below the larynx, the tape sloping slightly down to the front. Waist, hips and neck together give body fat by the US Navy method.</string>
 </resources>

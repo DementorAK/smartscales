@@ -12,6 +12,8 @@ import dev.kinash.smartscales.core.data.db.entity.normalizeTagName
 import dev.kinash.smartscales.core.data.toEntity
 import dev.kinash.smartscales.core.data.toMeasurement
 import dev.kinash.smartscales.core.data.toProfile
+import dev.kinash.smartscales.core.model.ManualFields
+import dev.kinash.smartscales.core.model.MeasurementSource
 import dev.kinash.smartscales.core.model.PersonSnapshot
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -58,11 +60,21 @@ class MeasurementRepository @Inject constructor(
     /** Takes a weighing away from its profile ("not me") and leaves it in the inbox without a snapshot. */
     suspend fun moveToInbox(id: Long) = dao.moveToInbox(id)
 
-    /** Saves a new measurement with its impedances, fields and tags; unknown tags are created. */
+    /**
+     * Saves a new measurement with its impedances, fields and tags; unknown tags are created. A weighing from the
+     * scale for a profile takes the profile's circumferences; a manual entry has them filled in its form already,
+     * where the person may have cleared one on purpose.
+     */
     suspend fun add(measurement: Measurement): Long = database.withTransaction {
         requireAfterBirth(measurement)
-        val id = dao.insert(measurement.copy(id = 0).toEntity())
-        insertDetails(id, measurement)
+        val profileId = measurement.profileId
+        val saved = if (measurement.source == MeasurementSource.SCALE && profileId != null) {
+            measurement.copy(manualValues = profileCircumferences(profileId) + measurement.manualValues)
+        } else {
+            measurement
+        }
+        val id = dao.insert(saved.copy(id = 0).toEntity())
+        insertDetails(id, saved)
         id
     }
 
@@ -87,8 +99,17 @@ class MeasurementRepository @Inject constructor(
      * The snapshot is taken from the target profile: sex and birth date from the profile, height from its
      * measurement closest in time, or from the profile when it has none, unless [heightCm] is given.
      * The target person must be born by the measurement date (see [Profile.isBornBy]).
+     * A weighing from the scale takes the target profile's circumferences too: it got those of the person it
+     * was taken for by mistake, or none in the inbox. A manual entry keeps the circumferences typed for it.
      */
     suspend fun transfer(measurementId: Long, targetProfileId: Long, heightCm: Double? = null) {
+        database.withTransaction {
+            val source = requireNotNull(dao.get(measurementId)) { "No measurement $measurementId" }.measurement.source
+            move(measurementId, targetProfileId, heightCm, takeCircumferences = source == MeasurementSource.SCALE)
+        }
+    }
+
+    private suspend fun move(measurementId: Long, targetProfileId: Long, heightCm: Double?, takeCircumferences: Boolean) {
         database.withTransaction {
             val details = requireNotNull(dao.get(measurementId)) { "No measurement $measurementId" }
             val profile = requireNotNull(database.profileDao().get(targetProfileId)) { "No profile $targetProfileId" }
@@ -108,8 +129,19 @@ class MeasurementRepository @Inject constructor(
                     birthDate = person.birthDate,
                 ),
             )
+            if (takeCircumferences) {
+                val others = details.manualValues.filter { it.fieldId !in ManualFields.CIRCUMFERENCES }
+                val taken = profileCircumferences(targetProfileId).map { (field, value) -> ManualValueEntity(measurementId, field, value) }
+                dao.deleteManualValues(measurementId)
+                dao.insertManualValues(others + taken)
+            }
         }
     }
+
+    private suspend fun profileCircumferences(profileId: Long): Map<String, Double> =
+        database.profileDao().getManualValues(profileId)
+            .filter { it.fieldId in ManualFields.CIRCUMFERENCES }
+            .associate { it.fieldId to it.value }
 
     /**
      * Creates a profile with [createProfile] and moves the inbox weighing [measurementId] into it, in one
@@ -123,11 +155,16 @@ class MeasurementRepository @Inject constructor(
             profileId
         }
 
-    /** Saves the edited [measurement] and moves it to [targetProfileId] in one transaction. */
+    /**
+     * Saves the edited [measurement] and moves it to [targetProfileId] in one transaction. Circumferences in the
+     * form stay as edited, since the person saw them while choosing where the measurement goes; a form without
+     * any, such as a weighing from the inbox, gets the target profile's, as a weighing sorted with "it's me" does.
+     */
     suspend fun updateAndTransfer(measurement: Measurement, targetProfileId: Long) {
         database.withTransaction {
             update(measurement)
-            transfer(measurement.id, targetProfileId)
+            val hasCircumferences = measurement.manualValues.keys.any { it in ManualFields.CIRCUMFERENCES }
+            move(measurement.id, targetProfileId, heightCm = null, takeCircumferences = !hasCircumferences)
         }
     }
 

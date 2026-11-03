@@ -42,6 +42,23 @@ data class ProfileGoalEntity(
     val setAt: Instant,
 )
 
+/**
+ * A manual input field the profile keeps, such as the waist (see `ManualFields.CIRCUMFERENCES`): weighings that
+ * get this profile take it as their own value. Lengths in centimetres.
+ */
+@Entity(
+    tableName = "profile_manual_value",
+    primaryKeys = ["profileId", "fieldId"],
+    foreignKeys = [
+        ForeignKey(ProfileEntity::class, ["id"], ["profileId"], onDelete = ForeignKey.CASCADE),
+    ],
+)
+data class ProfileManualValueEntity(
+    val profileId: Long,
+    val fieldId: String,
+    val value: Double,
+)
+
 /** Main variant of an indicator group chosen in the profile, for example `ffm` → `ffm_wu`. */
 @Entity(
     tableName = "profile_main_variant",

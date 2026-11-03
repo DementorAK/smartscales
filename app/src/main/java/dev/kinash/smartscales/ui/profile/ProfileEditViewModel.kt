@@ -27,6 +27,8 @@ import dev.kinash.smartscales.ui.common.avatarText
 import dev.kinash.smartscales.ui.common.lengthInput
 import dev.kinash.smartscales.ui.common.parseLength
 import dev.kinash.smartscales.ui.common.resolve
+import dev.kinash.smartscales.ui.measurement.CircumferenceFields
+import dev.kinash.smartscales.ui.measurement.MeasurementEditViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -50,6 +52,8 @@ data class ProfileForm(
     val goal: WeightInput = WeightInput(),
     /** Variant chosen for an indicator group; a group left out uses the formula set's first variant. */
     val variants: Map<String, String> = emptyMap(),
+    /** Circumferences the profile keeps for its weighings, as typed, by field ([CircumferenceFields]). */
+    val circumferences: Map<String, String> = emptyMap(),
 )
 
 /**
@@ -89,7 +93,7 @@ data class VariantGroup(
     }
 }
 
-enum class ProfileField { NAME, SEX, BIRTH_DATE, HEIGHT, GOAL }
+enum class ProfileField { NAME, SEX, BIRTH_DATE, HEIGHT, GOAL, CIRCUMFERENCES }
 
 /** Sex or birth date changed: whether past measurements get them too. */
 data class ApplyToPastQuestion(
@@ -133,6 +137,7 @@ class ProfileEditViewModel @Inject constructor(
     private var pending: Profile? = null
     private var heightPrefill: Prefill<String>? = null
     private var goalPrefill: Prefill<WeightInput>? = null
+    private var circumferencePrefills: Map<String, Prefill<String>> = emptyMap()
 
     private val _state = MutableStateFlow(
         ProfileEditState(
@@ -157,7 +162,11 @@ class ProfileEditViewModel @Inject constructor(
                 val goalKg = profiles.getGoal(profile.id, ProfileRepository.WEIGHT_GOAL)
                 val goal = WeightInput.of(goalKg, profile.weightUnit)
                 goalPrefill = goalKg?.let { Prefill(goal, it) }
+                val kept = profiles.getManualValues(profile.id).filterKeys { it in CircumferenceFields }
+                val circumferences = CircumferenceFields.associateWith { lengthInput(kept[it], profile.lengthUnit) }
+                circumferencePrefills = kept.mapValues { (field, cm) -> Prefill(circumferences.getValue(field), cm) }
                 val form = ProfileForm(
+                    circumferences = circumferences,
                     name = profile.name,
                     sex = profile.sex,
                     birthDate = profile.birthDate,
@@ -190,16 +199,25 @@ class ProfileEditViewModel @Inject constructor(
         }
     }
 
-    /** Switches the unit and converts the height already typed. */
+    /** Switches the unit and converts the height and circumferences already typed. */
     fun setLengthUnit(unit: LengthUnit) {
-        val cm = heightCm(_state.value.form)
-        if (cm == null) {
-            edit { it.copy(lengthUnit = unit) }
-            return
+        val form = _state.value.form
+        val cm = heightCm(form)
+        val height = cm?.let { lengthInput(it, unit) } ?: form.height
+        if (cm != null) heightPrefill = Prefill(height, cm)
+        val lengths = circumferencesCm(form)
+        val circumferences = CircumferenceFields.associateWith { field ->
+            lengths[field]?.takeIf { it != INVALID }?.let { lengthInput(it, unit) } ?: form.circumferences[field].orEmpty()
         }
-        val height = lengthInput(cm, unit)
-        heightPrefill = Prefill(height, cm)
-        edit { it.copy(lengthUnit = unit, height = height) }
+        circumferencePrefills = lengths.filterValues { it != null && it != INVALID }
+            .mapValues { (field, value) -> Prefill(circumferences.getValue(field), value!!) }
+        edit { it.copy(lengthUnit = unit, height = height, circumferences = circumferences) }
+    }
+
+    /** Typed circumferences in centimetres: null for an empty field, [INVALID] for one that does not parse. */
+    private fun circumferencesCm(form: ProfileForm): Map<String, Double?> = CircumferenceFields.associateWith { field ->
+        form.circumferences[field]?.trim()?.takeIf { it.isNotEmpty() }
+            ?.let { text -> circumferencePrefills[field].resolve(text) { parseLength(it, form.lengthUnit) } ?: INVALID }
     }
 
     /** Switches the unit and converts the goal already typed. */
@@ -250,6 +268,9 @@ class ProfileEditViewModel @Inject constructor(
             }
             if (heightCm == null || heightCm !in HEIGHT_RANGE_CM) add(ProfileField.HEIGHT)
             if (!form.goal.isBlank && goalKg(form)?.let { it in WEIGHT_RANGE_KG } != true) add(ProfileField.GOAL)
+            if (circumferencesCm(form).values.any { it != null && it !in MeasurementEditViewModel.CIRCUMFERENCE_RANGE_CM }) {
+                add(ProfileField.CIRCUMFERENCES)
+            }
         }
         _state.update { it.copy(errors = errors) }
         if (errors.isNotEmpty()) return
@@ -334,26 +355,35 @@ class ProfileEditViewModel @Inject constructor(
 
     private fun persist(profile: Profile, applyToPastMeasurements: Boolean) {
         val goalKg = goalKg(_state.value.form)
+        val circumferences = circumferencesCm(_state.value.form).mapNotNull { (field, cm) -> cm?.let { field to it } }.toMap()
         _state.update { it.copy(saving = true) }
+        // Every offered group is written, so a choice set back to the first variant or not offered to the
+        // profile's sex is cleared
+        val groups = _state.value.variantGroups
+        val choices = _state.value.form.variants.filter { (group, variant) ->
+            groups.any { it.id == group && it.allows(variant, profile.sex) }
+        }
+        suspend fun saveDetails(id: Long) {
+            profiles.setGoal(id, ProfileRepository.WEIGHT_GOAL, goalKg)
+            profiles.setManualValues(id, circumferences)
+            profiles.setMainVariants(id, groups.map { it.id }, choices)
+        }
         viewModelScope.launch {
             val assignId = route.assignMeasurementId
+            // One transaction with everything the form holds; a weighing claimed from the inbox moves after the
+            // profile has its circumferences, so it gets them
             val id = when {
-                profile.id != 0L -> {
+                profile.id != 0L -> profiles.inTransaction {
                     profiles.update(profile, applyToPastMeasurements)
+                    saveDetails(profile.id)
                     profile.id
                 }
-                assignId != null -> measurements.claimForNewProfile(assignId) { profiles.add(profile) }
-                else -> profiles.add(profile)
+                assignId != null -> measurements.claimForNewProfile(assignId) {
+                    profiles.add(profile).also { saveDetails(it) }
+                }
+                else -> profiles.inTransaction { profiles.add(profile).also { saveDetails(it) } }
             }
             if (profile.id == 0L) settings.selectProfile(id)
-            profiles.setGoal(id, ProfileRepository.WEIGHT_GOAL, goalKg)
-            // Every offered group is written, so a choice set back to the first variant or not offered to the
-            // profile's sex is cleared; one transaction, one recalculation of the history
-            val groups = _state.value.variantGroups
-            val choices = _state.value.form.variants.filter { (group, variant) ->
-                groups.any { it.id == group && it.allows(variant, profile.sex) }
-            }
-            profiles.setMainVariants(id, groups.map { it.id }, choices)
             _state.update { it.copy(done = true) }
         }
     }
@@ -410,6 +440,9 @@ class ProfileEditViewModel @Inject constructor(
         }
 
         private const val MONTHS_PER_YEAR = 12.0
+
+        /** A typed value that does not parse: outside any range, so it fails validation. */
+        private const val INVALID = -1.0
 
         private fun typicalAdult(sex: Sex): Map<String, Any?> = mapOf(
             "weight" to 70.0, "height" to 170.0, "age" to 40.0, "sex" to if (sex == Sex.MALE) 1.0 else 0.0,

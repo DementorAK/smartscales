@@ -50,6 +50,87 @@ class MeasurementRepositoryTest : DatabaseTestBase() {
     }
 
     @Test
+    fun weighingFromTheScaleTakesTheProfileCircumferences() = runTest {
+        val profileId = profiles.add(profile())
+        profiles.setManualValues(profileId, mapOf(ManualFields.WAIST_CM to 86.0, ManualFields.NECK_CM to 39.0))
+        val id = measurements.add(measurement(profileId).copy(source = MeasurementSource.SCALE))
+        assertEquals(mapOf("waist" to 86.0, "neck" to 39.0), measurements.get(id)!!.manualValues)
+
+        // A manual entry keeps what its form had: the person may have cleared a field on purpose
+        val manual = measurements.add(measurement(profileId).copy(manualValues = mapOf(ManualFields.WAIST_CM to 84.0)))
+        assertEquals(mapOf("waist" to 84.0), measurements.get(manual)!!.manualValues)
+
+        // Changing the profile later does not rewrite the past
+        profiles.setManualValues(profileId, mapOf(ManualFields.WAIST_CM to 90.0))
+        assertEquals(86.0, measurements.get(id)!!.manualValues["waist"])
+    }
+
+    @Test
+    fun transferTakesTheCircumferencesOfTheTarget() = runTest {
+        val dmitry = profiles.add(profile())
+        val anna = profiles.add(profile("Anna", Sex.FEMALE, "1992-03-15", 168.0))
+        profiles.setManualValues(dmitry, mapOf(ManualFields.WAIST_CM to 86.0, ManualFields.NECK_CM to 39.0))
+        profiles.setManualValues(anna, mapOf(ManualFields.WAIST_CM to 70.0, ManualFields.HIP_CM to 96.0))
+        val id = measurements.add(
+            measurement(dmitry).copy(source = MeasurementSource.SCALE, manualValues = mapOf("custom" to 1.0)),
+        )
+
+        measurements.transfer(id, anna)
+        // Anna's waist and hips, none of Dmitry's neck; a field of a formula set stays
+        assertEquals(mapOf("waist" to 70.0, "hip" to 96.0, "custom" to 1.0), measurements.get(id)!!.manualValues)
+    }
+
+    @Test
+    fun weighingFromTheInboxGetsTheCircumferencesOfItsProfile() = runTest {
+        val profileId = profiles.add(profile())
+        profiles.setManualValues(profileId, mapOf(ManualFields.WAIST_CM to 86.0))
+        val id = measurements.add(measurement(null).copy(person = null, source = MeasurementSource.SCALE))
+        measurements.transfer(id, profileId)
+        assertEquals(mapOf("waist" to 86.0), measurements.get(id)!!.manualValues)
+    }
+
+    @Test
+    fun editedCircumferencesStayWhenTheEditMovesTheMeasurement() = runTest {
+        val dmitry = profiles.add(profile())
+        val anna = profiles.add(profile("Anna", Sex.FEMALE, "1992-03-15", 168.0))
+        profiles.setManualValues(anna, mapOf(ManualFields.WAIST_CM to 70.0))
+        val id = measurements.add(measurement(dmitry))
+        measurements.updateAndTransfer(measurements.get(id)!!.copy(manualValues = mapOf("waist" to 72.5)), anna)
+        assertEquals(mapOf("waist" to 72.5), measurements.get(id)!!.manualValues)
+    }
+
+    @Test
+    fun manualEntryKeepsItsCircumferencesWhenMoved() = runTest {
+        val dmitry = profiles.add(profile())
+        val anna = profiles.add(profile("Anna", Sex.FEMALE, "1992-03-15", 168.0))
+        profiles.setManualValues(anna, mapOf(ManualFields.WAIST_CM to 70.0))
+        val id = measurements.add(measurement(dmitry).copy(manualValues = mapOf(ManualFields.WAIST_CM to 71.5)))
+        measurements.transfer(id, anna)
+        assertEquals(mapOf("waist" to 71.5), measurements.get(id)!!.manualValues)
+    }
+
+    @Test
+    fun inboxWeighingSortedInItsFormGetsTheCircumferencesOfTheProfile() = runTest {
+        val profileId = profiles.add(profile())
+        profiles.setManualValues(profileId, mapOf(ManualFields.WAIST_CM to 86.0))
+        val id = measurements.add(measurement(null).copy(person = null, source = MeasurementSource.SCALE))
+        val edited = measurements.get(id)!!.copy(person = profile().snapshot(), note = "edited")
+        measurements.updateAndTransfer(edited, profileId)
+        assertEquals(mapOf("waist" to 86.0), measurements.get(id)!!.manualValues)
+        assertEquals("edited", measurements.get(id)!!.note)
+    }
+
+    @Test
+    fun newProfileForAnInboxWeighingGivesItTheCircumferencesTypedWithIt() = runTest {
+        val id = measurements.add(measurement(null).copy(person = null, source = MeasurementSource.SCALE))
+        val profileId = measurements.claimForNewProfile(id) {
+            profiles.add(profile()).also { profiles.setManualValues(it, mapOf(ManualFields.WAIST_CM to 86.0)) }
+        }
+        assertEquals(profileId, measurements.get(id)!!.profileId)
+        assertEquals(mapOf("waist" to 86.0), measurements.get(id)!!.manualValues)
+    }
+
+    @Test
     fun tagsAreCaseInsensitiveAndShared() = runTest {
         val profileId = profiles.add(profile())
         measurements.add(measurement(profileId).copy(tags = listOf("Morning")))

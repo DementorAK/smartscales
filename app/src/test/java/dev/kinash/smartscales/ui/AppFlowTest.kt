@@ -82,6 +82,9 @@ class AppFlowTest {
         compose.onNode(hasSetTextAction() and hasAnyAncestor(isDialog())).performTextInput("10281990")
         compose.onNodeWithText("OK").performClick()
         compose.onNodeWithTag("profile_height").performScrollTo().performTextInput("180")
+        // The waist is kept in the profile, with a hint for men on how to measure
+        compose.onNode(hasText("Waist") and hasSetTextAction()).performScrollTo().performTextInput("86")
+        compose.onNodeWithText("Adam", substring = true).assertExists()
         compose.onNodeWithText("Save").performClick()
 
         waitFor(hasText("No measurements yet", substring = true))
@@ -98,6 +101,8 @@ class AppFlowTest {
         val saved = runBlocking { measurements.observeHistory(profile.id).first().single() }
         assertEquals(PersonSnapshot(180.0, Sex.MALE, LocalDate.parse("1990-10-28")), saved.person)
         assertEquals(MeasurementSource.MANUAL, saved.source)
+        // The manual entry came with the waist from the profile
+        assertEquals(mapOf(ManualFields.WAIST_CM to 86.0), saved.manualValues)
     }
 
     @Test
@@ -201,7 +206,7 @@ class AppFlowTest {
         compose.onNodeWithText("Save").performClick()
         waitFor(hasContentDescription("Settings"))
         compose.openProfile("Dmitry")
-        // Saved without changes: height and goal must not pick up the rounding of their text
+        // Saved without changes: height, goal and circumferences must not pick up the rounding of their text
         compose.onNodeWithText("Save").performClick()
         compose.backFromSettings()
 

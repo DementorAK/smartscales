@@ -46,6 +46,8 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.kinash.smartscales.R
 import dev.kinash.smartscales.indicators.ImpedanceStatus
+import dev.kinash.smartscales.ui.measurement.CircumferenceFields
+import dev.kinash.smartscales.ui.measurement.circumferenceLabel
 import dev.kinash.smartscales.core.formula.text
 import dev.kinash.smartscales.core.model.Sex
 import dev.kinash.smartscales.core.model.WeightUnit
@@ -190,6 +192,32 @@ fun ProfileEditScreen(onDone: () -> Unit, viewModel: ProfileEditViewModel = hilt
             )
             Text(
                 stringResource(R.string.profile_units_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            SectionLabel(stringResource(R.string.profile_circumferences), isError = ProfileField.CIRCUMFERENCES in state.errors)
+            Row(horizontalArrangement = Arrangement.spacedBy(FieldSpacing)) {
+                CircumferenceFields.forEach { field ->
+                    NumberField(
+                        value = form.circumferences[field].orEmpty(),
+                        onValueChange = { text ->
+                            viewModel.edit { it.copy(circumferences = it.circumferences + (field to text)) }
+                        },
+                        label = stringResource(circumferenceLabel(field)),
+                        suffix = stringResource(form.lengthUnit.symbol()),
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+            // How to measure depends on the sex: the neck by the Adam's apple, the hips needed for body fat of women
+            Text(
+                stringResource(
+                    when (form.sex) {
+                        Sex.MALE -> R.string.profile_circumferences_hint_male
+                        Sex.FEMALE -> R.string.profile_circumferences_hint_female
+                        null -> R.string.profile_circumferences_hint
+                    },
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

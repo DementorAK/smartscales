@@ -122,10 +122,15 @@ class MeasurementEditViewModel @Inject constructor(
             val now = clock.instant().atZone(zone)
             val height = lengthInput(profile.heightCm, profile.lengthUnit)
             heightPrefill = Prefill(height, profile.heightCm)
+            // The circumferences the profile keeps, as a weighing from the scale would get them
+            val kept = profiles.getManualValues(profile.id).filterKeys { it in CircumferenceFields }
+            val circumferences = CircumferenceFields.associateWith { lengthInput(kept[it], profile.lengthUnit) }
+            circumferencePrefills = kept.mapValues { (field, cm) -> Prefill(circumferences.getValue(field), cm) }
             val form = MeasurementForm(
                 date = now.toLocalDate(),
                 time = now.toLocalTime().truncatedTo(ChronoUnit.MINUTES),
                 height = height,
+                circumferences = circumferences,
             )
             _state.update { it.copy(loaded = true, profile = profile, form = form) }
             return

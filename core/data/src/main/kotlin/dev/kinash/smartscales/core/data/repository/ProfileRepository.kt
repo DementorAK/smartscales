@@ -5,6 +5,7 @@ import dev.kinash.smartscales.core.data.Profile
 import dev.kinash.smartscales.core.data.db.SmartScalesDatabase
 import dev.kinash.smartscales.core.data.db.entity.ProfileGoalEntity
 import dev.kinash.smartscales.core.data.db.entity.ProfileMainVariantEntity
+import dev.kinash.smartscales.core.data.db.entity.ProfileManualValueEntity
 import dev.kinash.smartscales.core.data.toEntity
 import dev.kinash.smartscales.core.data.toProfile
 import kotlinx.coroutines.flow.Flow
@@ -26,7 +27,28 @@ class ProfileRepository @Inject constructor(
 
     suspend fun get(id: Long): Profile? = dao.get(id)?.toProfile()
 
+    /**
+     * Runs [block] in one transaction, so a profile is saved with its goal, circumferences and formula choices
+     * at once: the history is recalculated once, and a weighing moved into a new profile sees all of them.
+     */
+    suspend fun <T> inTransaction(block: suspend () -> T): T = database.withTransaction { block() }
+
     suspend fun add(profile: Profile): Long = dao.insert(profile.copy(id = 0).toEntity())
+
+    /** The manual fields the profile keeps for its weighings (circumferences), by field id, in centimetres. */
+    suspend fun getManualValues(profileId: Long): Map<String, Double> =
+        dao.getManualValues(profileId).associate { it.fieldId to it.value }
+
+    /**
+     * Replaces the fields the profile keeps. Measurements already taken keep their own values: a waist measured
+     * last year stays last year's.
+     */
+    suspend fun setManualValues(profileId: Long, values: Map<String, Double>) {
+        database.withTransaction {
+            dao.deleteManualValues(profileId)
+            dao.insertManualValues(values.map { (field, value) -> ProfileManualValueEntity(profileId, field, value) })
+        }
+    }
 
     /** The variant the profile chose for each indicator group, by group id; groups without a choice are absent. */
     fun observeMainVariants(profileId: Long): Flow<Map<String, String>> =

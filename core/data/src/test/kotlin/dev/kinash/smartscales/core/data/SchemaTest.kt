@@ -29,8 +29,27 @@ class SchemaTest {
 
     @Test
     fun latestVersionMatchesEntities() {
-        helper.createDatabase(2).close()
-        helper.runMigrationsAndValidate(2).close()
+        helper.createDatabase(3).close()
+        helper.runMigrationsAndValidate(3).close()
+    }
+
+    @Test
+    fun migration2To3AddsProfileCircumferencesAndKeepsProfiles() {
+        helper.createDatabase(2).use { db ->
+            db.execSQL(
+                """
+                INSERT INTO profile (name, sex, birthDate, heightCm, weightUnit, lengthUnit, color, createdAt)
+                VALUES ('Dmitry', 'MALE', '1990-10-28', 180.0, 'KILOGRAM', 'CENTIMETRE', 0, 0)
+                """,
+            )
+        }
+        helper.runMigrationsAndValidate(3, MIGRATIONS.toList()).use { db ->
+            db.prepare("SELECT COUNT(*) FROM profile").use {
+                it.step()
+                assertEquals(1L, it.getLong(0))
+            }
+            db.execSQL("INSERT INTO profile_manual_value (profileId, fieldId, value) VALUES (1, 'waist', 85.0)")
+        }
     }
 
     @Test

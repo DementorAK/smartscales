@@ -15,6 +15,12 @@ object ManualFields {
     const val WAIST_CM = "waist"
     const val HIP_CM = "hip"
     const val NECK_CM = "neck"
+
+    /**
+     * Circumferences a profile keeps (requirements §3): they change slowly, so a weighing takes them from its
+     * profile instead of asking each time, and the person corrects them in the profile when they change.
+     */
+    val CIRCUMFERENCES = listOf(WAIST_CM, HIP_CM, NECK_CM)
 }
 
 /**

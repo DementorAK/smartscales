@@ -8,6 +8,7 @@ import androidx.room.Upsert
 import dev.kinash.smartscales.core.data.db.entity.ProfileEntity
 import dev.kinash.smartscales.core.data.db.entity.ProfileGoalEntity
 import dev.kinash.smartscales.core.data.db.entity.ProfileMainVariantEntity
+import dev.kinash.smartscales.core.data.db.entity.ProfileManualValueEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -38,6 +39,15 @@ interface ProfileDao {
 
     @Query("DELETE FROM profile_goal WHERE profileId = :profileId AND indicatorId = :indicatorId")
     suspend fun deleteGoal(profileId: Long, indicatorId: String)
+
+    @Query("SELECT * FROM profile_manual_value WHERE profileId = :profileId")
+    suspend fun getManualValues(profileId: Long): List<ProfileManualValueEntity>
+
+    @Insert
+    suspend fun insertManualValues(values: List<ProfileManualValueEntity>)
+
+    @Query("DELETE FROM profile_manual_value WHERE profileId = :profileId")
+    suspend fun deleteManualValues(profileId: Long)
 
     @Query("SELECT * FROM profile_main_variant WHERE profileId = :profileId")
     fun observeMainVariants(profileId: Long): Flow<List<ProfileMainVariantEntity>>

@@ -102,6 +102,60 @@ class BluetoothLogTest {
     }
 
     @Test
+    fun gattTrafficIsRecordedBothWaysWithItsCharacteristicAndRepeats() = runBlocking {
+        val log = newLog().apply { setRecording(true) }
+        val tx = java.util.UUID.fromString("0000fff2-0000-1000-8000-00805f9b34fb")
+        val result = java.util.UUID.fromString("00002a9c-0000-1000-8000-00805f9b34fb")
+        log.log("aa:bb:cc:00:11:22", "OKOK_CLOUD_V4", tx, byteArrayOf(0x01, 0x00), outgoing = true)
+        log.log("aa:bb:cc:00:11:22", "OKOK_CLOUD_V4", result, byteArrayOf(0xC4.toByte()), outgoing = false)
+        // A protocol may send the same value twice in a row; each one is a step
+        log.log("aa:bb:cc:00:11:22", "OKOK_CLOUD_V4", result, byteArrayOf(0xC4.toByte()), outgoing = false)
+        assertEquals(3, log.count.value)
+
+        val reopened = newLog()
+        val entries = reopened.recent.value.map { it.entry }
+        assertEquals(listOf(LogEntry.Kind.GATT_WRITE, LogEntry.Kind.GATT, LogEntry.Kind.GATT), entries.map { it.kind })
+        assertEquals(listOf("FFF2", "2A9C", "2A9C"), entries.map { it.characteristic })
+        assertEquals("AA:BB:CC:00:11:22", entries.first().address)
+
+        val out = StringWriter()
+        reopened.export(out, emptyList(), ZoneOffset.UTC)
+        val row = out.toString().lines().first { it.isNotEmpty() && !it.startsWith("#") }.split('\t')
+        assertEquals(listOf("scale-1", "GATT_WRITE", "01 00", "FFF2"), listOf(row[1], row[4], row[6], row[7]))
+    }
+
+    @Test
+    fun theUserCommandLosesThePersonOnExport() = runBlocking {
+        val log = newLog().apply { setRecording(true) }
+        val tx = java.util.UUID.fromString("0000fff2-0000-1000-8000-00805f9b34fb")
+        val user = byteArrayOf(0xA0.toByte(), 0, 0, 0, 7, (0x80 or 36).toByte(), 180.toByte(), 0x03, 0x25)
+        log.log("AA:BB:CC:00:11:22", "OKOK_CLOUD_V4", tx, user, outgoing = true)
+        log.log("AA:BB:CC:00:11:22", "OKOK_CLOUD_V4", tx, byteArrayOf(0x01, 0x00), outgoing = true)
+
+        val out = StringWriter()
+        log.export(out, emptyList(), ZoneOffset.UTC)
+        val data = out.toString().lines().filter { it.isNotEmpty() && !it.startsWith("#") }.map { it.split('	')[6] }
+        assertEquals(listOf("A0 00 00 00 00 00 00 00 00", "01 00"), data)
+        // The app keeps the real command for its own screen
+        assertEquals("A0 00 00 00 07 A4 B4 03 25", log.recent.value.first().entry.data)
+    }
+
+    @Test
+    fun gattIsNotRecordedWhileRecordingIsOff() {
+        val log = newLog()
+        log.log("AA:BB:CC:00:11:22", "OKOK_CLOUD_V4", java.util.UUID.randomUUID(), byteArrayOf(1), outgoing = false)
+        assertEquals(0, log.count.value)
+    }
+
+    @Test
+    fun logsWrittenBeforeGattColumnsStillLoad() {
+        folder.root.resolve("bluetooth.log").writeText("1761900000000\tAA:BB:CC:00:11:22\t-60\tOKOK_V2\tADV\t\t02 01 06\n")
+        val entry = newLog().recent.value.single().entry
+        assertEquals(LogEntry.Kind.ADV, entry.kind)
+        assertEquals(null, entry.characteristic)
+    }
+
+    @Test
     fun logAndSwitchSurviveRestart() {
         newLog().apply {
             setRecording(true)

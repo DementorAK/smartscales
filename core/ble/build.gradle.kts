@@ -22,5 +22,7 @@ dependencies {
     api(project(":core:protocol"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.nordic.ble)
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }

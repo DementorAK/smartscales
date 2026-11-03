@@ -146,7 +146,7 @@
     <string name="cap_time_sync">Часы</string>
     <string name="cap_unit_config">Единица на дисплее</string>
 
-    <string name="bt_permission_text">Чтобы найти весы, приложению нужно разрешение на поиск устройств Bluetooth. Местоположение приложение не использует.</string>
+    <string name="bt_permission_text">Чтобы найти весы и подключиться к ним, приложению нужно разрешение «Устройства поблизости». Местоположение приложение не использует.</string>
     <string name="bt_permission_text_legacy">Чтобы найти весы, приложению нужно разрешение на геолокацию: до Android 12 так Android разрешает поиск устройств Bluetooth. Местоположение приложение не использует.</string>
     <string name="bt_permission_grant">Разрешить</string>
     <string name="bt_permission_settings">Открыть настройки приложения</string>

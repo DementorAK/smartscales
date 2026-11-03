@@ -40,9 +40,12 @@ import dev.kinash.smartscales.core.ble.ScannedAdvertisement
 import dev.kinash.smartscales.ui.history.EmptyState
 import kotlinx.coroutines.CancellationException
 
-/** Permissions BLE scanning needs on this Android version. */
+/**
+ * Permissions BLE scanning needs on this Android version. From Android 12 connecting to scales read over GATT
+ * needs its own permission; Android asks for both at once as "Nearby devices".
+ */
 private val scanPermissions: Array<String> = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-    arrayOf(Manifest.permission.BLUETOOTH_SCAN)
+    arrayOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT)
 } else {
     arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
 }

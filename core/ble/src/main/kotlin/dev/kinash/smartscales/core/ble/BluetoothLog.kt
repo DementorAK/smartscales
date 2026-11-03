@@ -15,13 +15,15 @@ import java.io.Writer
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.UUID
 
 /**
  * One frame in the [BluetoothLog].
  *
  * @property address the device address as Android reports it; replaced with an alias on export.
  * @property protocol the driver's protocol when the device was recognised as a scale, otherwise null.
- * @property data the frame as received, in hex: the whole advertisement, or the value of a GATT notification.
+ * @property data the frame in hex: the whole advertisement, the value of a GATT notification, or what the app wrote.
+ * @property characteristic the GATT characteristic, for [Kind.GATT] and [Kind.GATT_WRITE].
  */
 data class LogEntry(
     val timeMs: Long,
@@ -31,8 +33,18 @@ data class LogEntry(
     val protocol: String?,
     val kind: Kind,
     val data: String,
+    val characteristic: String? = null,
 ) {
-    enum class Kind { ADV, GATT }
+    enum class Kind {
+        /** An advertisement. */
+        ADV,
+
+        /** A notification or indication from the scale. */
+        GATT,
+
+        /** A command the app wrote to the scale. */
+        GATT_WRITE,
+    }
 
     /** The frame as bytes. */
     fun bytes(): ByteArray = data.split(' ').filter { it.isNotEmpty() }.map { it.toInt(16).toByte() }.toByteArray()
@@ -53,7 +65,7 @@ class BluetoothLog(
     private val dir: File,
     private val clock: () -> Long = System::currentTimeMillis,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
-) {
+) : GattLogger {
     private sealed interface Command {
         data class Write(val entry: LogEntry) : Command
         data class SetRecording(val on: Boolean) : Command
@@ -150,6 +162,25 @@ class BluetoothLog(
         commands.trySend(Command.Write(entry))
     }
 
+    /**
+     * Records GATT traffic of a connected scale when recording: every value, repeats included, since a protocol
+     * talks in sequences and each step matters when the scale is read wrong.
+     */
+    override fun log(address: String, protocol: String, characteristic: UUID, value: ByteArray, outgoing: Boolean) {
+        if (!_recording.value) return
+        val entry = LogEntry(
+            timeMs = clock(),
+            address = address.uppercase(),
+            rssi = 0,
+            name = null,
+            protocol = protocol,
+            kind = if (outgoing) LogEntry.Kind.GATT_WRITE else LogEntry.Kind.GATT,
+            data = value.toHex(),
+            characteristic = shortUuid(characteristic),
+        )
+        commands.trySend(Command.Write(entry))
+    }
+
     fun clear() {
         synchronized(lastByAddress) { lastByAddress.clear() }
         commands.trySend(Command.Clear)
@@ -219,9 +250,11 @@ class BluetoothLog(
         command.header.forEach { out.write("# $it\n") }
         out.write("# Device addresses are replaced with aliases; data is each frame as received, in hex")
         out.write(if (command.identities != null) ", with device addresses inside frames zeroed.\n" else ".\n")
-        out.write("# time\tdevice\trssi\tprotocol\tkind\tname\tdata\n")
+        out.write("# Commands that tell the scale who stands on it (age, height, sex, weight) are zeroed after their type byte.\n")
+        out.write("# kind: ADV advertisement, GATT from the scale, GATT_WRITE from the app to the scale\n")
+        out.write("# time\tdevice\trssi\tprotocol\tkind\tname\tdata\tcharacteristic\n")
         for (entry in entries) {
-            val data = command.identities?.let { hideAddresses(entry.data, it(entry)) } ?: entry.data
+            val data = hidePerson(entry, command.identities?.let { hideAddresses(entry.data, it(entry)) } ?: entry.data)
             val fields = listOf(
                 time.format(Instant.ofEpochMilli(entry.timeMs)),
                 exportAliases.getValue(entry.address),
@@ -230,6 +263,7 @@ class BluetoothLog(
                 entry.kind.name,
                 entry.name.orEmpty(),
                 data,
+                entry.characteristic.orEmpty(),
             )
             out.write(fields.joinToString("\t") + "\n")
         }
@@ -244,11 +278,13 @@ class BluetoothLog(
         entry.kind.name,
         entry.name.orEmpty().replace(Regex("[\\t\\r\\n]"), " "),
         entry.data,
+        entry.characteristic.orEmpty(),
     ).joinToString("\t")
 
     private fun parse(line: String): LogEntry? {
         val f = line.split('\t')
-        if (f.size != FIELDS) return null
+        // Logs written before GATT traffic was recorded have no characteristic column
+        if (f.size != FIELDS && f.size != FIELDS - 1) return null
         return LogEntry(
             timeMs = f[0].toLongOrNull() ?: return null,
             address = f[1],
@@ -257,6 +293,7 @@ class BluetoothLog(
             kind = LogEntry.Kind.entries.firstOrNull { it.name == f[4] } ?: return null,
             name = f[5].ifEmpty { null },
             data = f[6],
+            characteristic = f.getOrNull(7)?.ifEmpty { null },
         )
     }
 
@@ -270,7 +307,7 @@ class BluetoothLog(
         /** The log file is cut to its newer half beyond this size. */
         const val MAX_BYTES = 2L * 1024 * 1024
 
-        private const val FIELDS = 7
+        private const val FIELDS = 8
         private const val DEVICE = "device-"
     }
 }
@@ -329,5 +366,29 @@ internal fun advertisingPart(record: ByteArray): ByteArray {
     }
     return record.copyOf(minOf(i, record.size))
 }
+
+/**
+ * [data] of [entry] without the person: a command that tells the scale who stands on it carries age, height,
+ * sex and weight, which a report to the developer does not need. Its type byte and length stay, so the
+ * exchange still reads. Every protocol with such a command adds it here.
+ */
+internal fun hidePerson(entry: LogEntry, data: String): String {
+    if (entry.kind != LogEntry.Kind.GATT_WRITE) return data
+    val bytes = data.split(' ').filter { it.isNotEmpty() }
+    val isUser = entry.protocol == CLOUD_V4 && bytes.firstOrNull() == CLOUD_V4_USER
+    if (!isUser) return data
+    return (listOf(bytes.first()) + List(bytes.size - 1) { "00" }).joinToString(" ")
+}
+
+private const val CLOUD_V4 = "OKOK_CLOUD_V4"
+private const val CLOUD_V4_USER = "A0"
+
+/** `FFF1` for a Bluetooth base UUID, the whole UUID otherwise. */
+internal fun shortUuid(uuid: UUID): String {
+    val text = uuid.toString().uppercase()
+    return if (text.startsWith("0000") && text.endsWith(BASE_UUID_TAIL)) text.substring(4, 8) else text
+}
+
+private const val BASE_UUID_TAIL = "-0000-1000-8000-00805F9B34FB"
 
 internal fun ByteArray.toHex(): String = joinToString(" ") { "%02X".format(it.toInt() and 0xFF) }

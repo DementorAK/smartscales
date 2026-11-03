@@ -144,7 +144,7 @@
     <string name="cap_time_sync">Clock</string>
     <string name="cap_unit_config">Unit on the display</string>
 
-    <string name="bt_permission_text">To find your scale the app needs permission to scan for Bluetooth devices. It does not use your location.</string>
+    <string name="bt_permission_text">To find your scale and connect to it the app needs the Nearby devices permission. It does not use your location.</string>
     <string name="bt_permission_text_legacy">To find your scale the app needs the location permission: before Android 12 that is how Android allows scanning for Bluetooth devices. The app does not use your location.</string>
     <string name="bt_permission_grant">Allow</string>
     <string name="bt_permission_settings">Open app settings</string>

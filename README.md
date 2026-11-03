@@ -79,6 +79,9 @@ Icons in `app/src/main/res/drawable/ic_*.xml` (except the launcher icon and `ic_
 [Material Icons](https://github.com/google/material-design-icons) by Google (Apache License 2.0); `ic_manual_entry.xml` is
 the "pan_tool" icon, scaled down, with a plus added.
 
+Connections to scales read over GATT use the [Nordic Android-BLE-Library](https://github.com/NordicSemiconductor/Android-BLE-Library)
+(BSD 3-Clause License, Copyright (c) 2015, Nordic Semiconductor).
+
 The scale driver interface in `:core:ble` (`ScaleDriver`, `DeviceSupport` with capabilities versus what is
 implemented, `ScaleDrivers`) follows the design of openScale's `ScaleDeviceHandler` and `ScaleFactory`;
 the code is written anew.

@@ -53,7 +53,7 @@ class BluetoothLogFlowTest {
     fun setUp() {
         hilt.inject()
         shadowOf(ApplicationProvider.getApplicationContext<Application>())
-            .grantPermissions(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.ACCESS_FINE_LOCATION)
+            .grantPermissions(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.ACCESS_FINE_LOCATION)
     }
 
     @Test

@@ -121,6 +121,7 @@ class BluetoothLogViewModel @Inject constructor(
 
     /** The address Android saw and, for a recognised scale, its own MAC from the frame (`C0` carries it). */
     private fun addressesIn(entry: LogEntry): List<String> {
+        if (entry.kind != LogEntry.Kind.ADV) return listOf(entry.address)
         val advertisement = ScannedAdvertisement(entry.address, entry.name, entry.rssi, entry.bytes(), 0)
         return listOfNotNull(entry.address, drivers.recognise(advertisement)?.second?.scaleMac).distinct()
     }
@@ -297,10 +298,16 @@ private fun EntryList(entries: List<BluetoothLog.AliasedEntry>, protocolTitle: (
                     .fillMaxWidth()
                     .padding(horizontal = ScreenPadding, vertical = FieldSpacing),
             ) {
+                // GATT entries show the characteristic and the direction where advertisements show the signal
+                val link = when (entry.kind) {
+                    LogEntry.Kind.ADV -> stringResource(R.string.btlog_rssi, entry.rssi)
+                    LogEntry.Kind.GATT -> "← ${entry.characteristic.orEmpty()}"
+                    LogEntry.Kind.GATT_WRITE -> "→ ${entry.characteristic.orEmpty()}"
+                }
                 val details = listOfNotNull(
                     time.format(Instant.ofEpochMilli(entry.timeMs)),
                     alias,
-                    stringResource(R.string.btlog_rssi, entry.rssi),
+                    link,
                     protocolTitle(entry.protocol) ?: entry.name,
                 )
                 Text(details.joinToString("  ·  "), style = MaterialTheme.typography.labelMedium)

@@ -14,7 +14,7 @@ import java.time.Instant
  * a scale at hand ([ProtocolDescription.testedOnRealScale] is false).
  */
 class CloudV4GattDriver(private val now: () -> Instant = Instant::now) : GattScaleDriver {
-    override fun gattProtocol(protocol: String, scaleMac: String): GattProtocol? =
+    override fun gattProtocol(protocol: String, scaleMac: String, version: String?): GattProtocol? =
         if (protocol == ChipseaProtocol.OKOK_CLOUD_V4.name) CloudV4Protocol(scaleMac, now) else null
 
     companion object {
@@ -62,7 +62,7 @@ internal class CloudV4Protocol(private val scaleMac: String, private val now: ()
         session.subscribe(ChipseaGatt.BODY_COMPOSITION_SERVICE, ChipseaGatt.BODY_COMPOSITION_MEASUREMENT)
     }
 
-    override fun onNotification(notification: GattNotification): List<GattEvent> {
+    override suspend fun onNotification(notification: GattNotification): List<GattEvent> {
         val channel = CloudV4Channel.of(notification.characteristic) ?: return emptyList()
         val measurement = parser.parse(channel, notification.value) ?: return emptyList()
         val reading = readingOf(measurement)

@@ -16,6 +16,7 @@ import dev.kinash.smartscales.core.ble.GattNotification
 import dev.kinash.smartscales.core.ble.GattSession
 import dev.kinash.smartscales.core.ble.GattTransport
 import dev.kinash.smartscales.core.ble.LoggingScanner
+import dev.kinash.smartscales.core.ble.OkokGattDriver
 import dev.kinash.smartscales.core.ble.ScaleDrivers
 import dev.kinash.smartscales.core.ble.ScannedAdvertisement
 import dev.kinash.smartscales.core.ble.WeighingTracker
@@ -70,12 +71,22 @@ class FakeGattTransport : GattTransport {
     @Volatile
     var frames: List<GattNotification> = emptyList()
 
+    /** The subscription after which the scale sends: the last one its protocol makes. */
+    @Volatile
+    var sendAfter: UUID = ChipseaGatt.BODY_COMPOSITION_MEASUREMENT
+
+    /** Whether the scale sleeps after [frames]; a test that answers the scale keeps it awake. */
+    @Volatile
+    var sleepAfterFrames = true
+
     val writes = CopyOnWriteArrayList<Pair<UUID, ByteArray>>()
     val connections = AtomicInteger()
 
     override suspend fun connect(address: String): GattLink {
         connections.incrementAndGet()
         val toSend = frames
+        val trigger = sendAfter
+        val sleep = sleepAfterFrames
         val channel = Channel<GattNotification>(Channel.UNLIMITED)
         return object : GattLink, GattSession {
             override val session: GattSession get() = this
@@ -84,10 +95,9 @@ class FakeGattTransport : GattTransport {
             override fun hasCharacteristic(service: UUID, characteristic: UUID) = true
 
             override suspend fun subscribe(service: UUID, characteristic: UUID) {
-                // The V4 protocol subscribes to the result last: then the scale sends and sleeps
-                if (characteristic == ChipseaGatt.BODY_COMPOSITION_MEASUREMENT) {
+                if (characteristic == trigger) {
                     toSend.forEach { channel.send(it) }
-                    channel.close()
+                    if (sleep) channel.close()
                 }
             }
 
@@ -121,7 +131,7 @@ object TestBleModule {
 
     @Provides
     @Singleton
-    fun drivers(): ScaleDrivers = ScaleDrivers(listOf(ChipseaAdvertisementDriver()), listOf(CloudV4GattDriver()))
+    fun drivers(): ScaleDrivers = ScaleDrivers(listOf(ChipseaAdvertisementDriver()), listOf(CloudV4GattDriver(), OkokGattDriver()))
 
     @Provides
     @Singleton

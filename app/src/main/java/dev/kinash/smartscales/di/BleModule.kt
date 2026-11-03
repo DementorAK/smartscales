@@ -13,6 +13,7 @@ import dev.kinash.smartscales.core.ble.ChipseaAdvertisementDriver
 import dev.kinash.smartscales.core.ble.CloudV4GattDriver
 import dev.kinash.smartscales.core.ble.GattConnector
 import dev.kinash.smartscales.core.ble.LoggingScanner
+import dev.kinash.smartscales.core.ble.OkokGattDriver
 import dev.kinash.smartscales.core.ble.NordicGattTransport
 import dev.kinash.smartscales.core.ble.ScaleDrivers
 import dev.kinash.smartscales.core.ble.WeighingTracker
@@ -34,7 +35,7 @@ object BleModule {
 
     @Provides
     @Singleton
-    fun drivers(): ScaleDrivers = ScaleDrivers(listOf(ChipseaAdvertisementDriver()), listOf(CloudV4GattDriver()))
+    fun drivers(): ScaleDrivers = ScaleDrivers(listOf(ChipseaAdvertisementDriver()), listOf(CloudV4GattDriver(), OkokGattDriver()))
 
     /** GATT traffic goes to the same log as advertisements. */
     @Provides

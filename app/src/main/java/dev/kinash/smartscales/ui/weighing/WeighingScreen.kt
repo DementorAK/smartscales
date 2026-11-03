@@ -136,6 +136,7 @@ fun WeighingScreen(
     }
 
     val keyCheck = state.keyChecks.firstOrNull()
+    val scaleQuestion = state.scaleQuestion
     if (keyCheck != null) {
         AlertDialog(
             // Only an answer decides whether the weighing is saved
@@ -160,6 +161,9 @@ fun WeighingScreen(
                 }
             },
         )
+    } else if (scaleQuestion != null) {
+        // The scale waits for this answer, so it comes before questions about weighings already saved
+        ScaleQuestionDialog(scaleQuestion, onAnswer = { viewModel.answerScale(scaleQuestion, it) })
     } else {
         state.questions.firstOrNull()?.let { question ->
             WhoDialog(
@@ -172,6 +176,29 @@ fun WeighingScreen(
             )
         }
     }
+}
+
+/**
+ * The scale asks who stands on it. Dismissing leaves the choice to the app, which picks the closest by last
+ * weight when the time is up.
+ */
+@Composable
+private fun ScaleQuestionDialog(question: ScaleUserQuestion, onAnswer: (Profile) -> Unit) {
+    AlertDialog(
+        onDismissRequest = {},
+        title = { Text(stringResource(R.string.weighing_scale_question_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(ScreenPadding)) {
+                Text(scaleWeightText(question.weight), style = MaterialTheme.typography.headlineSmall)
+                Text(
+                    pluralStringResource(R.plurals.weighing_scale_question_text, question.timeoutSeconds, question.timeoutSeconds),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                ProfileChoiceList(question.candidates, onSelect = onAnswer)
+            }
+        },
+        confirmButton = {},
+    )
 }
 
 /** The weighing is in the inbox already: dismissing leaves it there. */

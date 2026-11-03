@@ -23,10 +23,12 @@ class ChipseaAdvertisementDriverTest {
     }
 
     @Test
-    fun gattScaleShowsOnlyPreview() {
+    fun gattScaleIsWeighedOverTheConnectionNotFromItsAdvertisement() {
         val support = driver.supportFor(advertisement("CA 11 0A 01 01 03 20 00 00 00 07"))!!
         assertEquals(LinkMode.CONNECT_GATT, support.description.linkMode)
-        assertFalse(support.description.canWeigh)
+        assertTrue(support.description.canWeigh)
+        assertFalse(support.description.testedOnRealScale)
+        assertEquals("0x11", support.protocolVersion)
         assertTrue(DeviceCapability.HISTORY_READ in support.description.capabilities)
         assertEquals(support.description, driver.describe("OKOK"))
 

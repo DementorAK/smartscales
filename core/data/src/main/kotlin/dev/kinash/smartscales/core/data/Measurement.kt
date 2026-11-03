@@ -15,7 +15,9 @@ import java.time.ZoneId
  * A stored measurement with everything attached to it.
  *
  * @property profileId null means the inbox; only inbox measurements may have no [person] snapshot.
- * @property importedValues indicator values from an import without impedance, shown as is.
+ * @property importedValues indicator values the app did not work out: from an import without impedance, or
+ *   what the scale worked out itself (OKOK v1.0/v1.1 send no impedance, only their own numbers, under the
+ *   `ScaleValues` identifiers). Kept and shown as is, never recalculated.
  * @property tags tag names, sorted.
  */
 data class Measurement(

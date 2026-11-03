@@ -35,6 +35,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -121,6 +122,23 @@ data class SavedWeighing(
     val choices: List<Profile>,
 )
 
+/**
+ * The scale asks which of [candidates] stands on it (OKOK v1.1), to work out its own numbers for them. Without
+ * an answer within [ScaleUserQuestion.TIMEOUT] the app picks the one closest by last weight.
+ */
+class ScaleUserQuestion(
+    val bindingId: Long,
+    val weight: ScaleWeight,
+    val candidates: List<Profile>,
+    internal val answer: suspend (Int) -> Unit,
+) {
+    val timeoutSeconds: Int get() = TIMEOUT.seconds.toInt()
+
+    companion object {
+        val TIMEOUT: Duration = Duration.ofSeconds(10)
+    }
+}
+
 /** The first weighing with a new V2 key: does the decrypted weight match the scale display? */
 data class KeyCheck(val bindingId: Long, val reading: ScaleReading)
 
@@ -131,6 +149,7 @@ data class WeighingState(
     val keyChecks: List<KeyCheck> = emptyList(),
     val saved: SavedWeighing? = null,
     val scanError: Int? = null,
+    val scaleQuestion: ScaleUserQuestion? = null,
 )
 
 @HiltViewModel
@@ -238,7 +257,7 @@ class WeighingViewModel @Inject constructor(
      */
     private fun CoroutineScope.connectIfNeeded(binding: ScaleBinding, address: String): Boolean {
         if (connections[binding.id]?.isActive == true) return true
-        val protocol = drivers.gattProtocol(binding.protocol, binding.mac) ?: return false
+        val protocol = drivers.gattProtocol(binding.protocol, binding.mac, binding.protocolVersion) ?: return false
         if (pausedUntil[binding.id]?.let { clock.instant().isBefore(it) } == true) return true
         connections[binding.id] = launch {
             val context = gattContext()
@@ -253,7 +272,7 @@ class WeighingViewModel @Inject constructor(
         return true
     }
 
-    private suspend fun onUpdate(binding: ScaleBinding, update: ConnectionUpdate, history: HistoryWindow) {
+    private suspend fun CoroutineScope.onUpdate(binding: ScaleBinding, update: ConnectionUpdate, history: HistoryWindow) {
         when (update) {
             is ConnectionUpdate.Connecting -> link(binding) { it.copy(connection = ConnectionStatus.CONNECTING) }
             ConnectionUpdate.Connected -> link(binding) { it.copy(connection = ConnectionStatus.CONNECTED) }
@@ -261,10 +280,12 @@ class WeighingViewModel @Inject constructor(
                 // The scale went to sleep after the weighing; it advertises a little longer, which is no reason to reconnect
                 pausedUntil[binding.id] = clock.instant().plus(RECONNECT_PAUSE)
                 link(binding) { it.copy(connection = null) }
+                dropQuestion(binding)
             }
             is ConnectionUpdate.Failed -> {
                 pausedUntil[binding.id] = clock.instant().plus(FAILED_PAUSE)
                 link(binding) { it.copy(connection = ConnectionStatus.FAILED) }
+                dropQuestion(binding)
             }
             is ConnectionUpdate.Event -> when (val event = update.event) {
                 is GattEvent.Live -> show(event.reading, ScaleStatus.LIVE)
@@ -278,8 +299,14 @@ class WeighingViewModel @Inject constructor(
                     if (history.isNew(event.takenAt)) storeHistory(binding, event.reading, event.takenAt)
                     history.saw(event.takenAt)
                 }
+                is GattEvent.UserQuestion -> ask(binding, event)
             }
         }
+    }
+
+    /** A question of a scale that went away cannot be answered any more. */
+    private fun dropQuestion(binding: ScaleBinding) {
+        session.update { if (it.scaleQuestion?.bindingId == binding.id) it.copy(scaleQuestion = null) else it }
     }
 
     private fun link(binding: ScaleBinding, change: (LinkState) -> LinkState) {
@@ -300,41 +327,87 @@ class WeighingViewModel @Inject constructor(
             WeightUnit.STONE -> ScaleUnit.STONE
             else -> ScaleUnit.KILOGRAM
         }
-        val user = profile?.let {
-            ScaleUser(
-                userId = it.id.toInt(),
-                male = it.sex == Sex.MALE,
-                ageYears = Period.between(it.birthDate, now.atZone(ZoneId.systemDefault()).toLocalDate()).years.coerceAtLeast(0),
-                heightCm = it.heightCm.roundToInt(),
-                weightKg = measurements.latestWeights()[it.id],
-            )
-        }
-        return GattContext(now, unit, user)
+        val today = now.atZone(ZoneId.systemDefault()).toLocalDate()
+        val weights = measurements.latestWeights()
+        fun userOf(it: Profile) = ScaleUser(
+            userId = it.id.toInt(),
+            male = it.sex == Sex.MALE,
+            ageYears = Period.between(it.birthDate, today).years.coerceAtLeast(0),
+            heightCm = it.heightCm.roundToInt(),
+            weightKg = weights[it.id],
+        )
+        // Scales that keep several people (OKOK v1.1) get everyone, the profile on the main screen first
+        val everyone = listOfNotNull(profile) + all.filter { it.id != profile?.id }
+        return GattContext(now, unit, profile?.let(::userOf), everyone.map(::userOf))
     }
 
     /**
-     * A record the scale kept while no phone was near. V4 records name no person, so they go to the inbox
-     * (requirements §2.2). The first connection takes the scale's whole memory, weighings from before the
-     * scale was paired included (the author's choice); later ones only what is newer than the binding's mark.
+     * Shows the scale's question. The answer goes back to the scale; without one, the closest candidate by last
+     * weight is chosen, as the vendor app does. Ids the app does not know are left out.
+     */
+    private suspend fun CoroutineScope.ask(binding: ScaleBinding, event: GattEvent.UserQuestion) {
+        val weight = event.reading.weight ?: return
+        val all = profiles.observeProfiles().first()
+        val candidates = event.candidates.mapNotNull { id -> all.firstOrNull { it.id.toInt() == id } }
+        if (candidates.isEmpty()) return
+        val question = ScaleUserQuestion(binding.id, weight, candidates, event.answer)
+        session.update { it.copy(scaleQuestion = question) }
+        launch {
+            delay(ScaleUserQuestion.TIMEOUT.toMillis())
+            if (session.value.scaleQuestion !== question) return@launch
+            val weights = measurements.latestWeights()
+            val closest = candidates.minByOrNull { profile ->
+                weights[profile.id]?.let { kotlin.math.abs(it - weight.kilograms) } ?: Double.MAX_VALUE
+            } ?: return@launch
+            answerScale(question, closest)
+        }
+    }
+
+    /** The person's answer to [ScaleUserQuestion]; it is sent to the scale until the scale answers. */
+    fun answerScale(question: ScaleUserQuestion, profile: Profile) {
+        session.update { if (it.scaleQuestion === question) it.copy(scaleQuestion = null) else it }
+        viewModelScope.launch { question.answer(profile.id.toInt()) }
+    }
+
+    /**
+     * The profile a scale named for its weighing ([ScaleReading.userId], the id the app gave the person), if it
+     * still exists and was born by then.
+     */
+    private suspend fun namedProfile(reading: ScaleReading, takenAt: Instant): Profile? {
+        val id = reading.userId ?: return null
+        val profile = profiles.observeProfiles().first().firstOrNull { it.id.toInt() == id } ?: return null
+        return profile.takeIf { it.isBornBy(takenAt.atZone(ZoneId.systemDefault()).toLocalDate()) }
+    }
+
+    /**
+     * A record the scale kept while no phone was near. A record that names its person (OKOK v1.1) goes to their
+     * profile; one that does not (V4) goes to the inbox (requirements §2.2). The first connection takes the
+     * scale's whole memory, weighings from before the scale was paired included (the author's choice); later
+     * ones only what is newer than the binding's mark.
+     *
+     * A record from before the scale was paired goes to the inbox even when it names someone: the scale kept
+     * it with the user numbers of another app, which may happen to equal the id of one of our profiles.
      */
     private suspend fun storeHistory(binding: ScaleBinding, reading: ScaleReading, takenAt: Instant) {
         val weight = reading.weight ?: return
         if (measurements.existsFromScale(binding.id, takenAt)) return
+        val profile = namedProfile(reading, takenAt)?.takeUnless { takenAt.isBefore(binding.boundAt) }
         measurements.add(
             Measurement(
-                profileId = null,
+                profileId = profile?.id,
                 takenAt = takenAt,
                 zone = ZoneId.systemDefault(),
                 source = MeasurementSource.SCALE,
                 weightKg = weight.kilograms,
-                person = null,
+                person = profile?.snapshot(),
                 impedances = reading.impedances,
                 heartRateBpm = reading.heartRateBpm,
+                importedValues = reading.scaleValues,
                 scaleBindingId = binding.id,
                 scaleProperties = reading.propertyBits,
             ),
         )
-        link(binding) { it.copy(historySaved = it.historySaved + 1) }
+        if (profile == null) link(binding) { it.copy(historySaved = it.historySaved + 1) }
     }
 
     private fun show(reading: ScaleReading, status: ScaleStatus) {
@@ -383,13 +456,15 @@ class WeighingViewModel @Inject constructor(
     }
 
     /**
-     * Saves a weighing for the only profile whose weight matches. Otherwise it goes to the inbox at once,
-     * so it is not lost with the process, and the app asks whose it is.
+     * Saves a weighing for the profile the scale named, or else for the only profile whose weight matches.
+     * Otherwise it goes to the inbox at once, so it is not lost with the process, and the app asks whose it is.
      */
     private suspend fun store(binding: ScaleBinding, reading: ScaleReading, takenAt: Instant = clock.instant()) {
         val weight = reading.weight ?: return
         val all = profiles.observeProfiles().first()
-        val matches = matchProfiles(weight.kilograms, measurements.latestWeights(), settings.matchThresholdKg.first())
+        val named = namedProfile(reading, takenAt)
+        val matches = named?.let { listOf(it.id) }
+            ?: matchProfiles(weight.kilograms, measurements.latestWeights(), settings.matchThresholdKg.first())
         val choices = all.sortedBy { profile -> matches.indexOf(profile.id).takeIf { it >= 0 } ?: Int.MAX_VALUE }
         val match = matches.singleOrNull()?.let { id -> all.firstOrNull { it.id == id } }
         val id = measurements.add(
@@ -402,6 +477,7 @@ class WeighingViewModel @Inject constructor(
                 person = match?.snapshot(),
                 impedances = reading.impedances,
                 heartRateBpm = reading.heartRateBpm,
+                importedValues = reading.scaleValues,
                 scaleBindingId = binding.id,
                 scaleProperties = reading.propertyBits,
             ),

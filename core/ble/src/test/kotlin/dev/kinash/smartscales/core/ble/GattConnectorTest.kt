@@ -53,7 +53,7 @@ class GattConnectorTest {
             session.subscribe(UUID.fromString("0000fff0-0000-1000-8000-00805f9b34fb"), UUID.fromString("0000fff1-0000-1000-8000-00805f9b34fb"))
         }
 
-        override fun onNotification(notification: GattNotification): List<GattEvent> =
+        override suspend fun onNotification(notification: GattNotification): List<GattEvent> =
             listOf(GattEvent.Live(ScaleReading("AA:BB:CC:DD:EE:FF", weight = null, measureSeqNo = notification.value[0].toInt())))
     }
 

@@ -31,7 +31,7 @@ class CloudV4GattDriverTest {
         }
     }
 
-    private fun protocol() = driver.gattProtocol("OKOK_CLOUD_V4", mac)!!
+    private fun protocol() = driver.gattProtocol("OKOK_CLOUD_V4", mac, "0x10")!!
 
     private fun le(value: Int) = byteArrayOf(value.toByte(), (value shr 8).toByte())
 
@@ -43,8 +43,8 @@ class CloudV4GattDriverTest {
 
     @Test
     fun onlyV4ScalesAreItsOwn() {
-        assertNull(driver.gattProtocol("OKOK_V2", mac))
-        assertNull(driver.gattProtocol("OKOK_CLOUD", mac))
+        assertNull(driver.gattProtocol("OKOK_V2", mac, null))
+        assertNull(driver.gattProtocol("OKOK_CLOUD", mac, null))
     }
 
     @Test
@@ -73,7 +73,7 @@ class CloudV4GattDriverTest {
     }
 
     @Test
-    fun resultHasImpedanceHeartRateAndTheScaleTime() {
+    fun resultHasImpedanceHeartRateAndTheScaleTime() = runTest {
         val taken = now.minusSeconds(20)
         val events = protocol().onNotification(GattNotification(ChipseaGatt.BODY_COMPOSITION_MEASUREMENT, c5(taken, 805, 5123, 72)))
         val result = events.single() as GattEvent.Result
@@ -85,7 +85,7 @@ class CloudV4GattDriverTest {
     }
 
     @Test
-    fun aResultFromAScaleWithAnUnsetClockIsKeptWithThePhoneTime() {
+    fun aResultFromAScaleWithAnUnsetClockIsKeptWithThePhoneTime() = runTest {
         val events = protocol().onNotification(
             GattNotification(ChipseaGatt.BODY_COMPOSITION_MEASUREMENT, c5(Instant.parse("2000-01-01T00:00:00Z"), 805, 0, 0)),
         )
@@ -93,7 +93,7 @@ class CloudV4GattDriverTest {
     }
 
     @Test
-    fun historyWithAnImplausibleTimeIsDropped() {
+    fun historyWithAnImplausibleTimeIsDropped() = runTest {
         val p = protocol()
         val kept = p.onNotification(GattNotification(ChipseaGatt.BODY_COMPOSITION_HISTORY, c5(now.minusSeconds(86_400), 790, 0, 0)))
         assertEquals(now.minusSeconds(86_400), (kept.single() as GattEvent.History).takenAt)
@@ -101,7 +101,7 @@ class CloudV4GattDriverTest {
     }
 
     @Test
-    fun liveWeightIsNotLockedAndEmptyResultsAreNotSaved() {
+    fun liveWeightIsNotLockedAndEmptyResultsAreNotSaved() = runTest {
         val p = protocol()
         val live = p.onNotification(GattNotification(ChipseaGatt.CHIPSEA_RX, c5(now, 640, 0, 0))).single() as GattEvent.Live
         assertEquals(64.0, live.reading.weight!!.kilograms, 1e-9)

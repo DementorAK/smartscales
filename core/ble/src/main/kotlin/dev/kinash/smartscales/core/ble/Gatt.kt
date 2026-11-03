@@ -61,8 +61,11 @@ data class ScaleUser(
     val weightKg: Double? = null,
 )
 
-/** What the app tells the scale on connecting. */
-data class GattContext(val now: Instant, val unit: ScaleUnit, val user: ScaleUser?)
+/**
+ * What the app tells the scale on connecting: the person on the scale ([user], the profile on the main screen)
+ * and, for scales that keep several, everyone ([users]).
+ */
+data class GattContext(val now: Instant, val unit: ScaleUnit, val user: ScaleUser?, val users: List<ScaleUser> = listOfNotNull(user))
 
 /** What a GATT scale reports. */
 sealed interface GattEvent {
@@ -76,6 +79,12 @@ sealed interface GattEvent {
 
     /** A weighing the scale kept while no phone was near. */
     data class History(override val reading: ScaleReading, val takenAt: Instant) : GattEvent
+
+    /**
+     * The weight fits several people and the scale asks which of [candidates] (user ids) stands on it, so it can
+     * work out its own numbers for them. [answer] sends the choice.
+     */
+    class UserQuestion(override val reading: ScaleReading, val candidates: List<Int>, val answer: suspend (Int) -> Unit) : GattEvent
 }
 
 /**
@@ -86,12 +95,18 @@ interface GattProtocol {
     /** Writes and subscriptions in the order the scale expects, right after the services were discovered. */
     suspend fun start(session: GattSession, context: GattContext)
 
-    /** Events in a notification; none while a multi-packet value is incomplete or for frames it does not know. */
-    fun onNotification(notification: GattNotification): List<GattEvent>
+    /**
+     * Events in a notification; none while a multi-packet value is incomplete or for frames it does not know.
+     * It may answer the scale through the session it was started with.
+     */
+    suspend fun onNotification(notification: GattNotification): List<GattEvent>
 }
 
 /** A driver of scales that are read over a GATT connection. */
 interface GattScaleDriver {
-    /** A protocol for a new connection to a scale bound with [protocol], or null when it is not this driver's. */
-    fun gattProtocol(protocol: String, scaleMac: String): GattProtocol?
+    /**
+     * A protocol for a new connection to a scale bound with [protocol] and [version] (as its advertisement gave
+     * it), or null when it is not this driver's.
+     */
+    fun gattProtocol(protocol: String, scaleMac: String, version: String?): GattProtocol?
 }

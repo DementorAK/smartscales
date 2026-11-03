@@ -41,6 +41,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.kinash.smartscales.R
 import dev.kinash.smartscales.core.ble.DeviceCapability
+import dev.kinash.smartscales.core.ble.OkokGattDriver
 import dev.kinash.smartscales.core.ble.ProtocolDescription
 import dev.kinash.smartscales.core.ble.ScaleDrivers
 import dev.kinash.smartscales.core.data.ScaleBinding
@@ -80,6 +81,9 @@ enum class KeyImportNote(val isError: Boolean) {
     OTHER_SCALES(true),
     UNREADABLE(true),
 }
+
+/** OKOK v1.1 keeps several people: it is told everyone, not only the profile on the main screen. */
+private fun ScaleBinding.sendsEveryone() = protocol == ChipseaProtocol.OKOK.name && protocolVersion == OkokGattDriver.VERSION_11
 
 data class ScaleEditState(
     val binding: ScaleBinding? = null,
@@ -319,7 +323,9 @@ fun ScaleEditScreen(onDone: () -> Unit, viewModel: ScaleEditViewModel = hiltView
                 CapabilityList(stringResource(R.string.scale_implemented), description.implemented)
                 if (DeviceCapability.USER_SYNC in description.implemented) {
                     Text(
-                        stringResource(R.string.scale_user_sync_hint),
+                        stringResource(
+                            if (state.binding?.sendsEveryone() == true) R.string.scale_users_sync_hint else R.string.scale_user_sync_hint,
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

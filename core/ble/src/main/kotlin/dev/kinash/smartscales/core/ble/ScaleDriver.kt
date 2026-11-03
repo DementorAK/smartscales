@@ -80,6 +80,10 @@ data class ScaleReading(
     val needsKey: Boolean = false,
     val decrypted: Boolean = false,
     val heartRateBpm: Int? = null,
+    /** The person the scale took the weighing for, by the user id the app gave them; null when it did not say. */
+    val userId: Int? = null,
+    /** What the scale worked out itself, by `ScaleValues` identifiers; kept as the scale's data. */
+    val scaleValues: Map<String, Double> = emptyMap(),
 )
 
 /** Keys that unlock encrypted advertisements, looked up by the scale's own MAC. */
@@ -108,8 +112,8 @@ interface ScaleDriver {
  */
 class ScaleDrivers(private val drivers: List<ScaleDriver>, private val gattDrivers: List<GattScaleDriver> = emptyList()) {
     /** The protocol of a new connection to a scale bound with [protocol], or null when no driver connects to it. */
-    fun gattProtocol(protocol: String, scaleMac: String): GattProtocol? =
-        gattDrivers.firstNotNullOfOrNull { it.gattProtocol(protocol, scaleMac) }
+    fun gattProtocol(protocol: String, scaleMac: String, version: String?): GattProtocol? =
+        gattDrivers.firstNotNullOfOrNull { it.gattProtocol(protocol, scaleMac, version) }
 
     fun describe(protocol: String): ProtocolDescription? = drivers.firstNotNullOfOrNull { it.describe(protocol) }
 

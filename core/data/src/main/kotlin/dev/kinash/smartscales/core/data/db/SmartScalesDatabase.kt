@@ -39,7 +39,7 @@ import dev.kinash.smartscales.core.data.db.entity.TagEntity
         MeasurementTagEntity::class,
         FormulaSetEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)

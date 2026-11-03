@@ -22,6 +22,15 @@ class ScaleBindingRepositoryTest : DatabaseTestBase() {
     private val scales by lazy { ScaleBindingRepository(database, Clock.fixed(now, ZoneOffset.UTC)) }
 
     @Test
+    fun historyMarkOnlyMovesForward() = runTest {
+        val id = scales.bind("AA:BB:CC:DD:EE:FF", "AA:BB:CC:DD:EE:FF", "OKOK_CLOUD_V4", null, 1)
+        assertEquals(null, scales.get(id)!!.historyAcceptedUntil)
+        scales.acceptHistoryUntil(id, java.time.Instant.parse("2026-11-02T08:00:00Z"))
+        scales.acceptHistoryUntil(id, java.time.Instant.parse("2026-11-01T08:00:00Z"))
+        assertEquals(java.time.Instant.parse("2026-11-02T08:00:00Z"), scales.get(id)!!.historyAcceptedUntil)
+    }
+
+    @Test
     fun rebindingSameMacRestoresCalibrationAndKey() = runTest {
         val id = scales.bind("aa:bb:cc:dd:ee:ff", "11:22:33:44:55:66", "chipsea_c0", "v2", productId = 7)
         scales.update(scales.get(id)!!.copy(name = "Bathroom", v2Key = "00112233445566778899aabbccddeeff", impedanceFactor = 1.08))

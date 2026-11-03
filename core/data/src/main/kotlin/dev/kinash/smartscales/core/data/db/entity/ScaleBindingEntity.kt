@@ -23,4 +23,5 @@ data class ScaleBindingEntity(
     val impedanceFactor: Double = 1.0,
     val unbound: Boolean = false,
     val boundAt: Instant,
+    val historyAcceptedUntil: Instant? = null,
 )

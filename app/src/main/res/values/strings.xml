@@ -224,4 +224,13 @@
     <string name="profile_circumferences_hint">Weighings take these values, so they are not typed each time; past weighings keep their own. Measure in the morning, standing relaxed, after a normal breath out, with the tape snug but not pressing. Waist: midway between the lowest rib and the top of the hip bone. Hips: around the widest part of the buttocks. Neck: just below the larynx.</string>
     <string name="profile_circumferences_hint_male">Weighings take these values, so they are not typed each time; past weighings keep their own. Measure in the morning, standing relaxed, after a normal breath out, with the tape snug but not pressing. Waist: midway between the lowest rib and the top of the hip bone, not at the belt line. Neck: just below the Adam\'s apple, the tape sloping slightly down to the front. Hips: around the widest part of the buttocks; for men they give only the waist-to-hip ratio.</string>
     <string name="profile_circumferences_hint_female">Weighings take these values, so they are not typed each time; past weighings keep their own. Measure in the morning, standing relaxed, after a normal breath out, with the tape snug but not pressing. Waist: midway between the lowest rib and the top of the hip bone. Hips: around the widest part of the buttocks, feet together. Neck: just below the larynx, the tape sloping slightly down to the front. Waist, hips and neck together give body fat by the US Navy method.</string>
+    <string name="weighing_connecting">Connecting to the scale…</string>
+    <string name="weighing_connection_failed">Could not connect. Step on the scale again to wake it up.</string>
+    <string name="weighing_heart_rate">Heart rate %1$d bpm</string>
+    <string name="scale_untested">Not checked on a real scale yet: this protocol is written from its description. If the weight or body composition is read wrong, record a Bluetooth log and send it to the author.</string>
+    <plurals name="weighing_history_saved">
+        <item quantity="one">%d weighing from the scale memory went to the inbox</item>
+        <item quantity="other">%d weighings from the scale memory went to the inbox</item>
+    </plurals>
+    <string name="scale_user_sync_hint">The scale is told the profile chosen on the main screen. If someone else steps on it, body fat on the scale display is worked out for the wrong person; the app works out body composition itself, for the profile the weighing goes to.</string>
 </resources>

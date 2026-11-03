@@ -32,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -217,7 +218,13 @@ private fun ScaleCard(scale: ScaleView, onOpenScale: () -> Unit) {
                     TextButton(onClick = onOpenScale) { Text(stringResource(R.string.scale_edit_title)) }
                 }
                 weight == null -> Text(
-                    stringResource(if (reading == null) R.string.weighing_step_on else R.string.weighing_measuring),
+                    stringResource(
+                        when {
+                            reading != null -> R.string.weighing_measuring
+                            scale.connection == ConnectionStatus.CONNECTING -> R.string.weighing_connecting
+                            else -> R.string.weighing_step_on
+                        },
+                    ),
                     style = MaterialTheme.typography.headlineSmall,
                 )
                 else -> {
@@ -236,10 +243,33 @@ private fun ScaleCard(scale: ScaleView, onOpenScale: () -> Unit) {
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
+                    reading.heartRateBpm?.let {
+                        Text(stringResource(R.string.weighing_heart_rate, it), style = MaterialTheme.typography.bodyMedium)
+                    }
                 }
+            }
+            if (scale.connection == ConnectionStatus.FAILED) {
+                Text(
+                    stringResource(R.string.weighing_connection_failed),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+            if (scale.historySaved > 0) {
+                Text(
+                    pluralStringResource(R.plurals.weighing_history_saved, scale.historySaved, scale.historySaved),
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
             if (scale.description?.canWeigh == false) {
                 Text(stringResource(R.string.weighing_needs_connection), style = MaterialTheme.typography.bodySmall)
+            }
+            if (scale.description?.let { it.canWeigh && !it.testedOnRealScale } == true) {
+                Text(
+                    stringResource(R.string.scale_untested),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }

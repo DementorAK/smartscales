@@ -16,6 +16,9 @@ import java.time.Instant
  * @property v2KeyConfirmed the person confirmed that the weight decrypted with [v2Key] matches the scale
  *   display. A wrong key gives a plausible weight, so weighings are not saved by themselves before that.
  * @property impedanceFactor calibration factor `k` applied to raw impedances before calculations.
+ * @property historyAcceptedUntil time of the newest record from the scale's memory taken so far. Scales send
+ *   their memory on every connection; records up to this time are skipped, so a record the person deleted
+ *   does not come back. Null until the first connection, which takes the whole memory.
  */
 data class ScaleBinding(
     val id: Long = 0,
@@ -30,6 +33,7 @@ data class ScaleBinding(
     val impedanceFactor: Double = 1.0,
     val unbound: Boolean = false,
     val boundAt: Instant,
+    val historyAcceptedUntil: Instant? = null,
 ) {
     init {
         require(impedanceFactor > 0) { "Calibration factor must be positive: $impedanceFactor" }
@@ -38,10 +42,10 @@ data class ScaleBinding(
 
 internal fun ScaleBindingEntity.toScaleBinding() = ScaleBinding(
     id, mac, bleAddress, name, protocol, protocolVersion, productId, v2Key, v2KeyConfirmed, impedanceFactor, unbound,
-    boundAt,
+    boundAt, historyAcceptedUntil,
 )
 
 internal fun ScaleBinding.toEntity() = ScaleBindingEntity(
     id, mac, bleAddress, name, protocol, protocolVersion, productId, v2Key, v2KeyConfirmed, impedanceFactor, unbound,
-    boundAt,
+    boundAt, historyAcceptedUntil,
 )

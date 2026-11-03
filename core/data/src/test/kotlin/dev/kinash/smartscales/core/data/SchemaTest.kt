@@ -8,6 +8,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import dev.kinash.smartscales.core.data.db.MIGRATIONS
 import dev.kinash.smartscales.core.data.db.SmartScalesDatabase
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -29,8 +30,27 @@ class SchemaTest {
 
     @Test
     fun latestVersionMatchesEntities() {
-        helper.createDatabase(3).close()
-        helper.runMigrationsAndValidate(3).close()
+        helper.createDatabase(4).close()
+        helper.runMigrationsAndValidate(4).close()
+    }
+
+    @Test
+    fun migration3To4KeepsBindingsWithNoHistoryTakenYet() {
+        helper.createDatabase(3).use {
+            it.execSQL(
+                """
+                INSERT INTO scale_binding (mac, protocol, v2KeyConfirmed, impedanceFactor, unbound, boundAt)
+                VALUES ('AA:BB:CC:DD:EE:FF', 'OKOK_CLOUD_V4', 0, 1.0, 0, 0)
+                """,
+            )
+        }
+        helper.runMigrationsAndValidate(4, MIGRATIONS.toList()).use { db ->
+            db.prepare("SELECT mac, historyAcceptedUntil FROM scale_binding").use {
+                it.step()
+                assertEquals("AA:BB:CC:DD:EE:FF", it.getText(0))
+                assertTrue(it.isNull(1))
+            }
+        }
     }
 
     @Test
@@ -43,7 +63,7 @@ class SchemaTest {
                 """,
             )
         }
-        helper.runMigrationsAndValidate(3, MIGRATIONS.toList()).use { db ->
+        helper.runMigrationsAndValidate(3, MIGRATIONS.take(2)).use { db ->
             db.prepare("SELECT COUNT(*) FROM profile").use {
                 it.step()
                 assertEquals(1L, it.getLong(0))
@@ -56,7 +76,7 @@ class SchemaTest {
     fun migration1To2KeepsBindingsWithKeyUnconfirmed() {
         helper.createDatabase(1).use { it.insertBinding() }
 
-        helper.runMigrationsAndValidate(2, MIGRATIONS.toList()).use { db ->
+        helper.runMigrationsAndValidate(2, MIGRATIONS.take(1)).use { db ->
             db.prepare("SELECT mac, v2Key, v2KeyConfirmed FROM scale_binding").use {
                 it.step()
                 assertEquals("AA:BB:CC:DD:EE:FF", it.getText(0))
@@ -88,7 +108,7 @@ class SchemaTest {
             )
         }
 
-        helper.runMigrationsAndValidate(2, MIGRATIONS.toList()).close()
+        helper.runMigrationsAndValidate(2, MIGRATIONS.take(1)).close()
     }
 
     private fun SQLiteConnection.insertBinding() = execSQL(

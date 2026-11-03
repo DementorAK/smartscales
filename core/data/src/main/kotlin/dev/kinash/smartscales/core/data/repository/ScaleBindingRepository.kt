@@ -9,6 +9,7 @@ import dev.kinash.smartscales.core.data.toScaleBinding
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.Clock
+import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -34,6 +35,9 @@ class ScaleBindingRepository @Inject constructor(
      * before is restored with its calibration factor, V2 key and name; the address and protocol details
      * are refreshed.
      */
+    /** Records from the scale's memory up to [until] are taken; see [ScaleBinding.historyAcceptedUntil]. */
+    suspend fun acceptHistoryUntil(id: Long, until: Instant) = dao.acceptHistoryUntil(id, until)
+
     suspend fun bind(
         mac: String,
         bleAddress: String?,

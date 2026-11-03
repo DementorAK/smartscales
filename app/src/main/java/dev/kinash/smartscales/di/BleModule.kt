@@ -10,7 +10,10 @@ import dev.kinash.smartscales.core.ble.AdvertisementScanner
 import dev.kinash.smartscales.core.ble.BleScanner
 import dev.kinash.smartscales.core.ble.BluetoothLog
 import dev.kinash.smartscales.core.ble.ChipseaAdvertisementDriver
+import dev.kinash.smartscales.core.ble.CloudV4GattDriver
+import dev.kinash.smartscales.core.ble.GattConnector
 import dev.kinash.smartscales.core.ble.LoggingScanner
+import dev.kinash.smartscales.core.ble.NordicGattTransport
 import dev.kinash.smartscales.core.ble.ScaleDrivers
 import dev.kinash.smartscales.core.ble.WeighingTracker
 import java.io.File
@@ -31,7 +34,13 @@ object BleModule {
 
     @Provides
     @Singleton
-    fun drivers(): ScaleDrivers = ScaleDrivers(listOf(ChipseaAdvertisementDriver()))
+    fun drivers(): ScaleDrivers = ScaleDrivers(listOf(ChipseaAdvertisementDriver()), listOf(CloudV4GattDriver()))
+
+    /** GATT traffic goes to the same log as advertisements. */
+    @Provides
+    @Singleton
+    fun connector(@ApplicationContext context: Context, log: BluetoothLog): GattConnector =
+        GattConnector(NordicGattTransport(context), log)
 
     /** One for the app: weighings finished on an earlier visit to the weighing screen stay finished. */
     @Provides

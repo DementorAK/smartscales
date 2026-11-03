@@ -105,12 +105,15 @@ class NordicGattTransport(private val context: Context) : GattTransport {
         }
 
         override suspend fun write(service: UUID, characteristic: UUID, value: ByteArray, withResponse: Boolean) {
-            val type = if (withResponse) {
+            val target = require(service, characteristic)
+            // A characteristic that takes writes only without response gets them so, whatever was asked
+            val canRespond = target.properties and BluetoothGattCharacteristic.PROPERTY_WRITE != 0
+            val type = if (withResponse && canRespond) {
                 BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
             } else {
                 BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
             }
-            gattCall { writeCharacteristic(require(service, characteristic), value, type).timeout(OPERATION_TIMEOUT_MS) }
+            gattCall { writeCharacteristic(target, value, type).timeout(OPERATION_TIMEOUT_MS) }
                 .await { cancelQueue() }
         }
 

@@ -36,9 +36,14 @@ data class ProtocolDescription(
     val capabilities: Set<DeviceCapability>,
     val implemented: Set<DeviceCapability>,
     val linkMode: LinkMode,
+    /**
+     * The driver was checked on a real scale. Drivers written from the protocol description alone say so, and
+     * the app tells the person: their Bluetooth log helps to fix what is read wrong.
+     */
+    val testedOnRealScale: Boolean = true,
 ) {
     /** Weighings can be saved from such a scale already; otherwise only a preview of the weight is shown. */
-    val canWeigh: Boolean get() = linkMode == LinkMode.BROADCAST_ONLY && DeviceCapability.LIVE_WEIGHT in implemented
+    val canWeigh: Boolean get() = DeviceCapability.LIVE_WEIGHT in implemented
 }
 
 /**
@@ -74,6 +79,7 @@ data class ScaleReading(
     val propertyBits: Int? = null,
     val needsKey: Boolean = false,
     val decrypted: Boolean = false,
+    val heartRateBpm: Int? = null,
 )
 
 /** Keys that unlock encrypted advertisements, looked up by the scale's own MAC. */
@@ -83,8 +89,8 @@ fun interface KeyProvider {
 
 /**
  * A scale protocol driver, modelled on `ScaleDeviceHandler` in openScale: it recognises its devices
- * ([supportFor]) and turns their advertisements into readings ([onAdvertisement]). GATT drivers will add
- * connection callbacks in 0.5.
+ * ([supportFor]) and turns their advertisements into readings ([onAdvertisement]). Scales read over a
+ * connection have a [GattScaleDriver] as well.
  */
 interface ScaleDriver {
     /** The protocol with this identifier, or null when it is not this driver's. */
@@ -96,8 +102,15 @@ interface ScaleDriver {
     fun onAdvertisement(advertisement: ScannedAdvertisement, keys: KeyProvider): ScaleReading?
 }
 
-/** All drivers, after `ScaleFactory` in openScale: the first one that recognises a device handles it. */
-class ScaleDrivers(private val drivers: List<ScaleDriver>) {
+/**
+ * All drivers, after `ScaleFactory` in openScale: the first one that recognises a device handles it. Scales
+ * read over a connection are recognised by their advertisements too, and [gattDrivers] then talk to them.
+ */
+class ScaleDrivers(private val drivers: List<ScaleDriver>, private val gattDrivers: List<GattScaleDriver> = emptyList()) {
+    /** The protocol of a new connection to a scale bound with [protocol], or null when no driver connects to it. */
+    fun gattProtocol(protocol: String, scaleMac: String): GattProtocol? =
+        gattDrivers.firstNotNullOfOrNull { it.gattProtocol(protocol, scaleMac) }
+
     fun describe(protocol: String): ProtocolDescription? = drivers.firstNotNullOfOrNull { it.describe(protocol) }
 
     /** The driver of the device that sent [advertisement] with what it says about it, or null for other devices. */

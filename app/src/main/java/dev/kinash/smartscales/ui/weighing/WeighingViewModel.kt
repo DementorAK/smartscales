@@ -5,10 +5,15 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.kinash.smartscales.core.ble.AdvertisementScanner
 import dev.kinash.smartscales.core.ble.BluetoothLog
+import dev.kinash.smartscales.core.ble.ConnectionUpdate
+import dev.kinash.smartscales.core.ble.GattConnector
+import dev.kinash.smartscales.core.ble.GattContext
+import dev.kinash.smartscales.core.ble.GattEvent
 import dev.kinash.smartscales.core.ble.KeyProvider
 import dev.kinash.smartscales.core.ble.ProtocolDescription
 import dev.kinash.smartscales.core.ble.ScaleDrivers
 import dev.kinash.smartscales.core.ble.ScaleReading
+import dev.kinash.smartscales.core.ble.ScaleUser
 import dev.kinash.smartscales.core.ble.WeighingTracker
 import dev.kinash.smartscales.core.data.Measurement
 import dev.kinash.smartscales.core.data.Profile
@@ -18,10 +23,18 @@ import dev.kinash.smartscales.core.data.repository.ProfileRepository
 import dev.kinash.smartscales.core.data.repository.ScaleBindingRepository
 import dev.kinash.smartscales.core.data.repository.SettingsRepository
 import dev.kinash.smartscales.core.model.MeasurementSource
+import dev.kinash.smartscales.core.model.Sex
+import dev.kinash.smartscales.core.model.WeightUnit
+import dev.kinash.smartscales.core.protocol.ScaleUnit
 import dev.kinash.smartscales.core.protocol.ScaleWeight
 import dev.kinash.smartscales.core.protocol.V2Cipher
 import dev.kinash.smartscales.ui.scale.scanUntilError
 import dev.kinash.smartscales.ui.scale.titleOf
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -31,11 +44,15 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.Clock
 import java.time.Duration
+import java.time.Instant
+import java.time.Period
 import java.time.ZoneId
 import javax.inject.Inject
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /**
  * Profiles whose last weight is within [thresholdKg] of [weightKg], closest first. Exactly one match
@@ -46,6 +63,17 @@ fun matchProfiles(weightKg: Double, latestWeights: Map<Long, Double>, thresholdK
         .filter { abs(it.value - weightKg) <= thresholdKg }
         .sortedBy { abs(it.value - weightKg) }
         .map { it.key }
+
+/** The connection to a scale read over GATT. */
+enum class ConnectionStatus {
+    CONNECTING,
+
+    /** Connected and set up; the scale sends once someone stands on it. */
+    CONNECTED,
+
+    /** The last try did not connect; the next advertisement tries again after a pause. */
+    FAILED,
+}
 
 /** What a paired scale shows right now. */
 enum class ScaleStatus {
@@ -68,6 +96,10 @@ data class ScaleView(
     val description: ProtocolDescription?,
     val status: ScaleStatus = ScaleStatus.WAITING,
     val reading: ScaleReading? = null,
+    /** Null for scales read from advertisements, and while a GATT scale is not being connected. */
+    val connection: ConnectionStatus? = null,
+    /** Records the scale kept and sent in this session; they went to the inbox. */
+    val historySaved: Int = 0,
 )
 
 /**
@@ -111,22 +143,55 @@ class WeighingViewModel @Inject constructor(
     private val measurements: MeasurementRepository,
     private val settings: SettingsRepository,
     private val clock: Clock,
+    private val connector: GattConnector,
     log: BluetoothLog,
 ) : ViewModel() {
     /** The Bluetooth log records this session's frames. */
     val logRecording: StateFlow<Boolean> = log.recording
 
     private val readings = MutableStateFlow<Map<String, Pair<ScaleStatus, ScaleReading>>>(emptyMap())
+
+    /** Connection and history records saved, by scale MAC, for GATT scales. */
+    private val links = MutableStateFlow<Map<String, LinkState>>(emptyMap())
+
+    private data class LinkState(val connection: ConnectionStatus? = null, val historySaved: Int = 0)
+
+    /**
+     * Running connections by binding id, and when the next one may start after a disconnection or a failure.
+     * Plain maps: [scan] and the connections it starts run on the main thread of [viewModelScope], so they are
+     * used from one thread only. Moving that work to another dispatcher needs them made thread-safe.
+     */
+    private val connections = mutableMapOf<Long, Job>()
+    private val pausedUntil = mutableMapOf<Long, Instant>()
+
+    /**
+     * Records of one connection: those up to [acceptedUntil] were taken on earlier connections and are skipped,
+     * even if the person deleted them since; [newest] moves the mark when the connection ends.
+     */
+    private class HistoryWindow(val acceptedUntil: Instant?) {
+        var newest: Instant? = null
+            private set
+
+        fun isNew(takenAt: Instant): Boolean = acceptedUntil == null || takenAt.isAfter(acceptedUntil)
+
+        fun saw(takenAt: Instant) {
+            if (newest?.isAfter(takenAt) != true) newest = takenAt
+        }
+    }
     private val session = MutableStateFlow(WeighingState())
     private val bound: StateFlow<List<ScaleBinding>?> =
         bindings.observeBound().stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-    val state: StateFlow<WeighingState> = combine(bound.filterNotNull(), readings, session) { bound, readings, session ->
+    val state: StateFlow<WeighingState> = combine(bound.filterNotNull(), readings, links, session) { bound, readings, links, session ->
         session.copy(
             loaded = true,
             scales = bound.map { binding ->
                 val (status, reading) = readings[binding.mac] ?: (ScaleStatus.WAITING to null)
-                ScaleView(binding, drivers.titleOf(binding), drivers.describe(binding.protocol), status, reading)
+                val link = links[binding.mac] ?: LinkState()
+                ScaleView(
+                    binding, drivers.titleOf(binding), drivers.describe(binding.protocol), status, reading,
+                    link.connection, link.historySaved,
+                )
             },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WeighingState())
@@ -135,8 +200,11 @@ class WeighingViewModel @Inject constructor(
 
     private fun boundByMac(mac: String): ScaleBinding? = bound.value?.firstOrNull { it.mac == mac }
 
-    /** Listens to the paired scales until cancelled. */
-    suspend fun scan() {
+    /**
+     * Listens to the paired scales until cancelled. A scale read over GATT is connected to when it advertises,
+     * that is, when it has woken up; the connections end with the scan.
+     */
+    suspend fun scan() = coroutineScope {
         session.update { it.copy(scanError = null) }
         val error = scanner.scanUntilError { advertisement ->
             val (driver, support) = drivers.recognise(advertisement) ?: return@scanUntilError
@@ -145,6 +213,7 @@ class WeighingViewModel @Inject constructor(
             if (binding.bleAddress != advertisement.address.uppercase()) {
                 bindings.updateAddress(binding.id, advertisement.address)
             }
+            if (connectIfNeeded(binding, advertisement.address)) return@scanUntilError
             when (val event = tracker.onReading(reading)) {
                 null -> Unit
                 is WeighingTracker.Event.Live -> show(reading, ScaleStatus.LIVE)
@@ -159,6 +228,113 @@ class WeighingViewModel @Inject constructor(
             }
         }
         if (error != null) session.update { it.copy(scanError = error) }
+        coroutineContext.cancelChildren()
+    }
+
+    /**
+     * Connects to [binding] when its protocol is read over GATT, unless it is connected already or pausing after
+     * the last connection. Returns true for such a scale: its advertisements are then only a sign it is awake,
+     * since the connection shows the weight.
+     */
+    private fun CoroutineScope.connectIfNeeded(binding: ScaleBinding, address: String): Boolean {
+        if (connections[binding.id]?.isActive == true) return true
+        val protocol = drivers.gattProtocol(binding.protocol, binding.mac) ?: return false
+        if (pausedUntil[binding.id]?.let { clock.instant().isBefore(it) } == true) return true
+        connections[binding.id] = launch {
+            val context = gattContext()
+            val history = HistoryWindow(bindings.get(binding.id)?.historyAcceptedUntil)
+            try {
+                connector.connect(address, binding.protocol, protocol, context).collect { update -> onUpdate(binding, update, history) }
+            } finally {
+                // Also when the person leaves the screen mid-connection: what was saved is taken
+                history.newest?.let { withContext(NonCancellable) { bindings.acceptHistoryUntil(binding.id, it) } }
+            }
+        }
+        return true
+    }
+
+    private suspend fun onUpdate(binding: ScaleBinding, update: ConnectionUpdate, history: HistoryWindow) {
+        when (update) {
+            is ConnectionUpdate.Connecting -> link(binding) { it.copy(connection = ConnectionStatus.CONNECTING) }
+            ConnectionUpdate.Connected -> link(binding) { it.copy(connection = ConnectionStatus.CONNECTED) }
+            ConnectionUpdate.Disconnected -> {
+                // The scale went to sleep after the weighing; it advertises a little longer, which is no reason to reconnect
+                pausedUntil[binding.id] = clock.instant().plus(RECONNECT_PAUSE)
+                link(binding) { it.copy(connection = null) }
+            }
+            is ConnectionUpdate.Failed -> {
+                pausedUntil[binding.id] = clock.instant().plus(FAILED_PAUSE)
+                link(binding) { it.copy(connection = ConnectionStatus.FAILED) }
+            }
+            is ConnectionUpdate.Event -> when (val event = update.event) {
+                is GattEvent.Live -> show(event.reading, ScaleStatus.LIVE)
+                is GattEvent.Result -> {
+                    show(event.reading, ScaleStatus.FINISHED)
+                    if (!measurements.existsFromScale(binding.id, event.takenAt)) store(binding, event.reading, event.takenAt)
+                    // A scale may keep the result in its memory too and send it again as a record later
+                    history.saw(event.takenAt)
+                }
+                is GattEvent.History -> {
+                    if (history.isNew(event.takenAt)) storeHistory(binding, event.reading, event.takenAt)
+                    history.saw(event.takenAt)
+                }
+            }
+        }
+    }
+
+    private fun link(binding: ScaleBinding, change: (LinkState) -> LinkState) {
+        links.update { it + (binding.mac to change(it[binding.mac] ?: LinkState())) }
+    }
+
+    /**
+     * What a GATT scale is told on connecting: the profile on the main screen, as the vendor app passes its
+     * current user, in that profile's weight unit. Without profiles the scale gets kilograms and no person.
+     */
+    private suspend fun gattContext(): GattContext {
+        val now = clock.instant()
+        val all = profiles.observeProfiles().first()
+        val selected = settings.selectedProfileId.first()
+        val profile = all.firstOrNull { it.id == selected } ?: all.firstOrNull()
+        val unit = when (profile?.weightUnit) {
+            WeightUnit.POUND -> ScaleUnit.POUND
+            WeightUnit.STONE -> ScaleUnit.STONE
+            else -> ScaleUnit.KILOGRAM
+        }
+        val user = profile?.let {
+            ScaleUser(
+                userId = it.id.toInt(),
+                male = it.sex == Sex.MALE,
+                ageYears = Period.between(it.birthDate, now.atZone(ZoneId.systemDefault()).toLocalDate()).years.coerceAtLeast(0),
+                heightCm = it.heightCm.roundToInt(),
+                weightKg = measurements.latestWeights()[it.id],
+            )
+        }
+        return GattContext(now, unit, user)
+    }
+
+    /**
+     * A record the scale kept while no phone was near. V4 records name no person, so they go to the inbox
+     * (requirements §2.2). The first connection takes the scale's whole memory, weighings from before the
+     * scale was paired included (the author's choice); later ones only what is newer than the binding's mark.
+     */
+    private suspend fun storeHistory(binding: ScaleBinding, reading: ScaleReading, takenAt: Instant) {
+        val weight = reading.weight ?: return
+        if (measurements.existsFromScale(binding.id, takenAt)) return
+        measurements.add(
+            Measurement(
+                profileId = null,
+                takenAt = takenAt,
+                zone = ZoneId.systemDefault(),
+                source = MeasurementSource.SCALE,
+                weightKg = weight.kilograms,
+                person = null,
+                impedances = reading.impedances,
+                heartRateBpm = reading.heartRateBpm,
+                scaleBindingId = binding.id,
+                scaleProperties = reading.propertyBits,
+            ),
+        )
+        link(binding) { it.copy(historySaved = it.historySaved + 1) }
     }
 
     private fun show(reading: ScaleReading, status: ScaleStatus) {
@@ -210,7 +386,7 @@ class WeighingViewModel @Inject constructor(
      * Saves a weighing for the only profile whose weight matches. Otherwise it goes to the inbox at once,
      * so it is not lost with the process, and the app asks whose it is.
      */
-    private suspend fun store(binding: ScaleBinding, reading: ScaleReading) {
+    private suspend fun store(binding: ScaleBinding, reading: ScaleReading, takenAt: Instant = clock.instant()) {
         val weight = reading.weight ?: return
         val all = profiles.observeProfiles().first()
         val matches = matchProfiles(weight.kilograms, measurements.latestWeights(), settings.matchThresholdKg.first())
@@ -219,12 +395,13 @@ class WeighingViewModel @Inject constructor(
         val id = measurements.add(
             Measurement(
                 profileId = match?.id,
-                takenAt = clock.instant(),
+                takenAt = takenAt,
                 zone = ZoneId.systemDefault(),
                 source = MeasurementSource.SCALE,
                 weightKg = weight.kilograms,
                 person = match?.snapshot(),
                 impedances = reading.impedances,
+                heartRateBpm = reading.heartRateBpm,
                 scaleBindingId = binding.id,
                 scaleProperties = reading.propertyBits,
             ),
@@ -271,5 +448,11 @@ class WeighingViewModel @Inject constructor(
     private companion object {
         /** A result equal to the newest weighing from the scale within this time is that weighing. */
         val SAME_RESULT_WINDOW: Duration = Duration.ofMinutes(10)
+
+        /** After a scale disconnected: it keeps advertising for a while on its way to sleep. */
+        val RECONNECT_PAUSE: Duration = Duration.ofSeconds(10)
+
+        /** After a failed connection, before the next advertisement tries again. */
+        val FAILED_PAUSE: Duration = Duration.ofSeconds(5)
     }
 }

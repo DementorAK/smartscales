@@ -7,8 +7,8 @@ import dev.kinash.smartscales.core.protocol.manufacturerData
 
 /**
  * Chipsea / OKOK scales by their advertisements. Broadcast scales (`CA 20`, `C0`) are weighed from
- * advertisements alone; GATT scales (`CA 10/11`, `FF F0`) show a weight preview until their GATT drivers
- * come in 0.5.
+ * advertisements alone; GATT scales (`CA 10/11`, `FF F0`) show a weight preview from them, and those with a
+ * GATT driver ([CloudV4GattDriver]) are weighed over the connection.
  */
 class ChipseaAdvertisementDriver : ScaleDriver {
 
@@ -20,8 +20,14 @@ class ChipseaAdvertisementDriver : ScaleDriver {
         return ProtocolDescription(
             displayName = DISPLAY_NAMES.getValue(protocol),
             capabilities = capabilitiesOf(protocol),
-            implemented = if (broadcast) setOf(DeviceCapability.LIVE_WEIGHT) else emptySet(),
+            implemented = when {
+                broadcast -> setOf(DeviceCapability.LIVE_WEIGHT)
+                protocol == ChipseaProtocol.OKOK_CLOUD_V4 -> CloudV4GattDriver.IMPLEMENTED
+                else -> emptySet()
+            },
             linkMode = if (broadcast) LinkMode.BROADCAST_ONLY else LinkMode.CONNECT_GATT,
+            // Only V2 broadcasts were checked on the author's scale; the rest is written from the protocol description
+            testedOnRealScale = protocol == ChipseaProtocol.OKOK_V2,
         )
     }
 

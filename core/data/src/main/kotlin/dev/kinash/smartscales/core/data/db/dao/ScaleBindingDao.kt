@@ -6,6 +6,7 @@ import androidx.room.Query
 import androidx.room.Update
 import dev.kinash.smartscales.core.data.db.entity.ScaleBindingEntity
 import kotlinx.coroutines.flow.Flow
+import java.time.Instant
 
 @Dao
 interface ScaleBindingDao {
@@ -33,6 +34,13 @@ interface ScaleBindingDao {
 
     @Query("UPDATE scale_binding SET bleAddress = :address WHERE id = :id")
     suspend fun updateAddress(id: Long, address: String)
+
+    /** Moves the mark forward only: a connection that saw older records does not take it back. */
+    @Query(
+        "UPDATE scale_binding SET historyAcceptedUntil = :until " +
+            "WHERE id = :id AND (historyAcceptedUntil IS NULL OR historyAcceptedUntil < :until)",
+    )
+    suspend fun acceptHistoryUntil(id: Long, until: Instant)
 
     @Query("UPDATE scale_binding SET v2KeyConfirmed = 1 WHERE id = :id AND v2Key = :key")
     suspend fun confirmKey(id: Long, key: String)

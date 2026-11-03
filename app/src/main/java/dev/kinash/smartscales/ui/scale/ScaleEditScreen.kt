@@ -317,6 +317,20 @@ fun ScaleEditScreen(onDone: () -> Unit, viewModel: ScaleEditViewModel = hiltView
             state.description?.let { description ->
                 CapabilityList(stringResource(R.string.scale_capabilities), description.capabilities)
                 CapabilityList(stringResource(R.string.scale_implemented), description.implemented)
+                if (DeviceCapability.USER_SYNC in description.implemented) {
+                    Text(
+                        stringResource(R.string.scale_user_sync_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (description.canWeigh && !description.testedOnRealScale) {
+                    Text(
+                        stringResource(R.string.scale_untested),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
     }

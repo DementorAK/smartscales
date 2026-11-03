@@ -17,6 +17,7 @@ import dev.kinash.smartscales.core.model.MeasurementSource
 import dev.kinash.smartscales.core.model.PersonSnapshot
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -56,6 +57,12 @@ class MeasurementRepository @Inject constructor(
 
     /** The newest weighing from this scale, in any profile or the inbox. */
     suspend fun latestFromScale(bindingId: Long): Measurement? = dao.latestFromScale(bindingId)?.toMeasurement()
+
+    /**
+     * Whether this scale's weighing taken at [takenAt] is stored already, in any profile or the inbox: a scale
+     * may send the records it kept again on the next connection.
+     */
+    suspend fun existsFromScale(bindingId: Long, takenAt: Instant): Boolean = dao.existsFromScale(bindingId, takenAt)
 
     /** Takes a weighing away from its profile ("not me") and leaves it in the inbox without a snapshot. */
     suspend fun moveToInbox(id: Long) = dao.moveToInbox(id)

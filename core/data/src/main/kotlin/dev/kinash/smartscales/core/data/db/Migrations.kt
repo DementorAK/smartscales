@@ -29,8 +29,15 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
     }
 }
 
+/** 3 → 4: `scale_binding.historyAcceptedUntil`, so records from a scale's memory are taken once. */
+val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("ALTER TABLE `scale_binding` ADD COLUMN `historyAcceptedUntil` INTEGER")
+    }
+}
+
 /** All migrations, for the database builder and the migration tests. */
-val MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
+val MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
 
 private fun SQLiteConnection.hasColumn(table: String, column: String): Boolean =
     prepare("PRAGMA table_info(`$table`)").use { statement ->

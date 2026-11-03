@@ -74,6 +74,9 @@ interface MeasurementDao {
     @Query("SELECT * FROM measurement WHERE scaleBindingId = :bindingId ORDER BY takenAt DESC, id DESC LIMIT 1")
     suspend fun latestFromScale(bindingId: Long): MeasurementWithDetails?
 
+    @Query("SELECT COUNT(*) > 0 FROM measurement WHERE scaleBindingId = :bindingId AND takenAt = :takenAt")
+    suspend fun existsFromScale(bindingId: Long, takenAt: Instant): Boolean
+
     @Insert
     suspend fun insert(measurement: MeasurementEntity): Long
 

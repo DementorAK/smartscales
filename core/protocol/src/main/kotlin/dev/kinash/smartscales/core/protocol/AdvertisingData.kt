@@ -37,5 +37,18 @@ internal fun ByteArray.uIntBe(offset: Int, length: Int): Int {
     return value
 }
 
+/** Little-endian unsigned number from [length] bytes starting at [offset]. */
+internal fun ByteArray.uIntLe(offset: Int, length: Int): Int {
+    var value = 0
+    for (i in offset + length - 1 downTo offset) value = (value shl 8) or this[i].toUByteInt()
+    return value
+}
+
+/** Big-endian unsigned 32-bit number at [offset], as a Long so it does not turn negative after 2038. */
+internal fun ByteArray.uInt32Be(offset: Int): Long = uIntBe(offset, 4).toLong() and 0xFFFF_FFFFL
+
+/** Little-endian unsigned 32-bit number at [offset]. */
+internal fun ByteArray.uInt32Le(offset: Int): Long = uIntLe(offset, 4).toLong() and 0xFFFF_FFFFL
+
 /** Formats bytes as an uppercase MAC address, `AA:BB:CC:DD:EE:FF`. */
 internal fun macOf(bytes: ByteArray): String = bytes.joinToString(":") { "%02X".format(it.toUByteInt()) }

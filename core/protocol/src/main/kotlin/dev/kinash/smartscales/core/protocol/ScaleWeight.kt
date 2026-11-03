@@ -4,15 +4,23 @@ import dev.kinash.smartscales.core.model.WeightUnit
 import kotlin.math.pow
 
 /** Unit the scale shows the weight in, from bits 4..3 of the property byte. */
-enum class ScaleUnit {
-    KILOGRAM,
+enum class ScaleUnit(
+    /** The code in bits 4..3 of the property byte and in unit commands; the entries must stay in this order. */
+    val code: Int,
+) {
+    KILOGRAM(0),
 
     /** Chinese jin, half a kilogram. */
-    JIN,
-    POUND,
+    JIN(1),
+    POUND(2),
 
     /** Stones and pounds; the raw value holds stones in the high byte and pounds × 10 in the low byte. */
-    STONE,
+    STONE(3),
+    ;
+
+    companion object {
+        fun of(code: Int): ScaleUnit = entries.first { it.code == code }
+    }
 }
 
 /** Which bits of the property byte give the number of decimals; differs between protocol families. */
@@ -33,7 +41,7 @@ value class ScaleProperty(val bits: Int) {
     /** The weight is final (the scale "locked" it). */
     val locked: Boolean get() = bits and 0x01 != 0
 
-    val unit: ScaleUnit get() = ScaleUnit.entries[(bits shr 3) and 0x03]
+    val unit: ScaleUnit get() = ScaleUnit.of((bits shr 3) and 0x03)
 
     /** Bit 5 of a V2 (`C0`) property: the scale measures impedance, not only weight. */
     val measuresImpedance: Boolean get() = bits and 0x20 != 0

@@ -215,4 +215,11 @@
     <string name="settings_profile_hint">Личные данные, единицы и формулы</string>
     <string name="settings_scales">Весы</string>
     <string name="settings_scales_hint">Привязанные весы, ключ шифрования и калибровка импеданса</string>
+    <string name="profile_formula_needs_impedance">, нужен импеданс</string>
+    <string name="profile_formula_last_used">В последнем взвешивании использована: %1$s</string>
+    <string name="profile_formula_last_none">Для последнего взвешивания не рассчитывается</string>
+    <string name="profile_formula_last_placeholder">Весы прислали заглушку вместо импеданса</string>
+    <string name="profile_formula_last_no_impedance">В нём нет импеданса</string>
+    <string name="card_needs_impedance_missing">Нужен импеданс, а в этом взвешивании его нет</string>
+    <string name="card_needs_impedance_placeholder">Нужен импеданс: весы прислали заглушку вместо него</string>
 </resources>

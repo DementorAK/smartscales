@@ -33,6 +33,15 @@ class VariantGroupsTest {
     }
 
     @Test
+    fun equationsByImpedanceAreMarkedWhereTheGroupHasOthers() {
+        assertEquals(setOf("bf_bia"), group("bf").needsImpedance)
+        assertEquals(setOf("bmr_katch", "bmr_cunningham"), group("bmr").needsImpedance)
+        assertTrue(group("bf").marksImpedance)
+        // Every water equation needs it: nothing to tell apart
+        assertFalse(group("tbw").marksImpedance)
+    }
+
+    @Test
     fun unknownVariantIsShownByItsIdInsteadOfFailing() {
         assertFalse(group("bf").allows("bf_gone", Sex.MALE))
         assertEquals("bf_gone", group("bf").method("bf_gone", "en"))

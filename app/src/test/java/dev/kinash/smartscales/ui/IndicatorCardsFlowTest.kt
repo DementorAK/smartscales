@@ -92,8 +92,8 @@ class IndicatorCardsFlowTest {
         weighing(day = 2, ohms = null)
         waitFor(hasText("Body fat (Gallagher 2000, from BMI)"))
         compose.onNodeWithText("19.9 %").assertExists()
-        // Body water and muscle need impedance
-        compose.onNodeWithText("Body water").assertDoesNotExist()
+        // Body water and muscle need impedance: their cards say so instead of disappearing
+        compose.onAllNodesWithText("Needs impedance, and this weighing has none").assertCountEquals(2)
     }
 
     @Test
@@ -107,6 +107,15 @@ class IndicatorCardsFlowTest {
         waitFor(hasText("Body fat (Gallagher 2000, from BMI)"))
         // The fat mass card names the method too
         compose.onAllNodesWithText("Body fat (Gallagher 2000, from BMI)").assertCountEquals(3)
+        compose.onAllNodesWithText("Needs impedance: the scale sent a placeholder instead").assertCountEquals(2)
+
+        // The profile shows that its default equations by impedance were not used, and why
+        compose.onNodeWithContentDescription("Edit profile").performClick()
+        waitFor(hasText("Formulas"))
+        compose.onNodeWithText("The last weighing used: Gallagher 2000, from BMI. The scale sent a placeholder instead of impedance")
+            .performScrollTo().assertExists()
+        compose.onNodeWithText("The last weighing used: Mifflin–St Jeor. The scale sent a placeholder instead of impedance")
+            .performScrollTo().assertExists()
     }
 
     @Test
@@ -131,7 +140,7 @@ class IndicatorCardsFlowTest {
         assertEquals(mapOf("bf" to "bf_deurenberg"), runBlocking { profiles.observeMainVariants(profileId).first() })
 
         // Back to the first variant: the choice is cleared, not stored
-        chooseBodyFat("From fat-free mass (default)")
+        chooseBodyFat("From fat-free mass, needs impedance (default)")
         waitFor(hasText("19.9 %"))
         assertEquals(emptyMap<String, String>(), runBlocking { profiles.observeMainVariants(profileId).first() })
     }
@@ -147,7 +156,7 @@ class IndicatorCardsFlowTest {
         waitFor(hasText("Body fat (Gallagher 2000, from BMI)"))
         compose.onNodeWithContentDescription("Edit profile").performClick()
         waitFor(hasText("Formulas"))
-        compose.onNodeWithText("From fat-free mass (default)").performScrollTo().assertExists()
+        compose.onNodeWithText("From fat-free mass, needs impedance (default)").performScrollTo().assertExists()
         compose.onNodeWithText("Save").performClick()
         waitFor(hasText("Body mass index"))
         compose.waitUntil(timeoutMillis = 5_000) {

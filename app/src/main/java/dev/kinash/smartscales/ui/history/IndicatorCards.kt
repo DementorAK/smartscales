@@ -33,6 +33,7 @@ import dev.kinash.smartscales.core.formula.LocalizedText
 import dev.kinash.smartscales.core.formula.ZoneLevel
 import dev.kinash.smartscales.core.formula.text
 import dev.kinash.smartscales.core.model.WeightUnit
+import dev.kinash.smartscales.indicators.ImpedanceStatus
 import dev.kinash.smartscales.ui.common.FieldSpacing
 import dev.kinash.smartscales.ui.common.ScreenPadding
 import dev.kinash.smartscales.ui.common.formatNumber
@@ -45,12 +46,15 @@ data class IndicatorCard(
     val title: LocalizedText,
     /** The method behind the value, for a group or an indicator that follows one ("Body fat (Gallagher 2000, from BMI)"). */
     val variant: LocalizedText?,
-    val value: Double,
+    /** Null when the card is shown only to say what it lacks, see [needsImpedance]. */
+    val value: Double?,
     val unit: IndicatorUnit,
     val precision: Int,
     val zone: FormulaModel.Zone?,
     /** Position on the CDC growth chart, for children. */
     val percentile: Double? = null,
+    /** Without a value: the indicator has one with an impedance, and this is why the weighing has none. */
+    val needsImpedance: ImpedanceStatus? = null,
 )
 
 /**
@@ -58,6 +62,8 @@ data class IndicatorCard(
  * value comes from the profile's variant.
  */
 val DEFAULT_CARDS = listOf("bmi", "bf", "fat_mass", "fat_free_mass", "tbw_percent", "smm_janssen", "bmr", "whtr")
+
+private const val NO_VALUE = "—"
 
 /** Card ids for children's weight and height, which formula sets do not define. */
 const val CHILD_WEIGHT_CARD = "child_weight"
@@ -85,16 +91,33 @@ fun childCards(model: FormulaModel, results: FormulaModel.Results, growth: Child
 /** Indicators whose value follows a group's variant: their card names the method, as the group's card does. */
 private val FOLLOWS_GROUP = mapOf("fat_mass" to "bf", "fat_free_mass" to "bf")
 
-/** Cards with a value for this measurement; hidden indicators and groups are left out. */
-fun indicatorCards(model: FormulaModel, results: FormulaModel.Results): List<IndicatorCard> =
+/**
+ * Cards with a value for this measurement; hidden indicators and groups are left out. A card that has a value only
+ * with an impedance ([withImpedance], the results with one) stays, without a value, to say so: the person sees
+ * that water or muscle needs it instead of wondering where the card went.
+ */
+fun indicatorCards(
+    model: FormulaModel,
+    results: FormulaModel.Results,
+    withImpedance: FormulaModel.Results? = null,
+    impedance: ImpedanceStatus = ImpedanceStatus.MEASURED,
+): List<IndicatorCard> =
     DEFAULT_CARDS.filter { it !in model.hidden }.mapNotNull { id ->
         if (id in model.groups) {
-            val (variant, value) = results.group(id) ?: return@mapNotNull null
+            results.group(id)?.let { (variant, value) ->
+                val def = model.indicators.getValue(variant).def
+                return@mapNotNull IndicatorCard(id, model.groupName(id, variant), def.name, value, def.unit, def.precision, results.zone(variant))
+            }
+            val (variant, _) = withImpedance?.group(id) ?: return@mapNotNull null
             val def = model.indicators.getValue(variant).def
-            IndicatorCard(id, model.groupName(id, variant), def.name, value, def.unit, def.precision, results.zone(variant))
+            IndicatorCard(id, model.groupName(id, variant), null, null, def.unit, def.precision, null, needsImpedance = impedance)
         } else {
             val def = model.indicators[id]?.def ?: return@mapNotNull null
-            val value = results.value(id) ?: return@mapNotNull null
+            val value = results.value(id)
+            if (value == null) {
+                if (withImpedance?.value(id) == null) return@mapNotNull null
+                return@mapNotNull IndicatorCard(id, def.name, null, null, def.unit, def.precision, null, needsImpedance = impedance)
+            }
             val method = FOLLOWS_GROUP[id]?.let { results.group(it) }?.let { (variant, _) -> model.indicators.getValue(variant).def.name }
             IndicatorCard(id, def.name, method, value, def.unit, def.precision, results.zone(id))
         }
@@ -119,7 +142,19 @@ private fun IndicatorCardView(card: IndicatorCard, profile: Profile, modifier: M
     OutlinedCard(modifier) {
         Column(Modifier.padding(ScreenPadding), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(cardTitle(card, language), style = MaterialTheme.typography.labelLarge)
-            Text(indicatorValueText(card.value, card.unit, card.precision, profile), style = MaterialTheme.typography.titleLarge)
+            Text(
+                card.value?.let { indicatorValueText(it, card.unit, card.precision, profile) } ?: NO_VALUE,
+                style = MaterialTheme.typography.titleLarge,
+            )
+            card.needsImpedance?.let {
+                Text(
+                    stringResource(
+                        if (it == ImpedanceStatus.PLACEHOLDER) R.string.card_needs_impedance_placeholder else R.string.card_needs_impedance_missing,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             card.zone?.let { ZoneLine(it, language) }
             card.percentile?.let {
                 Text(stringResource(R.string.card_percentile, percentileText(it)), style = MaterialTheme.typography.bodyMedium)

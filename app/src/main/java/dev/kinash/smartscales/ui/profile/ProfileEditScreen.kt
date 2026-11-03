@@ -27,6 +27,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -44,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.kinash.smartscales.R
+import dev.kinash.smartscales.indicators.ImpedanceStatus
 import dev.kinash.smartscales.core.formula.text
 import dev.kinash.smartscales.core.model.Sex
 import dev.kinash.smartscales.core.model.WeightUnit
@@ -195,6 +197,10 @@ fun ProfileEditScreen(onDone: () -> Unit, viewModel: ProfileEditViewModel = hilt
                 SectionLabel(stringResource(R.string.profile_formulas))
                 val language = LocalConfiguration.current.locales[0].language
                 val defaultMark = stringResource(R.string.profile_formula_default)
+                val impedanceMark = stringResource(R.string.profile_formula_needs_impedance)
+                val lastUse = remember(form.variants, form.sex, state.lastWeighing, state.variantGroups) {
+                    viewModel.lastWeighingUse(form.variants, form.sex)
+                }
                 state.variantGroups.forEach { group ->
                     val options = group.options(form.sex)
                     ChoiceField(
@@ -204,10 +210,14 @@ fun ProfileEditScreen(onDone: () -> Unit, viewModel: ProfileEditViewModel = hilt
                         onSelect = { viewModel.setVariant(group, it) },
                         title = { id ->
                             val name = group.method(id, language)
-                            if (id == group.default) "$name $defaultMark" else name
+                            val marked = if (group.marksImpedance && id in group.needsImpedance) "$name$impedanceMark" else name
+                            if (id == group.default) "$marked $defaultMark" else marked
                         },
                         modifier = Modifier.fillMaxWidth(),
                     )
+                    if (group.id in lastUse) {
+                        LastWeighingUse(group, lastUse[group.id], state.lastWeighing?.impedance, language)
+                    }
                 }
                 Text(
                     stringResource(R.string.profile_formulas_hint),
@@ -283,6 +293,26 @@ private fun SectionLabel(text: String, isError: Boolean = false) {
         style = MaterialTheme.typography.labelLarge,
         color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(top = FieldSpacing),
+    )
+}
+
+/**
+ * Under a formula choice the last weighing could not use: the variant it got instead, and why when the reason is
+ * a missing impedance, so a choice that "changes nothing" explains itself.
+ */
+@Composable
+private fun LastWeighingUse(group: VariantGroup, used: String?, impedance: ImpedanceStatus?, language: String) {
+    val what = used?.let { stringResource(R.string.profile_formula_last_used, group.method(it, language)) }
+        ?: stringResource(R.string.profile_formula_last_none)
+    val why = when (impedance) {
+        ImpedanceStatus.PLACEHOLDER -> stringResource(R.string.profile_formula_last_placeholder)
+        ImpedanceStatus.MISSING -> stringResource(R.string.profile_formula_last_no_impedance)
+        else -> null
+    }
+    Text(
+        if (why == null) what else "$what. $why",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }
 

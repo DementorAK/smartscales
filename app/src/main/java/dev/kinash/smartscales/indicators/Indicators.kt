@@ -16,12 +16,49 @@ import kotlinx.coroutines.flow.flowOn
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/** Whether a measurement's impedance went into the formulas. */
+enum class ImpedanceStatus {
+    MEASURED,
+
+    /** The scale sent none, or the measurement was entered by hand. */
+    MISSING,
+
+    /** The scale sent the value it sends when it measures nothing (requirements §2.2). */
+    PLACEHOLDER,
+}
+
 /**
  * A measurement with its indicators; [results] is null in the inbox, where the person is not known. [growth] is
  * the child's position on the CDC charts, for a child under 18; like the formulas, it is worked out when first asked.
+ * [inputs] are the formula inputs, for working out other choices of variants, and [impedance] tells whether they
+ * have an impedance.
  */
-class MeasuredIndicators(val measurement: Measurement, val results: FormulaModel.Results?, growthOf: () -> ChildGrowth? = { null }) {
+class MeasuredIndicators(
+    val measurement: Measurement,
+    val results: FormulaModel.Results?,
+    val inputs: Map<String, Any?>? = null,
+    /** The profile's variants the results were worked out with. */
+    val primary: Map<String, String> = emptyMap(),
+    val impedance: ImpedanceStatus = ImpedanceStatus.MISSING,
+    private val model: FormulaModel? = null,
+    growthOf: () -> ChildGrowth? = { null },
+) {
     val growth: ChildGrowth? by lazy(growthOf)
+
+    /**
+     * The indicators as they would be with an impedance, when this measurement has none: an indicator with no
+     * value in [results] but one here is missing only the impedance. The probe value is never shown.
+     */
+    val withImpedance: FormulaModel.Results? by lazy {
+        if (impedance == ImpedanceStatus.MEASURED) return@lazy null
+        val values = inputs ?: return@lazy null
+        model?.evaluate(values + ("impedance" to PROBE_OHMS), primary)
+    }
+
+    private companion object {
+        /** A typical foot-to-foot impedance of an adult. */
+        const val PROBE_OHMS = 500.0
+    }
 }
 
 /**
@@ -53,22 +90,26 @@ class Indicators @Inject constructor(
         history.map { measurement ->
             // A snapshot born after the measurement (old or imported data) gets no indicators instead of failing
             val raw = measurement.takeIf { it.isAfterBirth }?.toRawMeasurement()
-            val results = raw?.let {
-                val scale = measurement.scaleBindingId
-                // The same value the placeholder query and the formulas look at: foot to foot, first frequency
-                val ohms = it.impedances.firstOrNull { i -> i.channel == Impedance.FOOT_TO_FOOT && i.frequencyIndex == 0 }?.ohms
-                val inputs = MeasurementInputs.of(
-                    it,
-                    impedanceFactor = scale?.let(factors::get) ?: 1.0,
-                    placeholder = scale != null && ohms != null && ohms in placeholders[scale].orEmpty(),
-                )
-                model.evaluate(inputs, primary)
+            if (raw == null) return@map MeasuredIndicators(measurement, null)
+            val scale = measurement.scaleBindingId
+            // The same value the placeholder query and the formulas look at: foot to foot, first frequency
+            val ohms = raw.impedances.firstOrNull { i -> i.channel == Impedance.FOOT_TO_FOOT && i.frequencyIndex == 0 }?.ohms
+            val impedance = when {
+                ohms == null -> ImpedanceStatus.MISSING
+                scale != null && ohms in placeholders[scale].orEmpty() -> ImpedanceStatus.PLACEHOLDER
+                else -> ImpedanceStatus.MEASURED
             }
-            MeasuredIndicators(measurement, results) {
-                val age = raw?.ageMonthsOrNull ?: return@MeasuredIndicators null
+            val inputs = MeasurementInputs.of(
+                raw,
+                impedanceFactor = scale?.let(factors::get) ?: 1.0,
+                placeholder = impedance == ImpedanceStatus.PLACEHOLDER,
+            )
+            val results = model.evaluate(inputs, primary)
+            MeasuredIndicators(measurement, results, inputs, primary, impedance, model) {
+                val age = raw.ageMonthsOrNull ?: return@MeasuredIndicators null
                 ChildGrowth.of(
                     raw.person.sex, age, raw.weightKg, raw.person.heightCm,
-                    bmi = results?.value("bmi"), bmiPrecision = model.indicators["bmi"]?.def?.precision ?: 1,
+                    bmi = results.value("bmi"), bmiPrecision = model.indicators["bmi"]?.def?.precision ?: 1,
                 )
             }
         }

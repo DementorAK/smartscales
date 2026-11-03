@@ -9,6 +9,7 @@ import dev.kinash.smartscales.core.data.Profile
 import dev.kinash.smartscales.core.data.repository.MeasurementRepository
 import dev.kinash.smartscales.core.data.repository.ProfileRepository
 import dev.kinash.smartscales.core.data.repository.SettingsRepository
+import dev.kinash.smartscales.core.formula.ChildGrowth
 import dev.kinash.smartscales.core.formula.FormulaModel
 import dev.kinash.smartscales.core.formula.LocalizedText
 import dev.kinash.smartscales.core.formula.text
@@ -16,6 +17,7 @@ import dev.kinash.smartscales.core.model.LengthUnit
 import dev.kinash.smartscales.core.model.Sex
 import dev.kinash.smartscales.core.model.WeightUnit
 import dev.kinash.smartscales.indicators.Indicators
+import dev.kinash.smartscales.indicators.MeasuredIndicators
 import dev.kinash.smartscales.ui.history.DEFAULT_CARDS
 import dev.kinash.smartscales.ui.ProfileEditRoute
 import dev.kinash.smartscales.ui.common.Prefill
@@ -59,7 +61,12 @@ data class VariantGroup(
     val name: LocalizedText,
     val variants: List<Pair<String, LocalizedText>>,
     val sexOnly: Map<String, Sex> = emptyMap(),
+    /** Variants that give a value only with an impedance from the scale. */
+    val needsImpedance: Set<String> = emptySet(),
 ) {
+    /** Whether the variants differ in needing an impedance, so the ones that need it are worth marking. */
+    val marksImpedance: Boolean get() = needsImpedance.isNotEmpty() && needsImpedance.size < variants.size
+
     val default: String get() = variants.first().first
 
     /** Variants to offer a person of [sex]: those for one sex only are not offered to the other. */
@@ -101,6 +108,11 @@ data class ProfileEditState(
     val deleteWarning: Int? = null,
     /** The new profile gets an inbox weighing taken before the birth date entered. */
     val bornAfterWeighing: Boolean = false,
+    /**
+     * The profile's last weighing, when it is an adult's: the screen shows which variant it actually got where the
+     * chosen one has no data for it, such as an equation by impedance for a weighing without one.
+     */
+    val lastWeighing: MeasuredIndicators? = null,
     /** A save or delete is running: further taps are ignored. */
     val saving: Boolean = false,
     val done: Boolean = false,
@@ -113,7 +125,7 @@ class ProfileEditViewModel @Inject constructor(
     private val measurements: MeasurementRepository,
     private val settings: SettingsRepository,
     private val clock: Clock,
-    indicators: Indicators,
+    private val indicators: Indicators,
 ) : ViewModel() {
     private val route = savedStateHandle.toRoute<ProfileEditRoute>()
     private val profileId = route.profileId
@@ -161,7 +173,10 @@ class ProfileEditViewModel @Inject constructor(
                         _state.value.variantGroups.any { it.id == group && it.allows(variant, profile.sex) }
                     },
                 )
-                _state.update { it.copy(loaded = true, form = form) }
+                val last = indicators.observeHistory(profile.id).first().firstOrNull()?.takeIf { measured ->
+                    (measured.inputs?.get("age") as? Double)?.let { it * MONTHS_PER_YEAR >= ChildGrowth.ADULT_MONTHS } == true
+                }
+                _state.update { it.copy(loaded = true, form = form, lastWeighing = last) }
             }
         }
     }
@@ -193,6 +208,27 @@ class ProfileEditViewModel @Inject constructor(
         val goal = WeightInput.of(kg, unit)
         goalPrefill = kg?.let { Prefill(goal, it) }
         edit { it.copy(weightUnit = unit, goal = goal) }
+    }
+
+    /**
+     * For each group whose chosen variant (in [variants]) the last weighing could not use, the variant it used
+     * instead, or null when none of them had data.
+     */
+    fun lastWeighingUse(variants: Map<String, String>, sex: Sex?): Map<String, String?> {
+        val last = _state.value.lastWeighing ?: return emptyMap()
+        val stored = last.inputs ?: return emptyMap()
+        // The sex in the form, which may be changed before saving, instead of the one in the weighing's snapshot
+        val inputs = if (sex == null) {
+            stored
+        } else {
+            stored + mapOf("sex" to if (sex == Sex.MALE) 1.0 else 0.0, "male" to (sex == Sex.MALE), "female" to (sex == Sex.FEMALE))
+        }
+        val results = indicators.model.evaluate(inputs, variants)
+        return _state.value.variantGroups.mapNotNull { group ->
+            val chosen = variants[group.id] ?: group.default
+            val used = results.group(group.id)?.first
+            if (used == chosen) null else group.id to used
+        }.toMap()
     }
 
     /** Chooses the variant of [group]; its first variant means "as the formula set says" and is not stored. */
@@ -347,6 +383,7 @@ class ProfileEditViewModel @Inject constructor(
                         name = model.groupNames[id] ?: model.indicators.getValue(variants.first()).def.name,
                         variants = variants.map { it to model.indicators.getValue(it).def.name },
                         sexOnly = variants.mapNotNull { v -> sexOnly(model, v)?.let { v to it } }.toMap(),
+                        needsImpedance = variants.filter { needsImpedance(model, it) }.toSet(),
                     )
                 }
         }
@@ -365,6 +402,14 @@ class ProfileEditViewModel @Inject constructor(
                 else -> null
             }
         }
+
+        /** Whether [variant] gives a value for a typical adult of either sex with an impedance and none without. */
+        private fun needsImpedance(model: FormulaModel, variant: String): Boolean = Sex.entries.any { sex ->
+            val with = typicalAdult(sex)
+            model.evaluate(with).value(variant) != null && model.evaluate(with + ("impedance" to null)).value(variant) == null
+        }
+
+        private const val MONTHS_PER_YEAR = 12.0
 
         private fun typicalAdult(sex: Sex): Map<String, Any?> = mapOf(
             "weight" to 70.0, "height" to 170.0, "age" to 40.0, "sex" to if (sex == Sex.MALE) 1.0 else 0.0,

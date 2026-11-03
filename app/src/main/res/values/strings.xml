@@ -211,4 +211,11 @@
     <string name="settings_profile_hint">Personal data, units and formulas</string>
     <string name="settings_scales">Scales</string>
     <string name="settings_scales_hint">Paired scales, encryption key and impedance calibration</string>
+    <string name="profile_formula_needs_impedance">, needs impedance</string>
+    <string name="profile_formula_last_used">The last weighing used: %1$s</string>
+    <string name="profile_formula_last_none">Not calculated for the last weighing</string>
+    <string name="profile_formula_last_placeholder">The scale sent a placeholder instead of impedance</string>
+    <string name="profile_formula_last_no_impedance">It has no impedance</string>
+    <string name="card_needs_impedance_missing">Needs impedance, and this weighing has none</string>
+    <string name="card_needs_impedance_placeholder">Needs impedance: the scale sent a placeholder instead</string>
 </resources>

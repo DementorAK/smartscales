@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -22,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -31,11 +33,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.kinash.smartscales.R
+import dev.kinash.smartscales.core.data.Profile
 import dev.kinash.smartscales.core.data.repository.ProfileRepository
 import dev.kinash.smartscales.core.data.repository.SettingsRepository
 import dev.kinash.smartscales.core.model.WeightUnit
 import dev.kinash.smartscales.ui.common.BackButton
 import dev.kinash.smartscales.ui.common.FieldSpacing
+import dev.kinash.smartscales.ui.common.ProfileAvatar
 import dev.kinash.smartscales.ui.common.ScreenPadding
 import dev.kinash.smartscales.ui.common.formatNumber
 import kotlinx.coroutines.NonCancellable
@@ -57,9 +61,13 @@ class SettingsViewModel @Inject constructor(
     val matchThresholdKg: StateFlow<Double?> =
         settings.matchThresholdKg.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    /** Everyone's profiles, to open their settings from here. */
+    val profiles: StateFlow<List<Profile>> =
+        profiles.observeProfiles().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     /** The weight unit of the profile on the main screen, to show the threshold in it as well. */
     val weightUnit: StateFlow<WeightUnit> =
-        combine(profiles.observeProfiles(), settings.selectedProfileId) { all, id ->
+        combine(this.profiles, settings.selectedProfileId) { all, id ->
             (all.firstOrNull { it.id == id } ?: all.firstOrNull())?.weightUnit ?: WeightUnit.KILOGRAM
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WeightUnit.KILOGRAM)
 
@@ -79,10 +87,22 @@ class SettingsViewModel @Inject constructor(
     }
 }
 
+/**
+ * All settings in one place (requirements §6.2a): profiles with their formulas, scales, weighing and debugging.
+ * The main screen keeps its shortcut to the current profile, and the weighing screen to the scales.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(onBack: () -> Unit, onOpenLog: () -> Unit, viewModel: SettingsViewModel = hiltViewModel()) {
+fun SettingsScreen(
+    onBack: () -> Unit,
+    onOpenProfile: (Long) -> Unit,
+    onAddProfile: () -> Unit,
+    onOpenScales: () -> Unit,
+    onOpenLog: () -> Unit,
+    viewModel: SettingsViewModel = hiltViewModel(),
+) {
     val stored by viewModel.matchThresholdKg.collectAsStateWithLifecycle()
+    val profiles by viewModel.profiles.collectAsStateWithLifecycle()
     val unit by viewModel.weightUnit.collectAsStateWithLifecycle()
     Scaffold(
         topBar = {
@@ -99,7 +119,34 @@ fun SettingsScreen(onBack: () -> Unit, onOpenLog: () -> Unit, viewModel: Setting
                 .padding(vertical = ScreenPadding),
             verticalArrangement = Arrangement.spacedBy(FieldSpacing),
         ) {
-            Column(Modifier.padding(horizontal = ScreenPadding), verticalArrangement = Arrangement.spacedBy(FieldSpacing)) {
+            Column(Modifier.padding(horizontal = ScreenPadding)) {
+                SectionTitle(stringResource(R.string.settings_profiles))
+            }
+            profiles.forEach { profile ->
+                SettingsItem(
+                    title = profile.name,
+                    hint = stringResource(R.string.settings_profile_hint),
+                    leading = { ProfileAvatar(profile) },
+                    onClick = { onOpenProfile(profile.id) },
+                )
+            }
+            SettingsItem(
+                title = stringResource(R.string.profile_new),
+                leading = { Icon(painterResource(R.drawable.ic_add), contentDescription = null) },
+                onClick = onAddProfile,
+            )
+            Column(Modifier.padding(horizontal = ScreenPadding).padding(top = ScreenPadding)) {
+                SectionTitle(stringResource(R.string.settings_scales))
+            }
+            SettingsItem(
+                title = stringResource(R.string.scales_title),
+                hint = stringResource(R.string.settings_scales_hint),
+                onClick = onOpenScales,
+            )
+            Column(
+                Modifier.padding(horizontal = ScreenPadding).padding(top = ScreenPadding),
+                verticalArrangement = Arrangement.spacedBy(FieldSpacing),
+            ) {
                 SectionTitle(stringResource(R.string.settings_weighing))
                 stored?.let { ThresholdSetting(it, unit, viewModel::setMatchThreshold) }
             }
@@ -107,14 +154,24 @@ fun SettingsScreen(onBack: () -> Unit, onOpenLog: () -> Unit, viewModel: Setting
                 SectionTitle(stringResource(R.string.settings_debug))
             }
             // People asked to "send the Bluetooth log" look for it here; it is also on the scales screen
-            ListItem(
-                headlineContent = { Text(stringResource(R.string.btlog_title)) },
-                supportingContent = { Text(stringResource(R.string.settings_btlog_hint)) },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                modifier = Modifier.clickable(onClick = onOpenLog),
+            SettingsItem(
+                title = stringResource(R.string.btlog_title),
+                hint = stringResource(R.string.settings_btlog_hint),
+                onClick = onOpenLog,
             )
         }
     }
+}
+
+@Composable
+private fun SettingsItem(title: String, onClick: () -> Unit, hint: String? = null, leading: (@Composable () -> Unit)? = null) {
+    ListItem(
+        headlineContent = { Text(title) },
+        supportingContent = hint?.let { { Text(it) } },
+        leadingContent = leading,
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        modifier = Modifier.clickable(onClick = onClick),
+    )
 }
 
 @Composable

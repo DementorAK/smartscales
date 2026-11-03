@@ -85,7 +85,13 @@ fun SmartScalesNavHost() {
         composable<ScaleSearchRoute> { ScaleSearchScreen(onDone = back) }
         composable<BluetoothLogRoute> { BluetoothLogScreen(onBack = back) }
         composable<SettingsRoute> {
-            SettingsScreen(onBack = back, onOpenLog = { navController.navigate(BluetoothLogRoute) })
+            SettingsScreen(
+                onBack = back,
+                onOpenProfile = { navController.navigate(ProfileEditRoute(it)) },
+                onAddProfile = { navController.navigate(ProfileEditRoute()) },
+                onOpenScales = { navController.navigate(ScalesRoute) },
+                onOpenLog = { navController.navigate(BluetoothLogRoute) },
+            )
         }
         composable<ScaleEditRoute> { ScaleEditScreen(onDone = back) }
         composable<InboxRoute> {

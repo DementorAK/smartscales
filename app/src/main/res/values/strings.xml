@@ -207,4 +207,8 @@
     <string name="card_percentile">Percentile: %1$s</string>
     <string name="card_percentile_below">below %1$s</string>
     <string name="card_percentile_above">above %1$s</string>
+    <string name="settings_profiles">Profiles</string>
+    <string name="settings_profile_hint">Personal data, units and formulas</string>
+    <string name="settings_scales">Scales</string>
+    <string name="settings_scales_hint">Paired scales, encryption key and impedance calibration</string>
 </resources>

@@ -3,14 +3,14 @@ package dev.kinash.smartscales.ui.profile
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -121,15 +121,14 @@ fun ProfileEditScreen(onDone: () -> Unit, viewModel: ProfileEditViewModel = hilt
                     modifier = Modifier.weight(1f),
                 )
             }
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(FieldSpacing),
-                verticalArrangement = Arrangement.spacedBy(FieldSpacing),
-            ) {
+            // One row on any width: the swatches share it and shrink below their full size on narrow screens
+            Row(horizontalArrangement = Arrangement.spacedBy(FieldSpacing)) {
                 ProfileColors.forEach { color ->
                     ColorSwatch(
                         color = color,
                         selected = color == form.color,
                         onClick = { viewModel.edit { it.copy(color = color) } },
+                        modifier = Modifier.weight(1f, fill = false),
                     )
                 }
             }
@@ -289,11 +288,12 @@ private fun SectionLabel(text: String, isError: Boolean = false) {
 
 /** A profile colour; the chosen one carries a check mark. */
 @Composable
-private fun ColorSwatch(color: Int, selected: Boolean, onClick: () -> Unit) {
+private fun ColorSwatch(color: Int, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val background = Color(color)
     Box(
-        Modifier
-            .size(40.dp)
+        modifier
+            .widthIn(max = 40.dp)
+            .aspectRatio(1f)
             .clip(CircleShape)
             .background(background)
             .clickable(onClick = onClick),

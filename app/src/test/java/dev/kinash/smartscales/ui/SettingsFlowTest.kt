@@ -9,6 +9,7 @@ import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -83,11 +84,37 @@ class SettingsFlowTest {
     @Test
     fun bluetoothLogOpensFromSettings() {
         openSettings()
-        compose.onNodeWithText("Bluetooth log").performClick()
+        compose.onNodeWithText("Bluetooth log").performScrollTo().performClick()
         waitFor(hasText("No frames recorded."))
         compose.onNodeWithContentDescription("Back").performClick()
         waitFor(hasText("Settings"))
         assertEquals(3.0, runBlocking { settings.matchThresholdKg.first() }, 0.0)
+    }
+
+    @Test
+    fun profilesAndScalesOpenFromSettings() {
+        runBlocking {
+            profiles.add(
+                Profile(
+                    name = "Anna",
+                    sex = Sex.FEMALE,
+                    birthDate = LocalDate.parse("1992-05-01"),
+                    heightCm = 165.0,
+                    color = 0xFF3F51B5.toInt(),
+                    createdAt = Instant.parse("2026-01-01T00:00:00Z"),
+                ),
+            )
+        }
+        openSettings()
+        // The profile's own settings, with its formulas
+        compose.onNodeWithText("Anna").performClick()
+        waitFor(hasText("Formulas"))
+        compose.onNodeWithContentDescription("Back").performClick()
+        waitFor(hasText("Profiles"))
+        compose.onNodeWithText("My scales").performScrollTo().performClick()
+        waitFor(hasText("My scales"))
+        compose.onNodeWithContentDescription("Back").performClick()
+        waitFor(hasText("New profile"))
     }
 
     private fun openSettings() {

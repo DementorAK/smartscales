@@ -211,4 +211,8 @@
     <string name="card_percentile">Перцентиль: %1$s</string>
     <string name="card_percentile_below">ниже %1$s</string>
     <string name="card_percentile_above">выше %1$s</string>
+    <string name="settings_profiles">Профили</string>
+    <string name="settings_profile_hint">Личные данные, единицы и формулы</string>
+    <string name="settings_scales">Весы</string>
+    <string name="settings_scales_hint">Привязанные весы, ключ шифрования и калибровка импеданса</string>
 </resources>

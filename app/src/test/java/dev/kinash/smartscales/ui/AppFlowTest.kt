@@ -106,13 +106,13 @@ class AppFlowTest {
         val measurementId = addMeasurement(profileId)
 
         waitForRow("80.0 kg")
-        compose.onNodeWithContentDescription("Edit profile").performClick()
-        waitFor(hasText("Female"))
+        compose.openProfile("Dmitry")
         compose.onNodeWithText("Female").performScrollTo().performClick()
         compose.onNodeWithText("Save").performClick()
         compose.onNodeWithText("Apply to past measurements?").assertExists()
         compose.onNodeWithText("Update all").performClick()
 
+        compose.backFromSettings()
         waitForRow("80.0 kg")
         assertEquals(Sex.FEMALE, runBlocking { measurements.get(measurementId) }!!.person!!.sex)
     }
@@ -123,12 +123,12 @@ class AppFlowTest {
         repeat(3) { addMeasurement(profileId) }
 
         waitFor(hasText("Dmitry"))
-        compose.onNodeWithContentDescription("Edit profile").performClick()
-        waitFor(hasText("Date of birth"))
+        compose.openProfile("Dmitry")
         compose.onNodeWithContentDescription("Delete profile").performClick()
         waitFor(hasText("3 measurements will be deleted", substring = true))
         compose.onNodeWithText("Delete").performClick()
 
+        compose.backFromSettings()
         waitFor(hasText("Create a profile", substring = true))
         assertEquals(0, runBlocking { profiles.countMeasurements(profileId) })
     }
@@ -199,12 +199,11 @@ class AppFlowTest {
         waitFor(hasText("Height at that time"))
         compose.onNodeWithText("Note").performTextInput("only the note")
         compose.onNodeWithText("Save").performClick()
-        waitFor(hasContentDescription("Edit profile"))
-        compose.onNodeWithContentDescription("Edit profile").performClick()
-        waitFor(hasText("Date of birth"))
+        waitFor(hasContentDescription("Settings"))
+        compose.openProfile("Dmitry")
         // Saved without changes: height and goal must not pick up the rounding of their text
         compose.onNodeWithText("Save").performClick()
-        waitFor(hasContentDescription("Edit profile"))
+        compose.backFromSettings()
 
         val saved = runBlocking { measurements.get(measurementId) }!!
         assertEquals("only the note", saved.note)
@@ -237,8 +236,7 @@ class AppFlowTest {
         val measurementId = addMeasurement(profileId, takenAt = "2020-06-01T07:00:00Z")
 
         waitForRow("80.0 kg")
-        compose.onNodeWithContentDescription("Edit profile").performClick()
-        waitFor(hasText("Date of birth"))
+        compose.openProfile("Dmitry")
         compose.onNodeWithText("Date of birth").performScrollTo().performClick()
         val input = compose.onNode(hasSetTextAction() and hasAnyAncestor(isDialog()))
         input.performTextClearance()
@@ -249,6 +247,7 @@ class AppFlowTest {
         compose.onNodeWithText("Update all").assertDoesNotExist()
         compose.onNodeWithText("Only new ones").performClick()
 
+        compose.backFromSettings()
         waitForRow("80.0 kg")
         assertEquals(LocalDate.parse("2021-01-01"), runBlocking { profiles.get(profileId) }!!.birthDate)
         assertEquals(LocalDate.parse("1990-10-28"), runBlocking { measurements.get(measurementId) }!!.person!!.birthDate)

@@ -88,8 +88,9 @@ class SettingsViewModel @Inject constructor(
 }
 
 /**
- * All settings in one place (requirements §6.2a): profiles with their formulas, scales, weighing and debugging.
- * The main screen keeps its shortcut to the current profile, and the weighing screen to the scales.
+ * All settings in one place, opened by the gear on the main screen (requirements §6.2a): profiles with their
+ * formulas, scales, weighing and debugging. Profiles are edited and deleted only here; the weighing screen also
+ * opens the scales.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

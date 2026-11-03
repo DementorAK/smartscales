@@ -56,7 +56,6 @@ fun SmartScalesNavHost() {
         composable<HistoryRoute> {
             HistoryScreen(
                 onAddProfile = { navController.navigate(ProfileEditRoute()) },
-                onEditProfile = { navController.navigate(ProfileEditRoute(it)) },
                 onAddMeasurement = { navController.navigate(MeasurementEditRoute(profileId = it)) },
                 onOpenMeasurement = { navController.navigate(MeasurementEditRoute(measurementId = it)) },
                 onOpenInbox = { navController.navigate(InboxRoute) },

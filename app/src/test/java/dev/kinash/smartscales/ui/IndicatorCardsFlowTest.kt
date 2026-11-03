@@ -116,8 +116,7 @@ class IndicatorCardsFlowTest {
         compose.onNodeWithText("Impedance 600 Ω: a placeholder from the scale, not used").assertExists()
 
         // The profile shows that its default equations by impedance were not used, and why
-        compose.onNodeWithContentDescription("Edit profile").performClick()
-        waitFor(hasText("Formulas"))
+        compose.openProfile("Dmitry")
         compose.onNodeWithText("The last weighing used: Gallagher 2000, from BMI. The scale sent a placeholder instead of impedance")
             .performScrollTo().assertExists()
         compose.onNodeWithText("The last weighing used: Mifflin–St Jeor. The scale sent a placeholder instead of impedance")
@@ -160,10 +159,10 @@ class IndicatorCardsFlowTest {
             profiles.setMainVariant(profileId, "tbw", "tbw_bell")
         }
         waitFor(hasText("Body fat (Gallagher 2000, from BMI)"))
-        compose.onNodeWithContentDescription("Edit profile").performClick()
-        waitFor(hasText("Formulas"))
+        compose.openProfile("Dmitry")
         compose.onNodeWithText("From fat-free mass, needs impedance (default)").performScrollTo().assertExists()
         compose.onNodeWithText("Save").performClick()
+        compose.backFromSettings()
         waitFor(hasText("Body mass index"))
         compose.waitUntil(timeoutMillis = 5_000) {
             runBlocking { profiles.observeMainVariants(profileId).first() }.isEmpty()
@@ -171,11 +170,11 @@ class IndicatorCardsFlowTest {
     }
 
     private fun chooseBodyFat(option: String) {
-        compose.onNodeWithContentDescription("Edit profile").performClick()
-        waitFor(hasText("Formulas"))
+        compose.openProfile("Dmitry")
         compose.onNodeWithText("Body fat").performScrollTo().performClick()
         compose.onNodeWithText(option).performClick()
         compose.onNodeWithText("Save").performClick()
+        compose.backFromSettings()
         waitFor(hasText("Body mass index"))
     }
 

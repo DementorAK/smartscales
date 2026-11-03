@@ -87,7 +87,7 @@ class SettingsFlowTest {
         compose.onNodeWithText("Bluetooth log").performScrollTo().performClick()
         waitFor(hasText("No frames recorded."))
         compose.onNodeWithContentDescription("Back").performClick()
-        waitFor(hasText("Settings"))
+        waitFor(hasText("Profiles"))
         assertEquals(3.0, runBlocking { settings.matchThresholdKg.first() }, 0.0)
     }
 
@@ -118,9 +118,8 @@ class SettingsFlowTest {
     }
 
     private fun openSettings() {
-        compose.onNodeWithContentDescription("More").performClick()
-        compose.onNodeWithText("Settings").performClick()
-        waitFor(hasText("Weighing"))
+        compose.onNodeWithContentDescription("Settings").performClick()
+        waitFor(hasText("Profiles"))
     }
 
     private fun waitFor(matcher: SemanticsMatcher) = compose.waitUntilAtLeastOneExists(matcher, timeoutMillis = 5_000)

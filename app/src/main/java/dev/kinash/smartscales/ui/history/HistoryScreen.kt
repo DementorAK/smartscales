@@ -45,7 +45,6 @@ import dev.kinash.smartscales.ui.common.ScreenPadding
 @Composable
 fun HistoryScreen(
     onAddProfile: () -> Unit,
-    onEditProfile: (Long) -> Unit,
     onAddMeasurement: (profileId: Long) -> Unit,
     onOpenMeasurement: (Long) -> Unit,
     onOpenInbox: () -> Unit,
@@ -67,12 +66,9 @@ fun HistoryScreen(
                         Text(stringResource(R.string.app_name))
                     }
                 },
+                // Profiles are edited and deleted in the settings; the bar keeps the weighing, manual entry and
+                // settings, and the inbox while it has weighings to sort
                 actions = {
-                    if (current != null) {
-                        IconButton(onClick = { onAddMeasurement(current.id) }) {
-                            Icon(painterResource(R.drawable.ic_manual_entry), stringResource(R.string.measurement_new))
-                        }
-                    }
                     if (ready != null && ready.inboxCount > 0) {
                         IconButton(onClick = onOpenInbox) {
                             BadgedBox(badge = { Badge { Text(ready.inboxCount.toString()) } }) {
@@ -80,16 +76,22 @@ fun HistoryScreen(
                             }
                         }
                     }
+                    IconButton(onClick = onWeigh) {
+                        Icon(painterResource(R.drawable.ic_scale), stringResource(R.string.weighing_open))
+                    }
                     if (current != null) {
-                        IconButton(onClick = { onEditProfile(current.id) }) {
-                            Icon(painterResource(R.drawable.ic_edit), stringResource(R.string.profile_edit))
+                        IconButton(onClick = { onAddMeasurement(current.id) }) {
+                            Icon(painterResource(R.drawable.ic_manual_entry), stringResource(R.string.measurement_new))
                         }
                     }
-                    MoreMenu(onOpenSettings)
+                    IconButton(onClick = onOpenSettings) {
+                        Icon(painterResource(R.drawable.ic_settings), stringResource(R.string.settings_title))
+                    }
                 },
             )
         },
-        // Weighing on the scale is the main action; manual entry is the exception and sits in the top bar
+        // Weighing on the scale is the main action: the big button, and the scale in the top bar beside manual entry
+        // (the author's choice, requirements §6.1)
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = onWeigh,
@@ -187,22 +189,3 @@ fun EmptyState(text: String, action: String? = null, onAction: () -> Unit = {}) 
     }
 }
 
-/** Less frequent actions, so the top bar keeps room for the profile switcher. */
-@Composable
-private fun MoreMenu(onOpenSettings: () -> Unit) {
-    var expanded by rememberSaveable { mutableStateOf(false) }
-    Box {
-        IconButton(onClick = { expanded = true }) {
-            Icon(painterResource(R.drawable.ic_more_vert), stringResource(R.string.more_actions))
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.settings_title)) },
-                onClick = {
-                    expanded = false
-                    onOpenSettings()
-                },
-            )
-        }
-    }
-}

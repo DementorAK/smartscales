@@ -222,4 +222,7 @@
     <string name="profile_formula_last_no_impedance">В нём нет импеданса</string>
     <string name="card_needs_impedance_missing">Нужен импеданс, а в этом взвешивании его нет</string>
     <string name="card_needs_impedance_placeholder">Нужен импеданс: весы прислали заглушку вместо него</string>
+    <string name="card_impedance">Импеданс: %1$s Ом</string>
+    <string name="card_impedance_placeholder">Импеданс %1$s Ом — заглушка весов, не используется</string>
+    <string name="card_impedance_none">Без импеданса</string>
 </resources>

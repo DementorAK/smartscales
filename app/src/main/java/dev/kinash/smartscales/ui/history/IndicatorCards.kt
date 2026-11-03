@@ -33,7 +33,9 @@ import dev.kinash.smartscales.core.formula.LocalizedText
 import dev.kinash.smartscales.core.formula.ZoneLevel
 import dev.kinash.smartscales.core.formula.text
 import dev.kinash.smartscales.core.model.WeightUnit
+import dev.kinash.smartscales.core.model.Impedance
 import dev.kinash.smartscales.indicators.ImpedanceStatus
+import dev.kinash.smartscales.indicators.MeasuredIndicators
 import dev.kinash.smartscales.ui.common.FieldSpacing
 import dev.kinash.smartscales.ui.common.ScreenPadding
 import dev.kinash.smartscales.ui.common.formatNumber
@@ -55,7 +57,30 @@ data class IndicatorCard(
     val percentile: Double? = null,
     /** Without a value: the indicator has one with an impedance, and this is why the weighing has none. */
     val needsImpedance: ImpedanceStatus? = null,
+    /** The weight card's impedance line. */
+    val impedance: ImpedanceReading? = null,
 )
+
+/** The impedance of a weighing as the formulas took it: [ohms] with the scale's calibration, or as sent for a placeholder. */
+data class ImpedanceReading(val ohms: Double?, val status: ImpedanceStatus)
+
+/** The first card of an adult: the weight, and the impedance the body composition comes from. */
+const val WEIGHT_CARD = "weight"
+
+/** The weight card of [measured]: its impedance is the one in the formulas, or the placeholder the scale sent. */
+fun weightCard(measured: MeasuredIndicators): IndicatorCard {
+    val measurement = measured.measurement
+    val ohms = when (measured.impedance) {
+        ImpedanceStatus.MEASURED -> measured.inputs?.get("impedance") as? Double
+        ImpedanceStatus.PLACEHOLDER ->
+            measurement.impedances.firstOrNull { it.channel == Impedance.FOOT_TO_FOOT && it.frequencyIndex == 0 }?.ohms
+        ImpedanceStatus.MISSING -> null
+    }
+    return IndicatorCard(
+        WEIGHT_CARD, emptyMap(), null, measurement.weightKg, IndicatorUnit.KG, 2, null,
+        impedance = ImpedanceReading(ohms, measured.impedance),
+    )
+}
 
 /**
  * The cards every profile sees until profiles choose their own in 0.6: an indicator id, or a group id whose
@@ -143,9 +168,15 @@ private fun IndicatorCardView(card: IndicatorCard, profile: Profile, modifier: M
         Column(Modifier.padding(ScreenPadding), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(cardTitle(card, language), style = MaterialTheme.typography.labelLarge)
             Text(
-                card.value?.let { indicatorValueText(it, card.unit, card.precision, profile) } ?: NO_VALUE,
+                when {
+                    card.value == null -> NO_VALUE
+                    // The weight as in the history list, with the scale's resolution
+                    card.id == WEIGHT_CARD -> weightText(card.value, profile.weightUnit)
+                    else -> indicatorValueText(card.value, card.unit, card.precision, profile)
+                },
                 style = MaterialTheme.typography.titleLarge,
             )
+            card.impedance?.let { ImpedanceLine(it) }
             card.needsImpedance?.let {
                 Text(
                     stringResource(
@@ -172,10 +203,30 @@ private fun IndicatorCardView(card: IndicatorCard, profile: Profile, modifier: M
     }
 }
 
-/** Children's weight and height come from the app, the other titles from the formula set. */
+/** The impedance under the weight; a placeholder is said to be one, since the cards below are then without it. */
+@Composable
+private fun ImpedanceLine(reading: ImpedanceReading) {
+    val ohms = reading.ohms?.let { formatNumber(it, 0, 1) }
+    when {
+        reading.status == ImpedanceStatus.MEASURED && ohms != null ->
+            Text(stringResource(R.string.card_impedance, ohms), style = MaterialTheme.typography.bodyMedium)
+        reading.status == ImpedanceStatus.PLACEHOLDER && ohms != null -> Text(
+            stringResource(R.string.card_impedance_placeholder, ohms),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        else -> Text(
+            stringResource(R.string.card_impedance_none),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/** Weight and children's height come from the app, the other titles from the formula set. */
 @Composable
 private fun cardTitle(card: IndicatorCard, language: String): String = when (card.id) {
-    CHILD_WEIGHT_CARD -> stringResource(R.string.card_weight)
+    WEIGHT_CARD, CHILD_WEIGHT_CARD -> stringResource(R.string.card_weight)
     CHILD_HEIGHT_CARD -> stringResource(R.string.card_height)
     else -> card.title.text(language)
 }

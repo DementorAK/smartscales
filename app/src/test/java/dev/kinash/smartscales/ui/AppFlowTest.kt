@@ -6,6 +6,7 @@ import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasScrollToNodeAction
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
@@ -143,7 +144,7 @@ class AppFlowTest {
         compose.onNodeWithText("Anna").performClick()
         compose.onNodeWithText("Dmitry").performClick()
         waitForRow("80.0 kg")
-        compose.onNodeWithText("80.0 kg").performClick()
+        compose.onNode(row("80.0 kg")).performClick()
         waitFor(hasText("Height at that time"))
         // An edit made before moving is saved, not lost
         compose.onNodeWithTag("measurement_weight").performTextClearance()
@@ -194,7 +195,7 @@ class AppFlowTest {
         val measurementId = addMeasurement(profileId, weightKg = 80.123, waistCm = 85.3)
 
         waitForRow("12 st 8.6 lb")
-        compose.onNodeWithText("12 st 8.6 lb").performClick()
+        compose.onNode(row("12 st 8.6 lb")).performClick()
         waitFor(hasText("Height at that time"))
         compose.onNodeWithText("Note").performTextInput("only the note")
         compose.onNodeWithText("Save").performClick()
@@ -221,7 +222,7 @@ class AppFlowTest {
         val measurementId = addMeasurement(dmitry, takenAt = "2026-10-27T07:00:00Z")
         waitForRow("80.0 kg")
 
-        compose.onNodeWithText("80.0 kg").performClick()
+        compose.onNode(row("80.0 kg")).performClick()
         compose.onNodeWithContentDescription("Move to another profile").performClick()
         waitFor(hasText("Born after this measurement was taken"))
         compose.onNode(hasText("Kid") and hasAnyAncestor(isDialog()), useUnmergedTree = true).performClick()
@@ -263,10 +264,13 @@ class AppFlowTest {
     private fun waitForRow(text: String) {
         compose.waitUntil(timeoutMillis = 5_000) {
             compose.onAllNodes(hasScrollToNodeAction()).fetchSemanticsNodes().isNotEmpty() &&
-                runCatching { compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasText(text)) }.isSuccess
+                runCatching { compose.onNode(hasScrollToNodeAction()).performScrollToNode(row(text)) }.isSuccess
         }
-        waitFor(hasText(text))
+        waitFor(row(text))
     }
+
+    /** A row of the history: the cards above it show the same weight, but only the row opens the measurement. */
+    private fun row(text: String) = hasText(text) and hasClickAction()
 
     private fun addProfile(
         name: String,

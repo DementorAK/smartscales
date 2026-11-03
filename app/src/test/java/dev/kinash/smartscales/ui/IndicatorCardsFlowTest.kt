@@ -85,6 +85,8 @@ class IndicatorCardsFlowTest {
         compose.onNodeWithText("Elevated").assertExists()
         compose.onAllNodesWithText("Body fat (from fat-free mass)").assertCountEquals(3)
         compose.onNodeWithText("24.7 kg/m²").assertExists()
+        // The weight comes first, with the impedance the body composition comes from
+        compose.onNodeWithText("Impedance: 450 Ω").assertExists()
     }
 
     @Test
@@ -96,6 +98,7 @@ class IndicatorCardsFlowTest {
         compose.onNodeWithText("Body water (Watson 1980, from height and weight)").assertExists()
         compose.onNodeWithText("56.4 %").assertExists()
         compose.onAllNodesWithText("Needs impedance, and this weighing has none").assertCountEquals(1)
+        compose.onNodeWithText("No impedance").assertExists()
     }
 
     @Test
@@ -110,6 +113,7 @@ class IndicatorCardsFlowTest {
         // The fat mass card names the method too
         compose.onAllNodesWithText("Body fat (Gallagher 2000, from BMI)").assertCountEquals(3)
         compose.onAllNodesWithText("Needs impedance: the scale sent a placeholder instead").assertCountEquals(1)
+        compose.onNodeWithText("Impedance 600 Ω: a placeholder from the scale, not used").assertExists()
 
         // The profile shows that its default equations by impedance were not used, and why
         compose.onNodeWithContentDescription("Edit profile").performClick()

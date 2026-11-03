@@ -52,7 +52,7 @@ class HistoryViewModel @Inject constructor(
             val newest = items.firstOrNull()
             val cards = newest?.results?.let { results ->
                 newest.growth?.let { childCards(indicators.model, results, it, newest.measurement) }
-                    ?: indicatorCards(indicators.model, results, newest.withImpedance, newest.impedance)
+                    ?: (listOf(weightCard(newest)) + indicatorCards(indicators.model, results, newest.withImpedance, newest.impedance))
             }.orEmpty()
             HistoryState.Ready(all, current, items.map { it.measurement }, inboxCount, cards)
         }.flowOn(Dispatchers.Default)

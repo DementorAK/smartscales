@@ -218,4 +218,7 @@
     <string name="profile_formula_last_no_impedance">It has no impedance</string>
     <string name="card_needs_impedance_missing">Needs impedance, and this weighing has none</string>
     <string name="card_needs_impedance_placeholder">Needs impedance: the scale sent a placeholder instead</string>
+    <string name="card_impedance">Impedance: %1$s Ω</string>
+    <string name="card_impedance_placeholder">Impedance %1$s Ω: a placeholder from the scale, not used</string>
+    <string name="card_impedance_none">No impedance</string>
 </resources>

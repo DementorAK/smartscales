@@ -274,6 +274,21 @@
       }
     },
     {
+      "id": "tbw_watson",
+      "group": "tbw",
+      "name": {"en": "Body water (Watson 1980, from height and weight)", "ru": "Вода тела (Watson 1980, по росту и весу)"},
+      "unit": "liter",
+      "precision": 1,
+      "formula": "if(male, m0 + m_age * age + m_height * height + m_weight * weight, f0 + f_height * height + f_weight * weight)",
+      "params": {"m0": 2.447, "m_age": -0.09516, "m_height": 0.1074, "m_weight": 0.3362, "f0": -2.097, "f_height": 0.1069, "f_weight": 0.2466},
+      "when": "age >= 18",
+      "source": {"text": "Watson P.E., Watson I.D., Batt R.D. Am J Clin Nutr 1980;33:27–39. doi:10.1093/ajcn/33.1.27", "url": "https://doi.org/10.1093/ajcn/33.1.27"},
+      "description": {
+        "en": "Without impedance, from height, weight, sex and age; dilution studies of adults. A rough estimate: it sees only body size, not composition.",
+        "ru": "Без импеданса, по росту, весу, полу и возрасту; исследования разведения у взрослых. Грубая оценка: учитывает только размеры тела, а не его состав."
+      }
+    },
+    {
       "id": "tbw_percent",
       "name": {"en": "Body water", "ru": "Вода тела"},
       "unit": "percent",

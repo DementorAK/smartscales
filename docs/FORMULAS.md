@@ -54,7 +54,7 @@ example, there is no impedance), the next variant of the group that has a value 
 |---|---|---|
 | Body fat, % | from fat-free mass by Wu 2015 | Gallagher 2000 |
 | Fat-free mass and fat mass | from body fat, adding up to the weight | from body fat, adding up to the weight |
-| Body water | Sun 2003 | — |
+| Body water | Sun 2003 | Watson 1980 |
 | Skeletal muscle | Janssen 2000 | — |
 | Basal metabolic rate | Katch–McArdle | Mifflin–St Jeor |
 
@@ -109,6 +109,7 @@ Lean body mass is a separate estimate; it is not used as fat-free mass.
 |---|---|---|
 | `tbw_sun` (default) | men: `1.20 + 0.45·H²/Z + 0.18·W`; women: `3.75 + 0.45·H²/Z + 0.11·W`, litres | Sun 2003 [3] |
 | `tbw_bell` (women) | `0.66·H²/Z`, litres | Franco-Villoria 2016 [4], after Bell 1998 [10] |
+| `tbw_watson` | men: `2.447 − 0.09516·A + 0.1074·H + 0.3362·W`; women: `−2.097 + 0.1069·H + 0.2466·W`, litres | Watson 1980 [22]: without impedance, dilution studies of adults |
 | `tbw_percent` | `TBW · 0.995 / W · 100` | — |
 
 ### Muscle and indices
@@ -252,3 +253,5 @@ of it. A set with errors is not activated, and the app points to the place of ea
 20. Kuczmarski R.J., Ogden C.L., Guo S.S. et al. 2000 CDC Growth Charts for the United States: methods and
     development. Vital Health Stat 11. 2002;(246):1–190. Data files: https://www.cdc.gov/growthcharts/cdc-data-files.htm
 21. Cole T.J. The LMS method for constructing normalized growth standards. Eur J Clin Nutr 1990;44:45–60.
+22. Watson P.E., Watson I.D., Batt R.D. Total body water volumes for adult males and females estimated from simple
+    anthropometric measurements. Am J Clin Nutr 1980;33:27–39. https://doi.org/10.1093/ajcn/33.1.27

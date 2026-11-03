@@ -92,8 +92,10 @@ class IndicatorCardsFlowTest {
         weighing(day = 2, ohms = null)
         waitFor(hasText("Body fat (Gallagher 2000, from BMI)"))
         compose.onNodeWithText("19.9 %").assertExists()
-        // Body water and muscle need impedance: their cards say so instead of disappearing
-        compose.onAllNodesWithText("Needs impedance, and this weighing has none").assertCountEquals(2)
+        // Body water comes from height and weight; muscle needs impedance, and its card says so instead of disappearing
+        compose.onNodeWithText("Body water (Watson 1980, from height and weight)").assertExists()
+        compose.onNodeWithText("56.4 %").assertExists()
+        compose.onAllNodesWithText("Needs impedance, and this weighing has none").assertCountEquals(1)
     }
 
     @Test
@@ -107,7 +109,7 @@ class IndicatorCardsFlowTest {
         waitFor(hasText("Body fat (Gallagher 2000, from BMI)"))
         // The fat mass card names the method too
         compose.onAllNodesWithText("Body fat (Gallagher 2000, from BMI)").assertCountEquals(3)
-        compose.onAllNodesWithText("Needs impedance: the scale sent a placeholder instead").assertCountEquals(2)
+        compose.onAllNodesWithText("Needs impedance: the scale sent a placeholder instead").assertCountEquals(1)
 
         // The profile shows that its default equations by impedance were not used, and why
         compose.onNodeWithContentDescription("Edit profile").performClick()

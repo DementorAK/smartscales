@@ -27,7 +27,7 @@ equations all come from peer-reviewed studies and official reports:
 | Indicator | With impedance | Without impedance |
 |---|---|---|
 | Body fat | from fat-free mass by Wu et al. 2015, an equation for foot-to-foot scales | Gallagher et al. 2000 |
-| Body water | Sun et al. 2003 | — |
+| Body water | Sun et al. 2003 | Watson et al. 1980 |
 | Skeletal muscle | Janssen et al. 2000 | — |
 | Basal metabolic rate | Katch–McArdle | Mifflin–St Jeor 1990 |
 | BMI, waist-to-height and waist-to-hip ratios | WHO, Ashwell | WHO, Ashwell |

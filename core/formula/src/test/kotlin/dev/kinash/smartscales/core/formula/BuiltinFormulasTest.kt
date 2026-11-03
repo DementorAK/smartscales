@@ -88,7 +88,7 @@ class BuiltinFormulasTest {
         mapOf(
             "bmi" to 24.6914, "ffm_wu" to 61.1080, "bf_bia" to 23.6150, "ffm_sun" to 65.9200,
             "lbm_boer" to 61.4200, "lbm_hume" to 57.7866, "bf_gallagher" to 19.8505, "bf_deurenberg" to 21.4796,
-            "bf_navy" to 18.3675, "tbw_sun" to 48.0000, "tbw_percent" to 59.7000, "smm_janssen" to 35.3140,
+            "bf_navy" to 18.3675, "tbw_sun" to 48.0000, "tbw_watson" to 45.3444, "tbw_percent" to 59.7000, "smm_janssen" to 35.3140,
             "smi" to 10.8994, "ffmi" to 18.8605, "fmi" to 5.8309, "fat_mass" to 18.892, "fat_free_mass" to 61.1080, "bmr_katch" to 1689.9328,
             "bmr_cunningham" to 1844.3760, "bmr_mifflin" to 1755.0, "whtr" to 0.5, "whr" to 0.9,
             "ideal_weight_min" to 59.94, "ideal_weight_max" to 80.676, "waist_circumference" to 90.0,
@@ -101,7 +101,7 @@ class BuiltinFormulasTest {
         mapOf(
             "bmi" to 22.0386, "ffm_wu" to 40.0380, "bf_bia" to 33.2700, "ffm_sun" to 45.8250, "ffm_bell" to 44.6311,
             "lbm_boer" to 44.8650, "lbm_hume" to 43.4395, "bf_gallagher" to 28.7870, "bf_deurenberg" to 29.0963,
-            "bf_navy" to 28.4350, "tbw_sun" to 32.6250, "tbw_bell" to 32.6700, "tbw_percent" to 54.1031,
+            "bf_navy" to 28.4350, "tbw_sun" to 32.6250, "tbw_bell" to 32.6700, "tbw_watson" to 30.3375, "tbw_percent" to 54.1031,
             "smm_janssen" to 22.4665, "smi" to 8.2522, "ffmi" to 14.7063, "fmi" to 7.3322, "bmr_katch" to 1234.8208,
             "bmr_cunningham" to 1380.8360, "bmr_mifflin" to 1295.25, "whtr" to 0.4545, "whr" to 0.7653,
         ),
@@ -125,7 +125,9 @@ class BuiltinFormulasTest {
         assertNull(results.group("ffm"))
         assertEquals("bf_gallagher", results.group("bf")!!.first)
         assertEquals("bmr_mifflin", results.group("bmr")!!.first)
-        assertNull(results.group("tbw"))
+        // Watson 1980 by height and weight: 45.3 l, 56.4 % of the weight
+        assertEquals("tbw_watson", results.group("tbw")!!.first)
+        assertEquals(45.3444 * 0.995 / 80 * 100, results.value("tbw_percent")!!, 1e-9)
         assertNull(results.value("smm_janssen"))
         assertEquals(80 * 19.8505 / 100, results.value("fat_mass")!!, 0.001)
         // Fat-free mass follows the fat estimate, so the two add up to the weight

@@ -25,7 +25,7 @@ class VariantGroupsTest {
         assertEquals(mapOf("ffm_bell" to Sex.FEMALE), group("ffm").sexOnly)
         assertEquals(listOf("ffm_wu", "ffm_sun"), group("ffm").options(Sex.MALE))
         assertEquals(listOf("ffm_wu", "ffm_sun", "ffm_bell"), group("ffm").options(Sex.FEMALE))
-        assertEquals(listOf("tbw_sun"), group("tbw").options(Sex.MALE))
+        assertEquals(listOf("tbw_sun", "tbw_watson"), group("tbw").options(Sex.MALE))
         assertFalse(group("tbw").allows("tbw_bell", Sex.MALE))
         assertTrue(group("tbw").allows("tbw_bell", Sex.FEMALE))
         // Nothing else depends on sex this way
@@ -37,8 +37,10 @@ class VariantGroupsTest {
         assertEquals(setOf("bf_bia"), group("bf").needsImpedance)
         assertEquals(setOf("bmr_katch", "bmr_cunningham"), group("bmr").needsImpedance)
         assertTrue(group("bf").marksImpedance)
-        // Every water equation needs it: nothing to tell apart
-        assertFalse(group("tbw").marksImpedance)
+        assertEquals(setOf("tbw_sun", "tbw_bell"), group("tbw").needsImpedance)
+        assertTrue(group("tbw").marksImpedance)
+        // Every equation of fat-free mass by impedance needs it: nothing to tell apart
+        assertFalse(group("ffm").marksImpedance)
     }
 
     @Test

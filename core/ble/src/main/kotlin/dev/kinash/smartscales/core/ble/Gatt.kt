@@ -105,8 +105,8 @@ interface GattProtocol {
 /** A driver of scales that are read over a GATT connection. */
 interface GattScaleDriver {
     /**
-     * A protocol for a new connection to a scale bound with [protocol] and [version] (as its advertisement gave
-     * it), or null when it is not this driver's.
+     * A protocol for a new connection to a scale bound with [protocol], [version] and [productId] (as its
+     * advertisement gave them), or null when it is not this driver's.
      */
-    fun gattProtocol(protocol: String, scaleMac: String, version: String?): GattProtocol?
+    fun gattProtocol(protocol: String, scaleMac: String, version: String?, productId: Int? = null): GattProtocol?
 }

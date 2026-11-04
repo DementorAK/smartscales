@@ -14,7 +14,7 @@ import java.time.Instant
  * a scale at hand ([ProtocolDescription.testedOnRealScale] is false).
  */
 class CloudV4GattDriver(private val now: () -> Instant = Instant::now) : GattScaleDriver {
-    override fun gattProtocol(protocol: String, scaleMac: String, version: String?): GattProtocol? =
+    override fun gattProtocol(protocol: String, scaleMac: String, version: String?, productId: Int?): GattProtocol? =
         if (protocol == ChipseaProtocol.OKOK_CLOUD_V4.name) CloudV4Protocol(scaleMac, now) else null
 
     companion object {

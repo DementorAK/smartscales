@@ -257,7 +257,7 @@ class WeighingViewModel @Inject constructor(
      */
     private fun CoroutineScope.connectIfNeeded(binding: ScaleBinding, address: String): Boolean {
         if (connections[binding.id]?.isActive == true) return true
-        val protocol = drivers.gattProtocol(binding.protocol, binding.mac, binding.protocolVersion) ?: return false
+        val protocol = drivers.gattProtocol(binding.protocol, binding.mac, binding.protocolVersion, binding.productId) ?: return false
         if (pausedUntil[binding.id]?.let { clock.instant().isBefore(it) } == true) return true
         connections[binding.id] = launch {
             val context = gattContext()

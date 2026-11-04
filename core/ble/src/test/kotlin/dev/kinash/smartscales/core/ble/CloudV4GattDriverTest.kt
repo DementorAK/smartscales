@@ -117,6 +117,7 @@ class CloudV4GattDriverTest {
         assertTrue(description.canWeigh)
         assertTrue(!description.testedOnRealScale)
         assertTrue(ChipseaAdvertisementDriver().describe("OKOK_V2")!!.testedOnRealScale)
-        assertTrue(!ChipseaAdvertisementDriver().describe("OKOK_CLOUD")!!.canWeigh)
+        val cloud = ChipseaAdvertisementDriver().describe("OKOK_CLOUD")!!
+        assertTrue(cloud.canWeigh && !cloud.testedOnRealScale)
     }
 }

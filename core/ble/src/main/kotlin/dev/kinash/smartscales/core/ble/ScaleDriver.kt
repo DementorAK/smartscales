@@ -112,8 +112,8 @@ interface ScaleDriver {
  */
 class ScaleDrivers(private val drivers: List<ScaleDriver>, private val gattDrivers: List<GattScaleDriver> = emptyList()) {
     /** The protocol of a new connection to a scale bound with [protocol], or null when no driver connects to it. */
-    fun gattProtocol(protocol: String, scaleMac: String, version: String?): GattProtocol? =
-        gattDrivers.firstNotNullOfOrNull { it.gattProtocol(protocol, scaleMac, version) }
+    fun gattProtocol(protocol: String, scaleMac: String, version: String?, productId: Int? = null): GattProtocol? =
+        gattDrivers.firstNotNullOfOrNull { it.gattProtocol(protocol, scaleMac, version, productId) }
 
     fun describe(protocol: String): ProtocolDescription? = drivers.firstNotNullOfOrNull { it.describe(protocol) }
 

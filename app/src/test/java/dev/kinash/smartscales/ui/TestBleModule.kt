@@ -16,6 +16,7 @@ import dev.kinash.smartscales.core.ble.GattNotification
 import dev.kinash.smartscales.core.ble.GattSession
 import dev.kinash.smartscales.core.ble.GattTransport
 import dev.kinash.smartscales.core.ble.LoggingScanner
+import dev.kinash.smartscales.core.ble.OkokCloudGattDriver
 import dev.kinash.smartscales.core.ble.OkokGattDriver
 import dev.kinash.smartscales.core.ble.ScaleDrivers
 import dev.kinash.smartscales.core.ble.ScannedAdvertisement
@@ -131,7 +132,7 @@ object TestBleModule {
 
     @Provides
     @Singleton
-    fun drivers(): ScaleDrivers = ScaleDrivers(listOf(ChipseaAdvertisementDriver()), listOf(CloudV4GattDriver(), OkokGattDriver()))
+    fun drivers(): ScaleDrivers = ScaleDrivers(listOf(ChipseaAdvertisementDriver()), listOf(CloudV4GattDriver(), OkokGattDriver(), OkokCloudGattDriver()))
 
     @Provides
     @Singleton

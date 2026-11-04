@@ -130,8 +130,7 @@ data class ChipseaAdvertisement(
         private fun parseCloud(d: ByteArray, protocol: ChipseaProtocol): ChipseaAdvertisement? {
             if (d.size < 10) return null
             val productId = d.uIntBe(6, 4)
-            // Two products send a meaningless property: kilograms with one decimal
-            val property = ScaleProperty(if (productId in CLOUD_FIXED_PROPERTY_PRODUCTS) 0x04 else d[3].toUByteInt())
+            val property = OkokCloud.property(d[3].toUByteInt(), productId)
             val layout = if (protocol == ChipseaProtocol.OKOK_CLOUD_V4) DigitsLayout.CLOUD_V4 else DigitsLayout.CLOUD
             return ChipseaAdvertisement(
                 protocol = protocol,
@@ -181,7 +180,5 @@ data class ChipseaAdvertisement(
         }
 
         private fun impedance(raw: Int): Double? = if (raw == 0) null else raw / 10.0
-
-        private val CLOUD_FIXED_PROPERTY_PRODUCTS = setOf(0xFAFBFCFD.toInt(), 1_104_000_001)
     }
 }

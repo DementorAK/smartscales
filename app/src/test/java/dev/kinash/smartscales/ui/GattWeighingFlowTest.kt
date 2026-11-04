@@ -124,6 +124,36 @@ class GattWeighingFlowTest {
     }
 
     @Test
+    fun okokCloudResultAndHistoryWithTheProductsFixedProperty() {
+        // This product sends a meaningless property: its weights are kilograms with one decimal
+        val product = 1_104_000_001
+        runBlocking { scales.bind(address, address, "OKOK_CLOUD", "0x02", product) }
+        val dmitry = addProfile("Dmitry", lastWeightKg = 80.0)
+        val takenAt = now.minusSeconds(30)
+        val kept = now.minus(1, ChronoUnit.DAYS)
+        gatt.sendAfter = ChipseaGatt.BODY_COMPOSITION_HISTORY
+        gatt.frames = listOf(
+            GattNotification(ChipseaGatt.BODY_COMPOSITION_HISTORY, cloud(kept, weightRaw = 790, ohmsX10 = 0)),
+            GattNotification(ChipseaGatt.BODY_COMPOSITION_MEASUREMENT, cloud(takenAt, weightRaw = 803, ohmsX10 = 5123)),
+        )
+        openWeighing()
+        waitForListener()
+
+        val ad = byteArrayOf(0xFF.toByte(), 0xF0.toByte(), 0x02, 0x12, 0x23, 0x03) +
+            byteArrayOf((product shr 24).toByte(), (product shr 16).toByte(), (product shr 8).toByte(), product.toByte())
+        scanner.advertise(ad, address)
+
+        waitFor(hasText("Saved for Dmitry"))
+        val saved = runBlocking { measurements.observeHistory(dmitry).first() }.first()
+        assertEquals(80.3, saved.weightKg, 1e-9)
+        assertEquals(listOf(Impedance(Impedance.FOOT_TO_FOOT, 512.3)), saved.impedances)
+        assertEquals(takenAt, saved.takenAt)
+        assertEquals(79.0, runBlocking { measurements.observeInbox().first() }.single().weightKg, 1e-9)
+        // Local time, then kilograms twice
+        assertEquals(listOf(ChipseaGatt.CURRENT_TIME, ChipseaGatt.CHIPSEA_TX, ChipseaGatt.CHIPSEA_TX), gatt.writes.map { it.first })
+    }
+
+    @Test
     fun aRecordSentAgainIsNotSavedTwice() {
         val scaleId = runBlocking { scales.bind(address, address, "OKOK_CLOUD_V4", null, 1) }
         val kept = now.minus(2, ChronoUnit.DAYS)
@@ -178,6 +208,14 @@ class GattWeighingFlowTest {
     /** `FF F0 10`: version 0x10 (V4), property: kilograms with one decimal in the V4 layout, weight LE, product. */
     private fun advertisement(weightRaw: Int) =
         byteArrayOf(0xFF.toByte(), 0xF0.toByte(), 0x10, 0x40, weightRaw.toByte(), (weightRaw shr 8).toByte(), 0, 0, 0, 1)
+
+    /** An OKOKCloud frame with impedance, on the scale's clock in the phone's zone; property byte 0x12 (pounds, no decimals). */
+    private fun cloud(time: Instant, weightRaw: Int, ohmsX10: Int): ByteArray {
+        val t = time.atZone(ZoneId.systemDefault())
+        return byteArrayOf(0x06, 0x03, t.year.toByte(), (t.year shr 8).toByte()) +
+            byteArrayOf(t.monthValue.toByte(), t.dayOfMonth.toByte(), t.hour.toByte(), t.minute.toByte(), t.second.toByte()) +
+            byteArrayOf(ohmsX10.toByte(), (ohmsX10 shr 8).toByte(), weightRaw.toByte(), (weightRaw shr 8).toByte(), 0, 0, 0x12)
+    }
 
     private fun c5(time: Instant, weightRaw: Int, ohmsX10: Int, heartRate: Int): ByteArray {
         val s = time.epochSecond

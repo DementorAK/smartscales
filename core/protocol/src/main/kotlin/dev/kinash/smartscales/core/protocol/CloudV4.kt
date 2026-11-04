@@ -6,8 +6,8 @@ import java.util.UUID
 import kotlin.math.roundToInt
 
 /**
- * Where an OKOKCloud V4 frame came from. The frames carry no "locked" or "history" flag: the characteristic
- * tells a weight in progress from a result or a record the scale kept while no phone was near.
+ * Where an OKOKCloud or OKOKCloud V4 frame came from. The frames carry no "locked" or "history" flag: the
+ * characteristic tells a weight in progress from a result or a record the scale kept while no phone was near.
  */
 enum class CloudV4Channel(val characteristic: UUID) {
     /** `FFF1` notifications: the weight while the person stands on the scale. */

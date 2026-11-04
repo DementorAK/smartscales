@@ -24,6 +24,7 @@ class ChipseaAdvertisementDriver : ScaleDriver {
                 broadcast -> setOf(DeviceCapability.LIVE_WEIGHT)
                 protocol == ChipseaProtocol.OKOK_CLOUD_V4 -> CloudV4GattDriver.IMPLEMENTED
                 protocol == ChipseaProtocol.OKOK -> OkokGattDriver.IMPLEMENTED
+                protocol == ChipseaProtocol.OKOK_CLOUD -> OkokCloudGattDriver.IMPLEMENTED
                 else -> emptySet()
             },
             linkMode = if (broadcast) LinkMode.BROADCAST_ONLY else LinkMode.CONNECT_GATT,

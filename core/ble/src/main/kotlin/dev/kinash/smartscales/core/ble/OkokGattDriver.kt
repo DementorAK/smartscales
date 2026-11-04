@@ -22,7 +22,7 @@ class OkokGattDriver(
     private val now: () -> Instant = Instant::now,
     private val zone: () -> ZoneId = ZoneId::systemDefault,
 ) : GattScaleDriver {
-    override fun gattProtocol(protocol: String, scaleMac: String, version: String?): GattProtocol? =
+    override fun gattProtocol(protocol: String, scaleMac: String, version: String?, productId: Int?): GattProtocol? =
         if (protocol == ChipseaProtocol.OKOK.name) OkokProtocol(scaleMac, multiUser = version == VERSION_11, now, zone) else null
 
     companion object {

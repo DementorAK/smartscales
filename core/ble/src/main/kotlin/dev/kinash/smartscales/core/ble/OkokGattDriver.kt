@@ -25,6 +25,13 @@ class OkokGattDriver(
     override fun gattProtocol(protocol: String, scaleMac: String, version: String?, productId: Int?): GattProtocol? =
         if (protocol == ChipseaProtocol.OKOK.name) OkokProtocol(scaleMac, multiUser = version == VERSION_11, now, zone) else null
 
+    /** The time goes with the user command, so it has no switch of its own; there is no unit command. */
+    override fun settings(protocol: String, version: String?): Set<ScaleSetting> = when {
+        protocol != ChipseaProtocol.OKOK.name -> emptySet()
+        version == VERSION_11 -> setOf(ScaleSetting.USERS)
+        else -> setOf(ScaleSetting.USER)
+    }
+
     companion object {
         /** The version a `CA 11` advertisement gives; everything else is v1.0. */
         const val VERSION_11 = "0x11"

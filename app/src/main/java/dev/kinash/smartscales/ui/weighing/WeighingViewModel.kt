@@ -18,6 +18,7 @@ import dev.kinash.smartscales.core.ble.WeighingTracker
 import dev.kinash.smartscales.core.data.Measurement
 import dev.kinash.smartscales.core.data.Profile
 import dev.kinash.smartscales.core.data.ScaleBinding
+import dev.kinash.smartscales.core.data.ScaleDisplayUnit
 import dev.kinash.smartscales.core.data.repository.MeasurementRepository
 import dev.kinash.smartscales.core.data.repository.ProfileRepository
 import dev.kinash.smartscales.core.data.repository.ScaleBindingRepository
@@ -260,8 +261,10 @@ class WeighingViewModel @Inject constructor(
         val protocol = drivers.gattProtocol(binding.protocol, binding.mac, binding.protocolVersion, binding.productId) ?: return false
         if (pausedUntil[binding.id]?.let { clock.instant().isBefore(it) } == true) return true
         connections[binding.id] = launch {
-            val context = gattContext()
-            val history = HistoryWindow(bindings.get(binding.id)?.historyAcceptedUntil)
+            // The stored binding: its settings may have changed since the list was read
+            val stored = bindings.get(binding.id) ?: binding
+            val context = gattContext(stored)
+            val history = HistoryWindow(stored.historyAcceptedUntil)
             try {
                 connector.connect(address, binding.protocol, protocol, context).collect { update -> onUpdate(binding, update, history) }
             } finally {
@@ -314,18 +317,29 @@ class WeighingViewModel @Inject constructor(
     }
 
     /**
-     * What a GATT scale is told on connecting: the profile on the main screen, as the vendor app passes its
-     * current user, in that profile's weight unit. Without profiles the scale gets kilograms and no person.
+     * What a GATT scale is told on connecting, by its settings. Of the profiles it may know (all but the
+     * excluded ones), it gets the profile on the main screen as the person on it, as the vendor app passes its
+     * current user, or else the first one; scales that keep several get them all. The unit is the binding's,
+     * by default that of the profile on the main screen; without profiles, kilograms.
      */
-    private suspend fun gattContext(): GattContext {
+    private suspend fun gattContext(binding: ScaleBinding): GattContext {
         val now = clock.instant()
+        val excluded = bindings.excludedProfiles(binding.id)
         val all = profiles.observeProfiles().first()
+        val known = all.filter { it.id !in excluded }
         val selected = settings.selectedProfileId.first()
-        val profile = all.firstOrNull { it.id == selected } ?: all.firstOrNull()
-        val unit = when (profile?.weightUnit) {
-            WeightUnit.POUND -> ScaleUnit.POUND
-            WeightUnit.STONE -> ScaleUnit.STONE
-            else -> ScaleUnit.KILOGRAM
+        val profile = known.firstOrNull { it.id == selected } ?: known.firstOrNull()
+        val shown = all.firstOrNull { it.id == selected } ?: all.firstOrNull()
+        val unit = when (binding.displayUnit) {
+            ScaleDisplayUnit.KEEP -> null
+            ScaleDisplayUnit.KILOGRAM -> ScaleUnit.KILOGRAM
+            ScaleDisplayUnit.POUND -> ScaleUnit.POUND
+            ScaleDisplayUnit.STONE -> ScaleUnit.STONE
+            ScaleDisplayUnit.PROFILE -> when (shown?.weightUnit) {
+                WeightUnit.POUND -> ScaleUnit.POUND
+                WeightUnit.STONE -> ScaleUnit.STONE
+                else -> ScaleUnit.KILOGRAM
+            }
         }
         val today = now.atZone(ZoneId.systemDefault()).toLocalDate()
         val weights = measurements.latestWeights()
@@ -337,8 +351,8 @@ class WeighingViewModel @Inject constructor(
             weightKg = weights[it.id],
         )
         // Scales that keep several people (OKOK v1.1) get everyone, the profile on the main screen first
-        val everyone = listOfNotNull(profile) + all.filter { it.id != profile?.id }
-        return GattContext(now, unit, profile?.let(::userOf), everyone.map(::userOf))
+        val everyone = listOfNotNull(profile) + known.filter { it.id != profile?.id }
+        return GattContext(now, unit, profile?.let(::userOf), everyone.map(::userOf), syncTime = binding.syncTime)
     }
 
     /**

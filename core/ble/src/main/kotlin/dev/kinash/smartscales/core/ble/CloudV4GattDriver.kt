@@ -17,6 +17,9 @@ class CloudV4GattDriver(private val now: () -> Instant = Instant::now) : GattSca
     override fun gattProtocol(protocol: String, scaleMac: String, version: String?, productId: Int?): GattProtocol? =
         if (protocol == ChipseaProtocol.OKOK_CLOUD_V4.name) CloudV4Protocol(scaleMac, now) else null
 
+    override fun settings(protocol: String, version: String?): Set<ScaleSetting> =
+        if (protocol == ChipseaProtocol.OKOK_CLOUD_V4.name) setOf(ScaleSetting.UNIT, ScaleSetting.TIME, ScaleSetting.USER) else emptySet()
+
     companion object {
         val IMPLEMENTED = setOf(
             DeviceCapability.LIVE_WEIGHT,
@@ -41,10 +44,10 @@ internal class CloudV4Protocol(private val scaleMac: String, private val now: ()
 
     override suspend fun start(session: GattSession, context: GattContext) {
         // The time is not essential: a scale without the Current Time characteristic is still read
-        if (session.hasCharacteristic(ChipseaGatt.CURRENT_TIME_SERVICE, ChipseaGatt.CURRENT_TIME)) {
+        if (context.syncTime && session.hasCharacteristic(ChipseaGatt.CURRENT_TIME_SERVICE, ChipseaGatt.CURRENT_TIME)) {
             session.write(ChipseaGatt.CURRENT_TIME_SERVICE, ChipseaGatt.CURRENT_TIME, CloudV4Commands.time(context.now))
         }
-        session.write(ChipseaGatt.CHIPSEA_SERVICE, ChipseaGatt.CHIPSEA_TX, CloudV4Commands.unit(context.unit))
+        context.unit?.let { session.write(ChipseaGatt.CHIPSEA_SERVICE, ChipseaGatt.CHIPSEA_TX, CloudV4Commands.unit(it)) }
         context.user?.let { user ->
             val command = CloudV4Commands.user(
                 userId = user.userId,

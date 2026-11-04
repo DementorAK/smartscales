@@ -19,6 +19,9 @@ import java.time.Instant
  * @property historyAcceptedUntil time of the newest record from the scale's memory taken so far. Scales send
  *   their memory on every connection; records up to this time are skipped, so a record the person deleted
  *   does not come back. Null until the first connection, which takes the whole memory.
+ * @property displayUnit the unit set on the scale display when connecting, for scales that take one.
+ * @property syncTime set the scale clock from the phone when connecting, for scales with a separate time
+ *   command. Off for a scale whose clock should be left alone.
  */
 data class ScaleBinding(
     val id: Long = 0,
@@ -34,18 +37,24 @@ data class ScaleBinding(
     val unbound: Boolean = false,
     val boundAt: Instant,
     val historyAcceptedUntil: Instant? = null,
+    val displayUnit: ScaleDisplayUnit = ScaleDisplayUnit.PROFILE,
+    val syncTime: Boolean = true,
 ) {
     init {
         require(impedanceFactor > 0) { "Calibration factor must be positive: $impedanceFactor" }
     }
 }
 
+/** The unit a scale shows: that of the profile on the main screen, a fixed one, or whatever the scale has. */
+enum class ScaleDisplayUnit { PROFILE, KILOGRAM, POUND, STONE, KEEP }
+
 internal fun ScaleBindingEntity.toScaleBinding() = ScaleBinding(
     id, mac, bleAddress, name, protocol, protocolVersion, productId, v2Key, v2KeyConfirmed, impedanceFactor, unbound,
-    boundAt, historyAcceptedUntil,
+    boundAt, historyAcceptedUntil, ScaleDisplayUnit.entries.firstOrNull { it.name == displayUnit } ?: ScaleDisplayUnit.PROFILE,
+    syncTime,
 )
 
 internal fun ScaleBinding.toEntity() = ScaleBindingEntity(
     id, mac, bleAddress, name, protocol, protocolVersion, productId, v2Key, v2KeyConfirmed, impedanceFactor, unbound,
-    boundAt, historyAcceptedUntil,
+    boundAt, historyAcceptedUntil, displayUnit.name, syncTime,
 )

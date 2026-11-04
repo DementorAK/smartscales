@@ -16,6 +16,7 @@ import dev.kinash.smartscales.MainActivity
 import dev.kinash.smartscales.core.ble.GattNotification
 import dev.kinash.smartscales.core.data.Measurement
 import dev.kinash.smartscales.core.data.Profile
+import dev.kinash.smartscales.core.data.ScaleDisplayUnit
 import dev.kinash.smartscales.core.data.repository.MeasurementRepository
 import dev.kinash.smartscales.core.data.repository.ProfileRepository
 import dev.kinash.smartscales.core.data.repository.ScaleBindingRepository
@@ -151,6 +152,27 @@ class GattWeighingFlowTest {
         assertEquals(79.0, runBlocking { measurements.observeInbox().first() }.single().weightKg, 1e-9)
         // Local time, then kilograms twice
         assertEquals(listOf(ChipseaGatt.CURRENT_TIME, ChipseaGatt.CHIPSEA_TX, ChipseaGatt.CHIPSEA_TX), gatt.writes.map { it.first })
+    }
+
+    @Test
+    fun theScaleIsToldOnlyWhatItsSettingsAllow() {
+        val scaleId = runBlocking { scales.bind(address, address, "OKOK_CLOUD_V4", null, 1) }
+        val dmitry = addProfile("Dmitry", lastWeightKg = 80.0)
+        val anna = addProfile("Anna", lastWeightKg = 61.0)
+        runBlocking {
+            // The clock and the display are left alone; Dmitry, the profile on the main screen, is not on this scale
+            scales.update(scales.get(scaleId)!!.copy(displayUnit = ScaleDisplayUnit.KEEP, syncTime = false), excludedProfiles = setOf(dmitry))
+        }
+        gatt.frames = listOf(GattNotification(ChipseaGatt.BODY_COMPOSITION_MEASUREMENT, c5(now, weightRaw = 610, ohmsX10 = 0, heartRate = 0)))
+        openWeighing()
+        waitForListener()
+
+        scanner.advertise(advertisement(weightRaw = 610), address)
+
+        waitFor(hasText("Saved for Anna"))
+        val user = gatt.writes.single().second
+        assertEquals(0xA0.toByte(), user[0])
+        assertEquals(anna.toInt(), user[4].toInt())
     }
 
     @Test

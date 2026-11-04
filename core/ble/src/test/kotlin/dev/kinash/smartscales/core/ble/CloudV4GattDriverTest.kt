@@ -73,6 +73,24 @@ class CloudV4GattDriverTest {
     }
 
     @Test
+    fun theClockAndTheUnitAreLeftAloneWhenTheSettingsSaySo() = runTest {
+        val session = RecordingSession()
+        protocol().start(session, GattContext(now, unit = null, user = null, syncTime = false))
+        assertEquals(listOf("subscribe FA9C", "subscribe FFF1", "subscribe 2A9C"), session.operations)
+    }
+
+    @Test
+    fun eachDriverOffersOnlyTheSettingsItHonours() {
+        val drivers = ScaleDrivers(emptyList(), listOf(CloudV4GattDriver(), OkokGattDriver(), OkokCloudGattDriver()))
+        assertEquals(setOf(ScaleSetting.UNIT, ScaleSetting.TIME, ScaleSetting.USER), drivers.settings("OKOK_CLOUD_V4", "0x10"))
+        assertEquals(setOf(ScaleSetting.USER), drivers.settings("OKOK", "0x10"))
+        assertEquals(setOf(ScaleSetting.USERS), drivers.settings("OKOK", "0x11"))
+        assertEquals(setOf(ScaleSetting.UNIT, ScaleSetting.TIME), drivers.settings("OKOK_CLOUD", "0x02"))
+        assertEquals(setOf(ScaleSetting.TIME), drivers.settings("OKOK_CLOUD", "0x01"))
+        assertEquals(emptySet<ScaleSetting>(), drivers.settings("OKOK_V2", null))
+    }
+
+    @Test
     fun resultHasImpedanceHeartRateAndTheScaleTime() = runTest {
         val taken = now.minusSeconds(20)
         val events = protocol().onNotification(GattNotification(ChipseaGatt.BODY_COMPOSITION_MEASUREMENT, c5(taken, 805, 5123, 72)))

@@ -73,6 +73,13 @@ class OkokCloudGattDriverTest {
     }
 
     @Test
+    fun theClockAndTheUnitAreLeftAloneWhenTheSettingsSaySo() = runTest {
+        val session = RecordingSession()
+        driver.gattProtocol("OKOK_CLOUD", mac, "0x02")!!.start(session, GattContext(now, unit = null, user = null, syncTime = false))
+        assertEquals(listOf("subscribe FFF1", "subscribe 2A9C", "subscribe FA9C"), session.operations)
+    }
+
+    @Test
     fun theCharacteristicTellsLiveResultAndHistory() = runTest {
         val protocol = driver.gattProtocol("OKOK_CLOUD", mac, "0x02")!!
         val live = protocol.onNotification(on(ChipseaGatt.CHIPSEA_RX, frame(now, 798, 0))).single() as GattEvent.Live

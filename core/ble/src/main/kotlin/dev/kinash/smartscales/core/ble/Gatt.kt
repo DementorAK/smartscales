@@ -63,9 +63,17 @@ data class ScaleUser(
 
 /**
  * What the app tells the scale on connecting: the person on the scale ([user], the profile on the main screen)
- * and, for scales that keep several, everyone ([users]).
+ * and, for scales that keep several, everyone ([users]); the [unit] for its display, or null to leave the
+ * scale's own; whether to set its clock ([syncTime]) where the time is a command of its own. Scales whose
+ * user command carries the time get it with the user whatever [syncTime] says.
  */
-data class GattContext(val now: Instant, val unit: ScaleUnit, val user: ScaleUser?, val users: List<ScaleUser> = listOfNotNull(user))
+data class GattContext(
+    val now: Instant,
+    val unit: ScaleUnit?,
+    val user: ScaleUser?,
+    val users: List<ScaleUser> = listOfNotNull(user),
+    val syncTime: Boolean = true,
+)
 
 /** What a GATT scale reports. */
 sealed interface GattEvent {
@@ -109,4 +117,22 @@ interface GattScaleDriver {
      * advertisement gave them), or null when it is not this driver's.
      */
     fun gattProtocol(protocol: String, scaleMac: String, version: String?, productId: Int? = null): GattProtocol?
+
+    /** The settings this driver honours for a scale of [protocol] and [version]; empty when it is not its own. */
+    fun settings(protocol: String, version: String?): Set<ScaleSetting>
+}
+
+/** What the settings of a connected scale offer, as far as its driver honours them. */
+enum class ScaleSetting {
+    /** The unit on the scale display. */
+    UNIT,
+
+    /** Setting the scale clock, a command of its own. */
+    TIME,
+
+    /** The scale takes one person, the profile on the main screen. */
+    USER,
+
+    /** The scale takes everyone it should know. */
+    USERS,
 }

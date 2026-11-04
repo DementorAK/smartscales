@@ -3,8 +3,10 @@ package dev.kinash.smartscales.core.data.db.dao
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
 import dev.kinash.smartscales.core.data.db.entity.ScaleBindingEntity
+import dev.kinash.smartscales.core.data.db.entity.ScaleExcludedProfileEntity
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 
@@ -44,4 +46,19 @@ interface ScaleBindingDao {
 
     @Query("UPDATE scale_binding SET v2KeyConfirmed = 1 WHERE id = :id AND v2Key = :key")
     suspend fun confirmKey(id: Long, key: String)
+
+    @Query("SELECT profileId FROM scale_excluded_profile WHERE bindingId = :id")
+    suspend fun excludedProfiles(id: Long): List<Long>
+
+    @Query("DELETE FROM scale_excluded_profile WHERE bindingId = :id")
+    suspend fun clearExcludedProfiles(id: Long)
+
+    @Insert
+    suspend fun insertExcludedProfiles(rows: List<ScaleExcludedProfileEntity>)
+
+    @Transaction
+    suspend fun setExcludedProfiles(id: Long, profileIds: Set<Long>) {
+        clearExcludedProfiles(id)
+        insertExcludedProfiles(profileIds.map { ScaleExcludedProfileEntity(id, it) })
+    }
 }

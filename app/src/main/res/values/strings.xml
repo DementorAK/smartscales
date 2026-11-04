@@ -232,8 +232,15 @@
         <item quantity="one">%d weighing from the scale memory went to the inbox</item>
         <item quantity="other">%d weighings from the scale memory went to the inbox</item>
     </plurals>
-    <string name="scale_users_sync_hint">The scale is told every profile and tells them apart by weight; when the weight fits several people, it asks who is on it. Weighings kept in its memory are read after the first weighing of a connection, not on connecting alone. Records from before the scale was added go to the inbox.</string>
-    <string name="scale_user_sync_hint">The scale is told the profile chosen on the main screen. If someone else steps on it, body fat on the scale display is worked out for the wrong person; the app works out body composition itself, for the profile the weighing goes to.</string>
+    <string name="scale_settings_title">On the scale</string>
+    <string name="scale_display_unit">Unit on the scale display</string>
+    <string name="scale_display_unit_profile">As in the profile on the main screen</string>
+    <string name="scale_display_unit_keep">Leave the scale\'s own</string>
+    <string name="scale_sync_time">Set the scale clock</string>
+    <string name="scale_sync_time_hint">From the phone, on every connection. Weighings kept in the scale memory carry its time.</string>
+    <string name="scale_profiles">Profiles the scale knows</string>
+    <string name="scale_users_sync_hint">The scale is told every checked profile and tells them apart by weight; when the weight fits several people, it asks who is on it. Weighings kept in its memory are read after the first weighing of a connection, not on connecting alone. Records from before the scale was added go to the inbox.</string>
+    <string name="scale_user_sync_hint">The scale is told the profile chosen on the main screen if it is checked, otherwise the first checked one. If someone else steps on it, body fat on the scale display is worked out for the wrong person; the app works out body composition itself, for the profile the weighing goes to.</string>
     <string name="weighing_scale_question_title">Who is on the scale?</string>
     <plurals name="weighing_scale_question_text">
         <item quantity="one">The scale asks whose weighing it is, to work out its own numbers for that person. Without an answer the app picks the closest by last weight in %1$d second.</item>

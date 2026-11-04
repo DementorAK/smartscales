@@ -62,6 +62,30 @@ class ScaleBindingRepositoryTest : DatabaseTestBase() {
     }
 
     @Test
+    fun driverSettingsAndExcludedProfilesAreSavedTogether() = runTest {
+        val id = scales.bind("AA:BB:CC:DD:EE:FF", null, "OKOK", "0x11", 7)
+        val fresh = scales.get(id)!!
+        assertEquals(ScaleDisplayUnit.PROFILE, fresh.displayUnit)
+        assertTrue(fresh.syncTime)
+        val profiles = ProfileRepository(database, clock)
+        val dmitry = profiles.add(profile())
+        val guest = profiles.add(profile(name = "Guest"))
+
+        scales.update(fresh.copy(displayUnit = ScaleDisplayUnit.POUND, syncTime = false), excludedProfiles = setOf(guest))
+        val saved = scales.get(id)!!
+        assertEquals(ScaleDisplayUnit.POUND, saved.displayUnit)
+        assertFalse(saved.syncTime)
+        assertEquals(setOf(guest), scales.excludedProfiles(id))
+
+        // A deleted profile is no longer excluded anywhere; saving without the set leaves it as it is
+        profiles.delete(guest)
+        assertEquals(emptySet<Long>(), scales.excludedProfiles(id))
+        scales.setExcludedProfiles(id, setOf(dmitry))
+        scales.update(saved.copy(name = "Bathroom"))
+        assertEquals(setOf(dmitry), scales.excludedProfiles(id))
+    }
+
+    @Test
     fun unbindingKeepsHistoryLinked() = runTest {
         val id = scales.bind("AA:BB:CC:DD:EE:FF", null, "chipsea_ca20", null, null)
         val profileId = ProfileRepository(database, clock).add(profile())

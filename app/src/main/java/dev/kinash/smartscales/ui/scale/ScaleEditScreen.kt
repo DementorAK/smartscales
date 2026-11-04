@@ -41,21 +41,29 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.kinash.smartscales.R
 import dev.kinash.smartscales.core.ble.DeviceCapability
-import dev.kinash.smartscales.core.ble.OkokGattDriver
 import dev.kinash.smartscales.core.ble.ProtocolDescription
 import dev.kinash.smartscales.core.ble.ScaleDrivers
+import dev.kinash.smartscales.core.ble.ScaleSetting
+import dev.kinash.smartscales.core.data.Profile
 import dev.kinash.smartscales.core.data.ScaleBinding
+import dev.kinash.smartscales.core.data.ScaleDisplayUnit
+import dev.kinash.smartscales.core.data.repository.ProfileRepository
 import dev.kinash.smartscales.core.data.repository.ScaleBindingRepository
+import dev.kinash.smartscales.core.model.WeightUnit
 import dev.kinash.smartscales.core.protocol.ChipseaProtocol
 import dev.kinash.smartscales.core.protocol.V2Cipher
 import dev.kinash.smartscales.core.protocol.V2KeyFile
 import dev.kinash.smartscales.core.protocol.V2KeyImport
 import dev.kinash.smartscales.ui.ScaleEditRoute
 import dev.kinash.smartscales.ui.common.BackButton
+import dev.kinash.smartscales.ui.common.CheckboxRow
+import dev.kinash.smartscales.ui.common.ChoiceField
 import dev.kinash.smartscales.ui.common.ConfirmDialog
 import dev.kinash.smartscales.ui.common.FieldSpacing
 import dev.kinash.smartscales.ui.common.Prefill
 import dev.kinash.smartscales.ui.common.ScreenPadding
+import dev.kinash.smartscales.ui.common.SwitchRow
+import dev.kinash.smartscales.ui.common.title
 import dev.kinash.smartscales.ui.common.formatNumber
 import dev.kinash.smartscales.ui.common.parseNumber
 import dev.kinash.smartscales.ui.common.resolve
@@ -63,6 +71,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -70,7 +79,15 @@ import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import javax.inject.Inject
 
-data class ScaleForm(val name: String = "", val v2Key: String = "", val factor: String = "")
+data class ScaleForm(
+    val name: String = "",
+    val v2Key: String = "",
+    val factor: String = "",
+    val displayUnit: ScaleDisplayUnit = ScaleDisplayUnit.PROFILE,
+    val syncTime: Boolean = true,
+    /** Profiles the scale is not told about. */
+    val excluded: Set<Long> = emptySet(),
+)
 
 enum class ScaleField { V2_KEY, FACTOR }
 
@@ -82,13 +99,13 @@ enum class KeyImportNote(val isError: Boolean) {
     UNREADABLE(true),
 }
 
-/** OKOK v1.1 keeps several people: it is told everyone, not only the profile on the main screen. */
-private fun ScaleBinding.sendsEveryone() = protocol == ChipseaProtocol.OKOK.name && protocolVersion == OkokGattDriver.VERSION_11
-
 data class ScaleEditState(
     val binding: ScaleBinding? = null,
     val title: String = "",
     val description: ProtocolDescription? = null,
+    /** What the driver honours for this scale; see [ScaleSetting]. */
+    val settings: Set<ScaleSetting> = emptySet(),
+    val profiles: List<Profile> = emptyList(),
     val form: ScaleForm = ScaleForm(),
     val errors: Set<ScaleField> = emptySet(),
     val keyNote: KeyImportNote? = null,
@@ -104,6 +121,7 @@ data class ScaleEditState(
 class ScaleEditViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val bindings: ScaleBindingRepository,
+    private val profiles: ProfileRepository,
     private val drivers: ScaleDrivers,
     @param:ApplicationContext private val context: Context,
 ) : ViewModel() {
@@ -130,7 +148,16 @@ class ScaleEditViewModel @Inject constructor(
                     binding = binding,
                     title = drivers.titleOf(binding),
                     description = drivers.describe(binding.protocol),
-                    form = ScaleForm(binding.name.orEmpty(), binding.v2Key.orEmpty(), factor),
+                    settings = drivers.settings(binding.protocol, binding.protocolVersion),
+                    profiles = profiles.observeProfiles().first(),
+                    form = ScaleForm(
+                        name = binding.name.orEmpty(),
+                        v2Key = binding.v2Key.orEmpty(),
+                        factor = factor,
+                        displayUnit = binding.displayUnit,
+                        syncTime = binding.syncTime,
+                        excluded = bindings.excludedProfiles(binding.id),
+                    ),
                 )
             }
             pendingImport?.let { uri ->
@@ -201,7 +228,11 @@ class ScaleEditViewModel @Inject constructor(
                     // One form for one key, so writing it differently does not ask to confirm it again
                     v2Key = V2Cipher.normalizeKey(key),
                     impedanceFactor = factor!!,
+                    displayUnit = form.displayUnit,
+                    syncTime = form.syncTime,
                 ),
+                // Profiles deleted meanwhile are left out: they are no one to exclude
+                excludedProfiles = form.excluded.filterTo(mutableSetOf()) { id -> state.profiles.any { it.id == id } },
             )
             _state.update { it.copy(done = true) }
         }
@@ -318,18 +349,12 @@ fun ScaleEditScreen(onDone: () -> Unit, viewModel: ScaleEditViewModel = hiltView
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth(),
             )
+            if (state.settings.isNotEmpty()) {
+                DriverSettings(state.settings, state.profiles, form, viewModel::edit)
+            }
             state.description?.let { description ->
                 CapabilityList(stringResource(R.string.scale_capabilities), description.capabilities)
                 CapabilityList(stringResource(R.string.scale_implemented), description.implemented)
-                if (DeviceCapability.USER_SYNC in description.implemented) {
-                    Text(
-                        stringResource(
-                            if (state.binding?.sendsEveryone() == true) R.string.scale_users_sync_hint else R.string.scale_user_sync_hint,
-                        ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
                 if (description.canWeigh && !description.testedOnRealScale) {
                     Text(
                         stringResource(R.string.scale_untested),
@@ -381,4 +406,58 @@ private fun CapabilityList(title: String, capabilities: Set<DeviceCapability>) {
     )
     val names = capabilities.sortedBy { it.ordinal }.map { stringResource(it.title()) }
     Text(names.ifEmpty { listOf(stringResource(R.string.scale_nothing_yet)) }.joinToString(", "))
+}
+
+/**
+ * What the scale is told on connecting, as far as its driver honours it: the unit on its display, its clock,
+ * and the profiles it knows.
+ */
+@Composable
+private fun DriverSettings(settings: Set<ScaleSetting>, profiles: List<Profile>, form: ScaleForm, edit: ((ScaleForm) -> ScaleForm) -> Unit) {
+    Text(stringResource(R.string.scale_settings_title), style = MaterialTheme.typography.titleSmall)
+    if (ScaleSetting.UNIT in settings) {
+        ChoiceField(
+            label = stringResource(R.string.scale_display_unit),
+            selected = form.displayUnit,
+            options = ScaleDisplayUnit.entries,
+            onSelect = { unit -> edit { it.copy(displayUnit = unit) } },
+            title = { stringResource(it.title()) },
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+    if (ScaleSetting.TIME in settings) {
+        SwitchRow(
+            title = stringResource(R.string.scale_sync_time),
+            hint = stringResource(R.string.scale_sync_time_hint),
+            checked = form.syncTime,
+            enabled = true,
+            onChange = { on -> edit { it.copy(syncTime = on) } },
+        )
+    }
+    val users = ScaleSetting.USERS in settings
+    if (users || ScaleSetting.USER in settings) {
+        // Without profiles there is nothing to check, but the hint still says what the scale will be told
+        if (profiles.isNotEmpty()) Text(stringResource(R.string.scale_profiles), style = MaterialTheme.typography.bodyLarge)
+        profiles.forEach { profile ->
+            CheckboxRow(
+                title = profile.name,
+                hint = null,
+                checked = profile.id !in form.excluded,
+                onChange = { on -> edit { it.copy(excluded = if (on) it.excluded - profile.id else it.excluded + profile.id) } },
+            )
+        }
+        Text(
+            stringResource(if (users) R.string.scale_users_sync_hint else R.string.scale_user_sync_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+private fun ScaleDisplayUnit.title(): Int = when (this) {
+    ScaleDisplayUnit.PROFILE -> R.string.scale_display_unit_profile
+    ScaleDisplayUnit.KILOGRAM -> WeightUnit.KILOGRAM.title()
+    ScaleDisplayUnit.POUND -> WeightUnit.POUND.title()
+    ScaleDisplayUnit.STONE -> WeightUnit.STONE.title()
+    ScaleDisplayUnit.KEEP -> R.string.scale_display_unit_keep
 }

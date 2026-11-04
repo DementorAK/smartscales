@@ -30,8 +30,31 @@ class SchemaTest {
 
     @Test
     fun latestVersionMatchesEntities() {
-        helper.createDatabase(4).close()
-        helper.runMigrationsAndValidate(4).close()
+        helper.createDatabase(5).close()
+        helper.runMigrationsAndValidate(5).close()
+    }
+
+    @Test
+    fun migration4To5GivesBindingsTheDefaultDriverSettings() {
+        helper.createDatabase(4).use {
+            it.execSQL(
+                """
+                INSERT INTO scale_binding (mac, protocol, v2KeyConfirmed, impedanceFactor, unbound, boundAt)
+                VALUES ('AA:BB:CC:DD:EE:FF', 'OKOK', 0, 1.0, 0, 0)
+                """,
+            )
+        }
+        helper.runMigrationsAndValidate(5, MIGRATIONS.toList()).use { db ->
+            db.prepare("SELECT displayUnit, syncTime FROM scale_binding").use {
+                it.step()
+                assertEquals("PROFILE", it.getText(0))
+                assertEquals(1L, it.getLong(1))
+            }
+            db.prepare("SELECT COUNT(*) FROM scale_excluded_profile").use {
+                it.step()
+                assertEquals(0L, it.getLong(0))
+            }
+        }
     }
 
     @Test
@@ -44,7 +67,7 @@ class SchemaTest {
                 """,
             )
         }
-        helper.runMigrationsAndValidate(4, MIGRATIONS.toList()).use { db ->
+        helper.runMigrationsAndValidate(4, MIGRATIONS.take(3)).use { db ->
             db.prepare("SELECT mac, historyAcceptedUntil FROM scale_binding").use {
                 it.step()
                 assertEquals("AA:BB:CC:DD:EE:FF", it.getText(0))

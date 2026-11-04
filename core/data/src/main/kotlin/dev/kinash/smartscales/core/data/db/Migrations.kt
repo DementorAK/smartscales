@@ -36,8 +36,25 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
     }
 }
 
+/** 4 → 5: driver settings of a scale: the unit on its display, its clock, and the profiles it is not told about. */
+val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("ALTER TABLE `scale_binding` ADD COLUMN `displayUnit` TEXT NOT NULL DEFAULT 'PROFILE'")
+        connection.execSQL("ALTER TABLE `scale_binding` ADD COLUMN `syncTime` INTEGER NOT NULL DEFAULT 1")
+        connection.execSQL(
+            "CREATE TABLE IF NOT EXISTS `scale_excluded_profile` (`bindingId` INTEGER NOT NULL, `profileId` INTEGER NOT NULL, " +
+                "PRIMARY KEY(`bindingId`, `profileId`), " +
+                "FOREIGN KEY(`bindingId`) REFERENCES `scale_binding`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , " +
+                "FOREIGN KEY(`profileId`) REFERENCES `profile`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        )
+        connection.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_scale_excluded_profile_profileId` ON `scale_excluded_profile` (`profileId`)",
+        )
+    }
+}
+
 /** All migrations, for the database builder and the migration tests. */
-val MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+val MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
 
 private fun SQLiteConnection.hasColumn(table: String, column: String): Boolean =
     prepare("PRAGMA table_info(`$table`)").use { statement ->

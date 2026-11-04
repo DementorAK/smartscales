@@ -18,6 +18,7 @@ import dev.kinash.smartscales.core.data.db.entity.ProfileGoalEntity
 import dev.kinash.smartscales.core.data.db.entity.ProfileMainVariantEntity
 import dev.kinash.smartscales.core.data.db.entity.ProfileManualValueEntity
 import dev.kinash.smartscales.core.data.db.entity.ScaleBindingEntity
+import dev.kinash.smartscales.core.data.db.entity.ScaleExcludedProfileEntity
 import dev.kinash.smartscales.core.data.db.entity.TagEntity
 
 /**
@@ -31,6 +32,7 @@ import dev.kinash.smartscales.core.data.db.entity.TagEntity
         ProfileMainVariantEntity::class,
         ProfileManualValueEntity::class,
         ScaleBindingEntity::class,
+        ScaleExcludedProfileEntity::class,
         MeasurementEntity::class,
         ImpedanceEntity::class,
         ManualValueEntity::class,
@@ -39,7 +41,7 @@ import dev.kinash.smartscales.core.data.db.entity.TagEntity
         MeasurementTagEntity::class,
         FormulaSetEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)

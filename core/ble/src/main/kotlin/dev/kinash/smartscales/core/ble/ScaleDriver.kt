@@ -115,6 +115,10 @@ class ScaleDrivers(private val drivers: List<ScaleDriver>, private val gattDrive
     fun gattProtocol(protocol: String, scaleMac: String, version: String?, productId: Int? = null): GattProtocol? =
         gattDrivers.firstNotNullOfOrNull { it.gattProtocol(protocol, scaleMac, version, productId) }
 
+    /** The settings a scale of [protocol] and [version] offers; see [ScaleSetting]. */
+    fun settings(protocol: String, version: String?): Set<ScaleSetting> =
+        gattDrivers.flatMap { it.settings(protocol, version) }.toSet()
+
     fun describe(protocol: String): ProtocolDescription? = drivers.firstNotNullOfOrNull { it.describe(protocol) }
 
     /** The driver of the device that sent [advertisement] with what it says about it, or null for other devices. */

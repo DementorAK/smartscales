@@ -78,10 +78,12 @@ class ScaleBindingRepository @Inject constructor(
     suspend fun unbind(id: Long) = dao.unbind(id)
 
     /**
-     * Saves name, address, V2 key or calibration factor. A new factor changes indicators of the whole history;
-     * a new key has to be confirmed again.
+     * Saves name, address, V2 key, calibration factor or driver settings, and with [excludedProfiles] also the
+     * profiles the scale is not told about, together. A new factor changes indicators of the whole history; a
+     * new key has to be confirmed again.
      */
-    suspend fun update(binding: ScaleBinding) {
+    suspend fun update(binding: ScaleBinding, excludedProfiles: Set<Long>? = null) = database.withTransaction {
+        excludedProfiles?.let { dao.setExcludedProfiles(binding.id, it) }
         val stored = dao.get(binding.id)
         val keyChanged = stored != null && stored.v2Key != binding.v2Key
         dao.update(
@@ -92,6 +94,12 @@ class ScaleBindingRepository @Inject constructor(
             ).toEntity(),
         )
     }
+
+    /** Profiles this scale is not told about; see [setExcludedProfiles]. */
+    suspend fun excludedProfiles(id: Long): Set<Long> = dao.excludedProfiles(id).toSet()
+
+    /** The profiles the scale is not told about (users on the scale); everyone else, new profiles too, is. */
+    suspend fun setExcludedProfiles(id: Long, profileIds: Set<Long>) = dao.setExcludedProfiles(id, profileIds)
 
     /** Remembers where Android sees the scale now, without touching other fields. */
     suspend fun updateAddress(id: Long, bleAddress: String) = dao.updateAddress(id, normalizeMac(bleAddress))

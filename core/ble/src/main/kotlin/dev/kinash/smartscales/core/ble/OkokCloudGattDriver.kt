@@ -27,6 +27,13 @@ class OkokCloudGattDriver(
             null
         }
 
+    /** No user command; the unit only for the version that takes it. */
+    override fun settings(protocol: String, version: String?): Set<ScaleSetting> = when {
+        protocol != ChipseaProtocol.OKOK_CLOUD.name -> emptySet()
+        version == VERSION_UNIT -> setOf(ScaleSetting.UNIT, ScaleSetting.TIME)
+        else -> setOf(ScaleSetting.TIME)
+    }
+
     companion object {
         /** Only scales of this advertisement version take the unit, as the vendor app has it. */
         const val VERSION_UNIT = "0x02"
@@ -56,13 +63,14 @@ internal class OkokCloudProtocol(
         session.subscribe(ChipseaGatt.CHIPSEA_SERVICE, ChipseaGatt.CHIPSEA_RX)
         session.subscribe(ChipseaGatt.BODY_COMPOSITION_SERVICE, ChipseaGatt.BODY_COMPOSITION_MEASUREMENT)
         // The time is not essential: a scale without the Current Time characteristic is still read
-        if (session.hasCharacteristic(ChipseaGatt.CURRENT_TIME_SERVICE, ChipseaGatt.CURRENT_TIME)) {
+        if (context.syncTime && session.hasCharacteristic(ChipseaGatt.CURRENT_TIME_SERVICE, ChipseaGatt.CURRENT_TIME)) {
             val clock = LocalDateTime.ofInstant(context.now, zone())
             session.write(ChipseaGatt.CURRENT_TIME_SERVICE, ChipseaGatt.CURRENT_TIME, OkokCloudCommands.time(clock))
         }
-        if (setsUnit) {
+        val unit = context.unit
+        if (setsUnit && unit != null) {
             repeat(UNIT_REPEATS) {
-                session.write(ChipseaGatt.CHIPSEA_SERVICE, ChipseaGatt.CHIPSEA_TX, OkokCloudCommands.unit(context.unit))
+                session.write(ChipseaGatt.CHIPSEA_SERVICE, ChipseaGatt.CHIPSEA_TX, OkokCloudCommands.unit(unit))
             }
         }
         if (session.hasCharacteristic(ChipseaGatt.BODY_COMPOSITION_SERVICE, ChipseaGatt.BODY_COMPOSITION_HISTORY)) {

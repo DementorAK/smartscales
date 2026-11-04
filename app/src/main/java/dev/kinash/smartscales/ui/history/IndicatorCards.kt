@@ -83,10 +83,39 @@ fun weightCard(measured: MeasuredIndicators): IndicatorCard {
 }
 
 /**
- * The cards every profile sees until profiles choose their own in 0.6: an indicator id, or a group id whose
+ * The cards of a profile that has not chosen its own ([Profile.cards]): an indicator id, or a group id whose
  * value comes from the profile's variant.
  */
 val DEFAULT_CARDS = listOf("bmi", "bf", "fat_mass", "fat_free_mass", "tbw_percent", "smm_janssen", "bmr", "whtr")
+
+/** The cards [profile] shows after the weight card, in its order. */
+fun cardsOf(profile: Profile): List<String> = profile.cards ?: DEFAULT_CARDS
+
+/**
+ * A card a profile can put on the main screen: a group, whose value comes from the variant the profile chose
+ * ([isGroup], for groups that have a choice), or one indicator, such as body fat by one equation next to the
+ * group's value.
+ */
+data class CardChoice(val id: String, val title: LocalizedText, val isGroup: Boolean)
+
+/**
+ * Everything that can be a card, in the formula sets' order, the built-in set first and the person's sets after
+ * it: each group before its variants, and indicators that are not hidden. A group's only variant is not offered
+ * apart from the group, since both give the same value.
+ */
+fun cardChoices(model: FormulaModel): List<CardChoice> = buildList {
+    val groupsSeen = mutableSetOf<String>()
+    model.indicators.values.forEach { indicator ->
+        val def = indicator.def
+        if (def.id in model.hidden) return@forEach
+        val group = def.group?.takeIf { it in model.groups && it !in model.hidden }
+        if (group != null && groupsSeen.add(group)) {
+            val variants = model.groups.getValue(group)
+            add(CardChoice(group, model.groupName(group, variants.first()), isGroup = variants.size > 1))
+        }
+        if (group == null || model.groups.getValue(group).size > 1) add(CardChoice(def.id, def.name, isGroup = false))
+    }
+}
 
 private const val NO_VALUE = "—"
 
@@ -117,7 +146,8 @@ fun childCards(model: FormulaModel, results: FormulaModel.Results, growth: Child
 private val FOLLOWS_GROUP = mapOf("fat_mass" to "bf", "fat_free_mass" to "bf", "tbw_percent" to "tbw")
 
 /**
- * Cards with a value for this measurement; hidden indicators and groups are left out. A card that has a value only
+ * The [cards] with a value for this measurement, in their order; hidden indicators and groups, and ids no formula
+ * set has any more, are left out. A card that has a value only
  * with an impedance ([withImpedance], the results with one) stays, without a value, to say so: the person sees
  * that water or muscle needs it instead of wondering where the card went.
  */
@@ -126,8 +156,9 @@ fun indicatorCards(
     results: FormulaModel.Results,
     withImpedance: FormulaModel.Results? = null,
     impedance: ImpedanceStatus = ImpedanceStatus.MEASURED,
+    cards: List<String> = DEFAULT_CARDS,
 ): List<IndicatorCard> =
-    DEFAULT_CARDS.filter { it !in model.hidden }.mapNotNull { id ->
+    cards.filter { it !in model.hidden }.mapNotNull { id ->
         if (id in model.groups) {
             results.group(id)?.let { (variant, value) ->
                 val def = model.indicators.getValue(variant).def

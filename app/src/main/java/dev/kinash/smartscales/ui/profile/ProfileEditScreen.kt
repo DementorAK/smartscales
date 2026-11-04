@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -21,6 +23,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -30,6 +33,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -66,6 +72,8 @@ import dev.kinash.smartscales.ui.common.WeightField
 import dev.kinash.smartscales.ui.common.avatarText
 import dev.kinash.smartscales.ui.common.symbol
 import dev.kinash.smartscales.ui.common.title
+import dev.kinash.smartscales.ui.history.CardChoice
+import dev.kinash.smartscales.ui.history.DEFAULT_CARDS
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -221,6 +229,14 @@ fun ProfileEditScreen(onDone: () -> Unit, viewModel: ProfileEditViewModel = hilt
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            CardsEditor(
+                cards = form.cards,
+                choices = state.cardChoices,
+                onAdd = viewModel::addCard,
+                onRemove = viewModel::removeCard,
+                onMove = viewModel::moveCard,
+                onReset = viewModel::resetCards,
+            )
             if (state.variantGroups.isNotEmpty()) {
                 SectionLabel(stringResource(R.string.profile_formulas))
                 val language = LocalConfiguration.current.locales[0].language
@@ -310,6 +326,97 @@ fun ProfileEditScreen(onDone: () -> Unit, viewModel: ProfileEditViewModel = hilt
             confirmLabel = stringResource(R.string.action_delete),
             onConfirm = viewModel::confirmDelete,
             onDismiss = viewModel::dismissDelete,
+        )
+    }
+}
+
+/**
+ * The cards of the main screen after the weight card: each can move up or down or go, and any indicator or group
+ * the formula sets offer can be added at the end.
+ */
+@Composable
+private fun CardsEditor(
+    cards: List<String>,
+    choices: List<CardChoice>,
+    onAdd: (String) -> Unit,
+    onRemove: (String) -> Unit,
+    onMove: (String, Int) -> Unit,
+    onReset: () -> Unit,
+) {
+    val language = LocalConfiguration.current.locales[0].language
+    val byId = choices.associateBy { it.id }
+    val shown = cards.mapNotNull { byId[it] }
+    var adding by rememberSaveable { mutableStateOf(false) }
+    SectionLabel(stringResource(R.string.profile_cards))
+    shown.forEachIndexed { index, choice ->
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(choice.title.text(language), style = MaterialTheme.typography.bodyLarge)
+                if (choice.isGroup) {
+                    Text(
+                        stringResource(R.string.profile_card_group),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            IconButton(onClick = { onMove(choice.id, -1) }, enabled = index > 0) {
+                Icon(painterResource(R.drawable.ic_arrow_upward), stringResource(R.string.profile_card_up, choice.title.text(language)))
+            }
+            IconButton(onClick = { onMove(choice.id, 1) }, enabled = index < shown.lastIndex) {
+                Icon(painterResource(R.drawable.ic_arrow_downward), stringResource(R.string.profile_card_down, choice.title.text(language)))
+            }
+            IconButton(onClick = { onRemove(choice.id) }) {
+                Icon(painterResource(R.drawable.ic_close), stringResource(R.string.profile_card_remove, choice.title.text(language)))
+            }
+        }
+    }
+    val available = choices.filter { it.id !in cards }
+    Row(horizontalArrangement = Arrangement.spacedBy(FieldSpacing)) {
+        OutlinedButton(onClick = { adding = true }, enabled = available.isNotEmpty()) {
+            Text(stringResource(R.string.profile_card_add))
+        }
+        TextButton(onClick = onReset, enabled = cards != DEFAULT_CARDS) {
+            Text(stringResource(R.string.profile_cards_reset))
+        }
+    }
+    Text(
+        stringResource(R.string.profile_cards_hint),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    if (adding) {
+        AlertDialog(
+            onDismissRequest = { adding = false },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { adding = false }) { Text(stringResource(android.R.string.cancel)) }
+            },
+            title = { Text(stringResource(R.string.profile_card_add)) },
+            text = {
+                LazyColumn {
+                    items(available, key = { it.id }) { choice ->
+                        Column(
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onAdd(choice.id)
+                                    adding = false
+                                }
+                                .padding(vertical = FieldSpacing),
+                        ) {
+                            Text(choice.title.text(language), style = MaterialTheme.typography.bodyLarge)
+                            if (choice.isGroup) {
+                                Text(
+                                    stringResource(R.string.profile_card_group),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                }
+            },
         )
     }
 }

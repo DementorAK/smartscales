@@ -2,7 +2,12 @@ package dev.kinash.smartscales.ui
 
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasScrollToNodeAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isDialog
+import androidx.compose.ui.test.onLast
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onAllNodesWithText
@@ -21,6 +26,7 @@ import dev.kinash.smartscales.core.data.repository.ScaleBindingRepository
 import dev.kinash.smartscales.core.model.Impedance
 import dev.kinash.smartscales.core.model.MeasurementSource
 import dev.kinash.smartscales.core.model.Sex
+import dev.kinash.smartscales.ui.history.DEFAULT_CARDS
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -169,9 +175,43 @@ class IndicatorCardsFlowTest {
         }
     }
 
+    @Test
+    fun profileChoosesItsCardsAndTheirOrder() {
+        weighing(day = 2, ohms = null)
+        waitFor(hasText("Body mass index"))
+        compose.openProfile("Dmitry")
+
+        compose.onNodeWithContentDescription("Remove Body mass index").performScrollTo().performClick()
+        compose.onNodeWithText("Add a card").performScrollTo().performClick()
+        compose.onNode(hasScrollToNodeAction() and hasAnyAncestor(isDialog()))
+            .performScrollToNode(hasText("Body fat (Deurenberg 1991, from BMI)"))
+        compose.onNodeWithText("Body fat (Deurenberg 1991, from BMI)").performClick()
+        // From the end of the list to the top, next to the profile's own body fat
+        repeat(10) {
+            compose.onNodeWithContentDescription("Move Body fat (Deurenberg 1991, from BMI) up").performScrollTo().performClick()
+        }
+        compose.onNodeWithText("Save").performClick()
+        compose.backFromSettings()
+
+        waitFor(hasText("21.5 %"))
+        compose.onNodeWithText("Body mass index").assertDoesNotExist()
+        val cards = runBlocking { profiles.get(profileId)!!.cards }!!
+        assertEquals("bf_deurenberg", cards.first())
+        assertEquals(DEFAULT_CARDS - "bmi", cards.drop(1))
+
+        // Back to the default set: nothing is stored, so the profile follows it
+        compose.openProfile("Dmitry")
+        compose.onNodeWithText("Default set").performScrollTo().performClick()
+        compose.onNodeWithText("Save").performClick()
+        compose.backFromSettings()
+        waitFor(hasText("Body mass index"))
+        assertEquals(null, runBlocking { profiles.get(profileId)!!.cards })
+    }
+
     private fun chooseBodyFat(option: String) {
         compose.openProfile("Dmitry")
-        compose.onNodeWithText("Body fat").performScrollTo().performClick()
+        // The formula field, after the card of the same name
+        compose.onAllNodesWithText("Body fat").onLast().performScrollTo().performClick()
         compose.onNodeWithText(option).performClick()
         compose.onNodeWithText("Save").performClick()
         compose.backFromSettings()

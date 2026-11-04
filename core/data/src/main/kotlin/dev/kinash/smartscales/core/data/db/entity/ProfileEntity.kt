@@ -12,6 +12,7 @@ import java.time.LocalDate
 /**
  * @property color profile colour as ARGB.
  * @property avatar short text shown instead of initials (for example an emoji), or null.
+ * @property cards card ids of the main screen joined by commas, empty for none; null for the default set.
  */
 @Entity(tableName = "profile")
 data class ProfileEntity(
@@ -25,6 +26,7 @@ data class ProfileEntity(
     val color: Int,
     val avatar: String? = null,
     val createdAt: Instant,
+    val cards: String? = null,
 )
 
 /** Goal for any indicator: weight, body fat or one from a formula set. */

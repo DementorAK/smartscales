@@ -198,6 +198,14 @@
     <string name="zone_high">High</string>
     <string name="zone_very_high">Very high</string>
     <string name="zone_approximate">%1$s (approximate)</string>
+    <string name="profile_cards">Cards on the main screen</string>
+    <string name="profile_card_group">By the formula chosen below</string>
+    <string name="profile_card_up">Move %1$s up</string>
+    <string name="profile_card_down">Move %1$s down</string>
+    <string name="profile_card_remove">Remove %1$s</string>
+    <string name="profile_card_add">Add a card</string>
+    <string name="profile_cards_reset">Default set</string>
+    <string name="profile_cards_hint">The weight card always comes first. An indicator by one formula can sit next to the same indicator by the formula chosen below, to compare them.</string>
     <string name="profile_formulas">Formulas</string>
     <string name="profile_formula_default">(default)</string>
     <string name="profile_formulas_hint">Which published equation each indicator uses. Changing it recalculates the whole history. Fat-free mass by impedance gives body fat when the scale measures impedance. When an equation has no data for a weighing, for example no impedance, the next one in the list is used.</string>

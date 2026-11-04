@@ -26,6 +26,16 @@ class ProfileRepositoryTest : DatabaseTestBase() {
     private val measurements by lazy { MeasurementRepository(database) }
 
     @Test
+    fun cardsKeepTheirOrderAndNoneDiffersFromTheDefault() = runTest {
+        val id = profiles.add(profile())
+        assertEquals(null, profiles.get(id)!!.cards)
+        profiles.update(profiles.get(id)!!.copy(cards = listOf("bf_gallagher", "bmi", "bf")), applyToPastMeasurements = false)
+        assertEquals(listOf("bf_gallagher", "bmi", "bf"), profiles.get(id)!!.cards)
+        profiles.update(profiles.get(id)!!.copy(cards = emptyList()), applyToPastMeasurements = false)
+        assertEquals(emptyList<String>(), profiles.get(id)!!.cards)
+    }
+
+    @Test
     fun applyToPastMeasurementsReplacesSexAndBirthDateButNotHeight() = runTest {
         val stored = profile()
         val profileId = profiles.add(stored)

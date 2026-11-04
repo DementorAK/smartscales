@@ -53,8 +53,15 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
     }
 }
 
+/** 5 → 6: `profile.cards`, the cards a profile chose for the main screen; null keeps the default set. */
+val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("ALTER TABLE `profile` ADD COLUMN `cards` TEXT")
+    }
+}
+
 /** All migrations, for the database builder and the migration tests. */
-val MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+val MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
 
 private fun SQLiteConnection.hasColumn(table: String, column: String): Boolean =
     prepare("PRAGMA table_info(`$table`)").use { statement ->

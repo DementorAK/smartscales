@@ -202,6 +202,14 @@
     <string name="zone_high">Высокий</string>
     <string name="zone_very_high">Очень высокий</string>
     <string name="zone_approximate">%1$s (ориентировочно)</string>
+    <string name="profile_cards">Карточки на главном экране</string>
+    <string name="profile_card_group">По формуле, выбранной ниже</string>
+    <string name="profile_card_up">%1$s выше</string>
+    <string name="profile_card_down">%1$s ниже</string>
+    <string name="profile_card_remove">Убрать %1$s</string>
+    <string name="profile_card_add">Добавить карточку</string>
+    <string name="profile_cards_reset">Набор по умолчанию</string>
+    <string name="profile_cards_hint">Карточка веса всегда первая. Показатель по одной формуле можно поставить рядом с тем же показателем по формуле, выбранной ниже, чтобы сравнить их.</string>
     <string name="profile_formulas">Формулы</string>
     <string name="profile_formula_default">(по умолчанию)</string>
     <string name="profile_formulas_hint">Какой опубликованной формулой считается каждый показатель. Смена пересчитывает всю историю. Безжировая масса по импедансу даёт жир, когда весы измеряют импеданс. Если для взвешивания у формулы нет данных, например импеданса, берётся следующая по списку.</string>

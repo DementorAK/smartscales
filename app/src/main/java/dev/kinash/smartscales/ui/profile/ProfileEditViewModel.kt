@@ -18,7 +18,10 @@ import dev.kinash.smartscales.core.model.Sex
 import dev.kinash.smartscales.core.model.WeightUnit
 import dev.kinash.smartscales.indicators.Indicators
 import dev.kinash.smartscales.indicators.MeasuredIndicators
+import dev.kinash.smartscales.ui.history.CardChoice
 import dev.kinash.smartscales.ui.history.DEFAULT_CARDS
+import dev.kinash.smartscales.ui.history.cardChoices
+import dev.kinash.smartscales.ui.history.cardsOf
 import dev.kinash.smartscales.ui.ProfileEditRoute
 import dev.kinash.smartscales.ui.common.Prefill
 import dev.kinash.smartscales.ui.common.ProfileColors
@@ -54,6 +57,8 @@ data class ProfileForm(
     val variants: Map<String, String> = emptyMap(),
     /** Circumferences the profile keeps for its weighings, as typed, by field ([CircumferenceFields]). */
     val circumferences: Map<String, String> = emptyMap(),
+    /** Cards on the main screen after the weight card, in order; see [Profile.cards]. */
+    val cards: List<String> = DEFAULT_CARDS,
 )
 
 /**
@@ -106,6 +111,8 @@ data class ProfileEditState(
     val loaded: Boolean = false,
     val form: ProfileForm = ProfileForm(),
     val variantGroups: List<VariantGroup> = emptyList(),
+    /** Everything that can be a card; the form's cards are among these. */
+    val cardChoices: List<CardChoice> = emptyList(),
     val errors: Set<ProfileField> = emptySet(),
     val applyToPast: ApplyToPastQuestion? = null,
     /** Number of measurements the profile deletion would remove, while the warning is shown. */
@@ -144,6 +151,7 @@ class ProfileEditViewModel @Inject constructor(
             isNew = profileId == null,
             loaded = profileId == null,
             variantGroups = variantGroups(indicators.model, DEFAULT_CARDS),
+            cardChoices = cardChoices(indicators.model),
         ),
     )
     val state: StateFlow<ProfileEditState> = _state.asStateFlow()
@@ -165,7 +173,11 @@ class ProfileEditViewModel @Inject constructor(
                 val kept = profiles.getManualValues(profile.id).filterKeys { it in CircumferenceFields }
                 val circumferences = CircumferenceFields.associateWith { lengthInput(kept[it], profile.lengthUnit) }
                 circumferencePrefills = kept.mapValues { (field, cm) -> Prefill(circumferences.getValue(field), cm) }
+                val cards = cardsOf(profile)
+                val storedVariants = profiles.observeMainVariants(profile.id).first()
+                _state.update { it.copy(variantGroups = offeredGroups(cards, storedVariants.keys)) }
                 val form = ProfileForm(
+                    cards = cards,
                     circumferences = circumferences,
                     name = profile.name,
                     sex = profile.sex,
@@ -178,7 +190,7 @@ class ProfileEditViewModel @Inject constructor(
                     goal = goal,
                     // A stored choice the formula sets no longer offer (a variant renamed, a set switched off)
                     // is dropped here, and saving clears it
-                    variants = profiles.observeMainVariants(profile.id).first().filter { (group, variant) ->
+                    variants = storedVariants.filter { (group, variant) ->
                         _state.value.variantGroups.any { it.id == group && it.allows(variant, profile.sex) }
                     },
                 )
@@ -249,6 +261,36 @@ class ProfileEditViewModel @Inject constructor(
         }.toMap()
     }
 
+    /** Adds a card at the end of the main screen. */
+    fun addCard(id: String) = editCards { if (id in it) it else it + id }
+
+    fun removeCard(id: String) = editCards { it - id }
+
+    /**
+     * Moves a card one place among the cards on the screen, up for a negative [by]; it stops at either end. Ids
+     * no formula set offers now stay where they are, unseen, so they come back if a set offers them again.
+     */
+    fun moveCard(id: String, by: Int) = editCards { cards ->
+        moveAmongVisible(cards, _state.value.cardChoices.map { it.id }.toSet(), id, by)
+    }
+
+    /** Back to the app's default set, which then follows changes to it. */
+    fun resetCards() = editCards { DEFAULT_CARDS }
+
+    /** Changes the cards; the formula choices follow, see [offeredGroups]. */
+    private fun editCards(change: (List<String>) -> List<String>) {
+        val cards = change(_state.value.form.cards)
+        _state.update { it.copy(variantGroups = offeredGroups(cards, it.form.variants.keys)) }
+        edit { it.copy(cards = cards) }
+    }
+
+    /**
+     * The groups whose formula can be chosen: those the [cards] use, and those with a choice made ([chosen]),
+     * which still counts for charts and goals after the last card using the group went, and so stays changeable.
+     */
+    private fun offeredGroups(cards: List<String>, chosen: Set<String>): List<VariantGroup> =
+        variantGroups(indicators.model, cards + chosen)
+
     /** Chooses the variant of [group]; its first variant means "as the formula set says" and is not stored. */
     fun setVariant(group: VariantGroup, variant: String) = edit { form ->
         val variants = if (variant == group.default) form.variants - group.id else form.variants + (group.id to variant)
@@ -317,6 +359,8 @@ class ProfileEditViewModel @Inject constructor(
         color = form.color,
         avatar = avatarText(form.avatar).ifEmpty { null },
         createdAt = stored?.createdAt ?: clock.instant(),
+        // The default set is not stored, so the profile follows changes to it
+        cards = form.cards.takeUnless { it == DEFAULT_CARDS },
     )
 
     /** Answer to "apply to past measurements?"; past ones get the change only when nothing predates the birth date. */
@@ -393,6 +437,21 @@ class ProfileEditViewModel @Inject constructor(
     private fun goalKg(form: ProfileForm): Double? = goalPrefill.resolve(form.goal) { it.toKilograms(form.weightUnit) }
 
     companion object {
+        /**
+         * [cards] with [id] swapped with its nearest neighbour among the [visible] ones, up for a negative [by];
+         * the others keep their places. Unchanged at either end or for an id that is not visible.
+         */
+        fun moveAmongVisible(cards: List<String>, visible: Set<String>, id: String, by: Int): List<String> {
+            val shown = cards.filter { it in visible }
+            val index = shown.indexOf(id)
+            if (index < 0) return cards
+            val neighbour = shown.getOrNull(index + by.coerceIn(-1, 1)) ?: return cards
+            return cards.toMutableList().apply {
+                this[cards.indexOf(id)] = neighbour
+                this[cards.indexOf(neighbour)] = id
+            }
+        }
+
         /** Groups in the order a person thinks of them; groups of other sets follow in their own order. */
         private val GROUP_ORDER = listOf("bf", "ffm", "tbw", "bmr", "lbm")
 

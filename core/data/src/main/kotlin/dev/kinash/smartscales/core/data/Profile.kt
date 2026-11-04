@@ -13,6 +13,8 @@ import java.time.LocalDate
  *
  * @property color profile colour as ARGB.
  * @property avatar short text shown instead of initials (for example an emoji), or null.
+ * @property cards ids of the indicators and groups on the main screen, in order; null for the app's default set,
+ *   so a profile that never chose follows changes to it.
  */
 data class Profile(
     val id: Long = 0,
@@ -25,6 +27,7 @@ data class Profile(
     val color: Int,
     val avatar: String? = null,
     val createdAt: Instant,
+    val cards: List<String>? = null,
 ) {
     init {
         require(heightCm > 0) { "Height must be positive: $heightCm" }
@@ -37,8 +40,16 @@ data class Profile(
     fun isBornBy(date: LocalDate): Boolean = !birthDate.isAfter(date)
 }
 
-internal fun ProfileEntity.toProfile() =
-    Profile(id, name, sex, birthDate, heightCm, weightUnit, lengthUnit, color, avatar, createdAt)
+internal fun ProfileEntity.toProfile() = Profile(
+    id, name, sex, birthDate, heightCm, weightUnit, lengthUnit, color, avatar, createdAt,
+    cards?.split(CARD_SEPARATOR)?.filter { it.isNotEmpty() },
+)
 
-internal fun Profile.toEntity() =
-    ProfileEntity(id, name, sex, birthDate, heightCm, weightUnit, lengthUnit, color, avatar, createdAt)
+internal fun Profile.toEntity() = ProfileEntity(
+    id, name, sex, birthDate, heightCm, weightUnit, lengthUnit, color, avatar, createdAt,
+    cards?.joinToString(CARD_SEPARATOR),
+)
+
+/** Indicator ids are letters, digits and underscores, so a comma separates them safely. */
+private const val CARD_SEPARATOR = ","
+

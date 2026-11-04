@@ -30,8 +30,27 @@ class SchemaTest {
 
     @Test
     fun latestVersionMatchesEntities() {
-        helper.createDatabase(5).close()
-        helper.runMigrationsAndValidate(5).close()
+        helper.createDatabase(6).close()
+        helper.runMigrationsAndValidate(6).close()
+    }
+
+    @Test
+    fun migration5To6LeavesProfilesWithTheDefaultCards() {
+        helper.createDatabase(5).use {
+            it.execSQL(
+                """
+                INSERT INTO profile (name, sex, birthDate, heightCm, weightUnit, lengthUnit, color, createdAt)
+                VALUES ('Dmitry', 'MALE', '1990-10-28', 180.0, 'KILOGRAM', 'CENTIMETRE', 0, 0)
+                """,
+            )
+        }
+        helper.runMigrationsAndValidate(6, MIGRATIONS.toList()).use { db ->
+            db.prepare("SELECT name, cards FROM profile").use {
+                it.step()
+                assertEquals("Dmitry", it.getText(0))
+                assertTrue(it.isNull(1))
+            }
+        }
     }
 
     @Test
@@ -44,7 +63,7 @@ class SchemaTest {
                 """,
             )
         }
-        helper.runMigrationsAndValidate(5, MIGRATIONS.toList()).use { db ->
+        helper.runMigrationsAndValidate(5, MIGRATIONS.take(4)).use { db ->
             db.prepare("SELECT displayUnit, syncTime FROM scale_binding").use {
                 it.step()
                 assertEquals("PROFILE", it.getText(0))

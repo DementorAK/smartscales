@@ -11,6 +11,7 @@ import dev.kinash.smartscales.ui.history.CHILD_HEIGHT_CARD
 import dev.kinash.smartscales.ui.history.CHILD_WEIGHT_CARD
 import dev.kinash.smartscales.ui.history.WEIGHT_CARD
 import dev.kinash.smartscales.ui.history.cardChoices
+import dev.kinash.smartscales.ui.segments.SegmentSeries
 import java.time.Duration
 import java.time.Instant
 
@@ -58,20 +59,23 @@ fun seriesId(cardId: String): String = when (cardId) {
 }
 
 /**
- * The series [id] over [history] (newest first, as the history comes): weight, height, a group by the
- * profile's variant or one indicator. Measurements without a value are left out; null when the formula sets have
+ * The series [id] over [history] (newest first, as the history comes): weight, height, a segment's impedance, a
+ * group by the profile's variant or one indicator. Measurements without a value are left out; null when the formula sets have
  * no such indicator or group.
  */
 fun chartSeries(model: FormulaModel, history: List<MeasuredIndicators>, id: String, profile: Profile): ChartSeries? {
-    val (unit, precision) = when (id) {
-        WEIGHT_CARD -> IndicatorUnit.KG to 2
-        HEIGHT_SERIES -> IndicatorUnit.CM to 1
-        in model.groups -> model.indicators.getValue(model.groups.getValue(id).first()).def.let { it.unit to it.precision }
+    val segment = SegmentSeries.of(id)
+    val (unit, precision) = when {
+        id == WEIGHT_CARD -> IndicatorUnit.KG to 2
+        id == HEIGHT_SERIES -> IndicatorUnit.CM to 1
+        segment != null -> IndicatorUnit.OHM to 1
+        id in model.groups -> model.indicators.getValue(model.groups.getValue(id).first()).def.let { it.unit to it.precision }
         else -> model.indicators[id]?.def?.let { it.unit to it.precision } ?: return null
     }
-    val title = when (id) {
-        WEIGHT_CARD, HEIGHT_SERIES -> emptyMap()
-        in model.groups -> model.groupName(id, history.firstNotNullOfOrNull { it.results?.group(id)?.first } ?: model.groups.getValue(id).first())
+    // Weight, height and segments are named by the app
+    val title = when {
+        id == WEIGHT_CARD || id == HEIGHT_SERIES || segment != null -> emptyMap()
+        id in model.groups -> model.groupName(id, history.firstNotNullOfOrNull { it.results?.group(id)?.first } ?: model.groups.getValue(id).first())
         else -> model.indicators.getValue(id).def.name
     }
     val points = seriesPoints(model, history, id).map { ChartPoint(it.takenAt, inProfileUnits(it.value, unit, profile)) }
@@ -80,15 +84,18 @@ fun chartSeries(model: FormulaModel, history: List<MeasuredIndicators>, id: Stri
 
 /**
  * The values of [id] over [history] (newest first), oldest first, in the indicator's own unit (kilograms,
- * centimetres): the weight, the height, a group by the profile's variant or one indicator. Measurements without
+ * centimetres, ohms): the weight, the height, a segment's impedance, a group by the profile's variant or one
+ * indicator. Measurements without
  * a value are left out.
  */
 fun seriesPoints(model: FormulaModel, history: List<MeasuredIndicators>, id: String): List<ChartPoint> =
     history.asReversed().mapNotNull { measured ->
-        val value = when (id) {
-            WEIGHT_CARD -> measured.measurement.weightKg
-            HEIGHT_SERIES -> measured.measurement.person?.heightCm
-            in model.groups -> measured.results?.group(id)?.second
+        val segment = SegmentSeries.of(id)
+        val value = when {
+            id == WEIGHT_CARD -> measured.measurement.weightKg
+            id == HEIGHT_SERIES -> measured.measurement.person?.heightCm
+            segment != null -> segment.valueOf(measured)
+            id in model.groups -> measured.results?.group(id)?.second
             else -> measured.results?.value(id)
         } ?: return@mapNotNull null
         ChartPoint(measured.measurement.takenAt, value)
@@ -138,8 +145,9 @@ fun zoneBands(model: FormulaModel, newest: MeasuredIndicators?, id: String, prof
     return rule.levels.mapIndexed { i, level -> ZoneBand(bounds.getOrNull(i - 1), bounds.getOrNull(i), level) }
 }
 
-/** What can be put on a chart: the weight first, then everything that can be a card. */
-fun chartChoices(model: FormulaModel): List<String> = listOf(WEIGHT_CARD) + cardChoices(model).map { it.id }
+/** What can be put on a chart: the weight first, then everything that can be a card, then the segments. */
+fun chartChoices(model: FormulaModel): List<String> =
+    listOf(WEIGHT_CARD) + cardChoices(model).map { it.id } + SegmentSeries.all.map { it.id }
 
 /**
  * The values an axis spans: the lowest and highest with a margin, so the line does not touch the edges, and

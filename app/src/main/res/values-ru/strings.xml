@@ -130,7 +130,7 @@
     <string name="scale_v2_key_other_scales">В файле ключи только для других весов.</string>
     <string name="scale_v2_key_unreadable">Не удалось прочитать файл.</string>
     <string name="scale_factor">Коэффициент импеданса k</string>
-    <string name="scale_factor_hint">1, если не калибровали по другому анализатору</string>
+    <string name="scale_factor_hint">1, если не калибровали по другому анализатору. Действует и на сегменты 8-электродных весов</string>
     <string name="scale_capabilities">Весы умеют</string>
     <string name="scale_implemented">Сейчас поддерживается</string>
     <string name="scale_nothing_yet">Пока ничего</string>
@@ -345,4 +345,19 @@
     </plurals>
     <string name="weighing_change_since">%1$s с %2$s</string>
     <string name="weighing_saved_close">Закрыть</string>
+    <string name="unit_ohm">Ом</string>
+    <string name="unit_ohm_value">%1$s Ом</string>
+    <string name="segment_right_arm">Правая рука</string>
+    <string name="segment_left_arm">Левая рука</string>
+    <string name="segment_right_leg">Правая нога</string>
+    <string name="segment_left_leg">Левая нога</string>
+    <string name="segment_trunk">Корпус</string>
+    <string name="segment_frequency">%1$s, частота %2$d</string>
+    <string name="segment_frequency_choice">Частота %1$d</string>
+    <string name="segments_title">Сегменты тела</string>
+    <string name="segments_card_one">Импеданс рук, ног и корпуса</string>
+    <string name="segments_card_two">Импеданс рук, ног и корпуса на двух частотах</string>
+    <string name="segments_card_taken">Взвешивание %1$s</string>
+    <string name="segments_hint">Сопротивление тела слабому току весов: оно ниже там, где больше воды и мышц. Сравнивайте сегмент с ним же со временем и правую сторону с левой.</string>
+    <string name="segments_change">%1$s к прошлому взвешиванию</string>
 </resources>

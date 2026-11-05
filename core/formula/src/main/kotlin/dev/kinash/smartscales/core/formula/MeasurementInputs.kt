@@ -28,6 +28,12 @@ object MeasurementInputs {
         values["female"] = !male
         values["impedance"] = if (placeholder) null else footToFoot(raw)?.let { it * impedanceFactor }
         values["heart_rate"] = raw.heartRateBpm?.toDouble()
+        // Segments with the same calibration as foot to foot: the factor is of the scale's measuring circuit
+        for (impedance in raw.impedances) {
+            val segment = impedance.channel - 1
+            if (segment !in SegmentInputs.segments.indices || impedance.frequencyIndex > 1) continue
+            values[SegmentInputs.name(segment, impedance.frequencyIndex)] = impedance.ohms * impedanceFactor
+        }
         return values
     }
 

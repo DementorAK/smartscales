@@ -53,6 +53,18 @@ class MeasurementInputsTest {
     }
 
     @Test
+    fun segmentsAreInputsByNameAndFrequencyWithTheCalibration() {
+        // As a CB frame comes: five segments at two frequencies, no foot to foot
+        val segments = (0..1).flatMap { frequency -> (1..5).map { Impedance(it, 300.0 + 10 * it + frequency, frequencyIndex = frequency) } }
+        val inputs = MeasurementInputs.of(raw.copy(impedances = segments), impedanceFactor = 2.0)
+        assertEquals(620.0, inputs["impedance_right_arm"] as Double, 1e-9)
+        assertEquals(700.0, inputs["impedance_trunk"] as Double, 1e-9)
+        assertEquals(642.0, inputs["impedance_left_arm_2"] as Double, 1e-9)
+        assertNull(inputs["impedance"])
+        assertEquals(SegmentInputs.names.toSet(), SegmentInputs.names.filter { it in StandardInputs.types }.toSet())
+    }
+
+    @Test
     fun birthDateAfterTheMeasurementGivesNoAge() {
         val unborn = raw.copy(person = raw.person.copy(birthDate = LocalDate.parse("2027-01-01")))
         val inputs = MeasurementInputs.of(unborn)

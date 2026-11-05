@@ -10,6 +10,7 @@ import dev.kinash.smartscales.ui.history.HistoryScreen
 import dev.kinash.smartscales.ui.inbox.InboxScreen
 import dev.kinash.smartscales.ui.measurement.MeasurementEditScreen
 import dev.kinash.smartscales.ui.profile.ProfileEditScreen
+import dev.kinash.smartscales.ui.segments.SegmentsScreen
 import dev.kinash.smartscales.ui.scale.BluetoothLogScreen
 import dev.kinash.smartscales.ui.scale.ScaleEditScreen
 import dev.kinash.smartscales.ui.scale.ScaleSearchScreen
@@ -35,6 +36,10 @@ data class MeasurementEditRoute(val measurementId: Long? = null, val profileId: 
 /** The chart of [indicator] (a card id) for [profileId]. */
 @Serializable
 data class ChartRoute(val profileId: Long, val indicator: String)
+
+/** The segments of [profileId]'s latest weighing on an 8-electrode scale. */
+@Serializable
+data class SegmentsRoute(val profileId: Long)
 
 /** Two weighings of [profileId] side by side, in either order. */
 @Serializable
@@ -73,10 +78,14 @@ fun SmartScalesNavHost() {
                 onOpenSettings = { navController.navigate(SettingsRoute) },
                 onOpenChart = { profileId, indicator -> navController.navigate(ChartRoute(profileId, indicator)) },
                 onCompare = { profileId, first, second -> navController.navigate(CompareRoute(profileId, first, second)) },
+                onOpenSegments = { navController.navigate(SegmentsRoute(it)) },
             )
         }
         composable<ChartRoute> { ChartScreen(onBack = back) }
         composable<CompareRoute> { CompareScreen(onBack = back) }
+        composable<SegmentsRoute> {
+            SegmentsScreen(onBack = back, onOpenChart = { profileId, series -> navController.navigate(ChartRoute(profileId, series)) })
+        }
         composable<WeighingRoute> {
             WeighingScreen(
                 onBack = back,

@@ -10,6 +10,7 @@ import dev.kinash.smartscales.ui.chart.HEIGHT_SERIES
 import dev.kinash.smartscales.ui.history.FOLLOWS_GROUP
 import dev.kinash.smartscales.ui.history.WEIGHT_CARD
 import dev.kinash.smartscales.ui.history.cardChoices
+import dev.kinash.smartscales.ui.segments.SegmentSeries
 import java.time.temporal.ChronoUnit
 
 /** One value at both weighings, as it was worked out for each of them. */
@@ -51,7 +52,7 @@ fun daysApart(before: Measurement, after: Measurement): Int =
     ChronoUnit.DAYS.between(before.takenAt.atZone(before.zone).toLocalDate(), after.takenAt.atZone(after.zone).toLocalDate()).toInt()
 
 /** A child's values: weight, height and BMI, as on the child's cards; body composition is not for children. */
-val CHILD_COMPARE = listOf(WEIGHT_CARD, HEIGHT_SERIES, "bmi")
+val CHILD_COMPARE = listOf(WEIGHT_CARD, HEIGHT_SERIES, "bmi") + SegmentSeries.all.map { it.id }
 
 /**
  * What a comparison shows, in order: the weight, the profile's [cards] as on the main screen, then every other
@@ -61,7 +62,8 @@ val CHILD_COMPARE = listOf(WEIGHT_CARD, HEIGHT_SERIES, "bmi")
 fun compareIds(model: FormulaModel, cards: List<String>): List<String> {
     val variants = model.groups.filterValues { it.size > 1 }.values.flatten().toSet()
     val rest = cardChoices(model).map { it.id }.filter { it !in variants }
-    return (listOf(WEIGHT_CARD) + cards.filter { it !in model.hidden } + rest).distinct()
+    // The segments last: rows without values at either weighing are left out, so they show for 8 electrodes only
+    return (listOf(WEIGHT_CARD) + cards.filter { it !in model.hidden } + rest + SegmentSeries.all.map { it.id }).distinct()
 }
 
 /**
@@ -70,18 +72,19 @@ fun compareIds(model: FormulaModel, cards: List<String>): List<String> {
  */
 fun compareRows(model: FormulaModel, before: MeasuredIndicators, after: MeasuredIndicators, ids: List<String>): List<CompareRow> =
     ids.mapNotNull { id ->
-        val (unit, precision) = when (id) {
-            WEIGHT_CARD -> IndicatorUnit.KG to 2
-            HEIGHT_SERIES -> IndicatorUnit.CM to 1
-            in model.groups -> model.indicators.getValue(model.groups.getValue(id).first()).def.let { it.unit to it.precision }
+        val (unit, precision) = when {
+            id == WEIGHT_CARD -> IndicatorUnit.KG to 2
+            id == HEIGHT_SERIES -> IndicatorUnit.CM to 1
+            SegmentSeries.of(id) != null -> IndicatorUnit.OHM to 1
+            id in model.groups -> model.indicators.getValue(model.groups.getValue(id).first()).def.let { it.unit to it.precision }
             else -> model.indicators[id]?.def?.let { it.unit to it.precision } ?: return@mapNotNull null
         }
         val a = valueOf(model, before, id)
         val b = valueOf(model, after, id)
         if (a == null && b == null) return@mapNotNull null
-        val title = when (id) {
-            WEIGHT_CARD, HEIGHT_SERIES -> emptyMap()
-            in model.groups -> model.groupName(id, b?.variant ?: a?.variant ?: model.groups.getValue(id).first())
+        val title = when {
+            id == WEIGHT_CARD || id == HEIGHT_SERIES || SegmentSeries.of(id) != null -> emptyMap()
+            id in model.groups -> model.groupName(id, b?.variant ?: a?.variant ?: model.groups.getValue(id).first())
             else -> model.indicators.getValue(id).def.name
         }
         CompareRow(id, title, unit, precision, a, b)
@@ -92,6 +95,7 @@ private fun valueOf(model: FormulaModel, measured: MeasuredIndicators, id: Strin
     // Children's norms are percentiles, not the zones of the formula sets, and body composition is not for children
     val zones = measured.growth == null
     if (!zones && id !in CHILD_COMPARE) return null
+    SegmentSeries.of(id)?.let { segment -> return segment.valueOf(measured)?.let { CompareValue(it, null, null) } }
     return when (id) {
         WEIGHT_CARD -> CompareValue(measured.measurement.weightKg, null, null)
         HEIGHT_SERIES -> measured.measurement.person?.heightCm?.let { CompareValue(it, null, null) }

@@ -128,7 +128,7 @@
     <string name="scale_v2_key_other_scales">The file has keys for other scales only.</string>
     <string name="scale_v2_key_unreadable">Cannot read the file.</string>
     <string name="scale_factor">Impedance factor k</string>
-    <string name="scale_factor_hint">1 unless calibrated against another analyser</string>
+    <string name="scale_factor_hint">1 unless calibrated against another analyser. It applies to the segments of 8-electrode scales too</string>
     <string name="scale_capabilities">The scale can</string>
     <string name="scale_implemented">Supported now</string>
     <string name="scale_nothing_yet">Nothing yet</string>
@@ -327,4 +327,19 @@
     </plurals>
     <string name="weighing_change_since">%1$s since %2$s</string>
     <string name="weighing_saved_close">Close</string>
+    <string name="unit_ohm">Ω</string>
+    <string name="unit_ohm_value">%1$s Ω</string>
+    <string name="segment_right_arm">Right arm</string>
+    <string name="segment_left_arm">Left arm</string>
+    <string name="segment_right_leg">Right leg</string>
+    <string name="segment_left_leg">Left leg</string>
+    <string name="segment_trunk">Trunk</string>
+    <string name="segment_frequency">%1$s, frequency %2$d</string>
+    <string name="segment_frequency_choice">Frequency %1$d</string>
+    <string name="segments_title">Body segments</string>
+    <string name="segments_card_one">Impedance of the arms, legs and trunk</string>
+    <string name="segments_card_two">Impedance of the arms, legs and trunk at two frequencies</string>
+    <string name="segments_card_taken">From the weighing of %1$s</string>
+    <string name="segments_hint">The body\'s resistance to the scale\'s weak current: it is lower where there is more water and muscle. Compare a segment with itself over time, and the right side with the left.</string>
+    <string name="segments_change">%1$s since the weighing before</string>
 </resources>

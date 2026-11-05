@@ -12,6 +12,8 @@ import dev.kinash.smartscales.indicators.Indicators
 import dev.kinash.smartscales.ui.chart.seriesId
 import dev.kinash.smartscales.ui.chart.seriesPoints
 import dev.kinash.smartscales.ui.goal.goalProgress
+import dev.kinash.smartscales.ui.segments.hasSegments
+import dev.kinash.smartscales.ui.segments.segmentFrequencies
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
@@ -44,6 +46,15 @@ sealed interface HistoryState {
         val tagFilter: Set<String> = emptySet(),
         /** All the profile's weighings, for "none with these tags" when the filter leaves none. */
         val total: Int = 0,
+        /**
+         * The latest weighing with the segments of an 8-electrode scale, which the segments screen shows: the card
+         * stays after a manual entry or a 4-electrode weighing, and then says which weighing it is. Null without any.
+         */
+        val segments: Measurement? = null,
+        /** [segments] is not the latest weighing. */
+        val segmentsEarlier: Boolean = false,
+        /** The frequencies [segments] has, 0 for the first. */
+        val segmentFrequencies: List<Int> = emptyList(),
     ) : HistoryState
 }
 
@@ -77,6 +88,7 @@ class HistoryViewModel @Inject constructor(
                 card.copy(goal = goalProgress(goal, seriesPoints(indicators.model, items, seriesId(card.id)), clock.instant()))
             }
             val history = items.map { it.measurement }
+            val withSegments = items.firstOrNull(::hasSegments)
             val tags = profileTags(history)
             val active = activeFilter(filter, tags)
             HistoryState.Ready(
@@ -85,6 +97,9 @@ class HistoryViewModel @Inject constructor(
                 tags = tags,
                 tagFilter = active,
                 total = history.size,
+                segments = withSegments?.measurement,
+                segmentsEarlier = withSegments != null && withSegments !== newest,
+                segmentFrequencies = withSegments?.let(::segmentFrequencies).orEmpty(),
             )
         }.flowOn(Dispatchers.Default)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HistoryState.Loading)

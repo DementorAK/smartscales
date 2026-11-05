@@ -162,6 +162,7 @@ enum class IndicatorUnit {
     @SerialName("liter") LITER,
     @SerialName("kcal") KCAL,
     @SerialName("kg_m2") KG_M2,
+    @SerialName("ohm") OHM,
     @SerialName("none") NONE,
 }
 

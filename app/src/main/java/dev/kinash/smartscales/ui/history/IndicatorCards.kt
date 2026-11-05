@@ -335,6 +335,7 @@ fun indicatorValueText(value: Double, unit: IndicatorUnit, precision: Int, profi
         IndicatorUnit.LITER -> stringResource(R.string.unit_liter_value, number)
         IndicatorUnit.KCAL -> stringResource(R.string.unit_kcal_value, number)
         IndicatorUnit.KG_M2 -> stringResource(R.string.unit_kg_m2_value, number)
+        IndicatorUnit.OHM -> stringResource(R.string.unit_ohm_value, number)
         IndicatorUnit.NONE -> number
     }
 }

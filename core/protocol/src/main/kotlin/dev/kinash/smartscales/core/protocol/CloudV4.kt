@@ -149,6 +149,11 @@ class CloudV4Parser {
         const val TYPE_C5 = 0xC5
         const val TYPE_C8 = 0xC8
         const val TYPE_CB = 0xCB
+        /**
+         * Five values per frequency, right arm, left arm, right leg, left leg and trunk: the order of
+         * `Segment` channels, so each goes on its channel as it comes. Known for `CB` from how OKOK reads its
+         * frames; taken to be the same for `C8`, not checked on a real scale.
+         */
         const val SEGMENTS = 5
         const val MEASURING_IMPEDANCE = 0x40
         const val MEASURING_HEART_RATE = 0x80

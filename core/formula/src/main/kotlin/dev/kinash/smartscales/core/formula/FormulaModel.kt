@@ -20,7 +20,23 @@ object StandardInputs {
         "waist" to ValueType.NUMBER,
         "hips" to ValueType.NUMBER,
         "neck" to ValueType.NUMBER,
-    )
+    ) + SegmentInputs.names.associateWith { ValueType.NUMBER }
+}
+
+/**
+ * The impedances of an 8-electrode scale as inputs, with the scale's calibration factor: `impedance_right_arm`,
+ * `impedance_left_arm`, `impedance_right_leg`, `impedance_left_leg`, `impedance_trunk` at the first frequency the
+ * scale sends, and the same with `_2` at the second. No built-in formula uses them: published segmental equations
+ * need the reactance, so they are for the person's own sets (requirements §6.3a).
+ */
+object SegmentInputs {
+    val segments = listOf("right_arm", "left_arm", "right_leg", "left_leg", "trunk")
+
+    /** The input of segment [index] (0 for the right arm, as the channels go from 1) at [frequencyIndex]. */
+    fun name(index: Int, frequencyIndex: Int): String =
+        "impedance_" + segments[index] + if (frequencyIndex == 0) "" else "_${frequencyIndex + 1}"
+
+    val names: List<String> = (0..1).flatMap { frequency -> segments.indices.map { name(it, frequency) } }
 }
 
 /** A problem in a formula set: [set] and [path] say where, [position] is the character in a formula. */

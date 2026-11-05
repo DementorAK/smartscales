@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,6 +21,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -34,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.kinash.smartscales.R
@@ -53,6 +56,7 @@ fun HistoryScreen(
     onOpenSettings: () -> Unit,
     onOpenChart: (profileId: Long, indicator: String) -> Unit,
     onCompare: (profileId: Long, first: Long, second: Long) -> Unit,
+    onOpenSegments: (profileId: Long) -> Unit,
     viewModel: HistoryViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -108,8 +112,10 @@ fun HistoryScreen(
                 else -> LazyColumn {
                     if (ready.cards.isNotEmpty()) {
                         item(key = "cards") { IndicatorCards(ready.cards, current, onOpen = { onOpenChart(current.id, it) }) }
-                        item(key = "cards-divider") { HorizontalDivider() }
                     }
+                    // Apart from the cards: a weighing without indicators (the profile lacks data) may have segments
+                    if (ready.segments != null) item(key = "segments") { SegmentsCard(ready, onClick = { onOpenSegments(current.id) }) }
+                    if (ready.cards.isNotEmpty() || ready.segments != null) item(key = "cards-divider") { HorizontalDivider() }
                     if (ready.compareHint) item(key = "compare-hint") { CompareHint(onClose = viewModel::hideCompareHint) }
                     if (ready.tags.isNotEmpty()) {
                         item(key = "tags") {
@@ -190,6 +196,33 @@ private fun MainBar(
             }
         },
     )
+}
+
+/**
+ * The latest weighing with the segments of an 8-electrode scale, which the card opens on a body. Its date is said
+ * when a later weighing has none (entered by hand, or on a 4-electrode scale), so it is not taken for today's.
+ */
+@Composable
+private fun SegmentsCard(ready: HistoryState.Ready, onClick: () -> Unit) {
+    val segments = ready.segments ?: return
+    OutlinedCard(
+        onClick,
+        Modifier
+            .fillMaxWidth()
+            .padding(start = ScreenPadding, top = if (ready.cards.isEmpty()) ScreenPadding else 0.dp, end = ScreenPadding, bottom = ScreenPadding),
+    ) {
+        Column(Modifier.padding(ScreenPadding)) {
+            Text(stringResource(R.string.segments_title), style = MaterialTheme.typography.labelLarge)
+            Text(
+                stringResource(if (ready.segmentFrequencies.size > 1) R.string.segments_card_two else R.string.segments_card_one),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (ready.segmentsEarlier) {
+                Text(stringResource(R.string.segments_card_taken, dateTimeText(segments)), style = MaterialTheme.typography.bodySmall)
+            }
+        }
+    }
 }
 
 /** A long press is found by chance only, so the history tells of it once. */

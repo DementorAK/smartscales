@@ -19,6 +19,7 @@ import dev.kinash.smartscales.ui.history.WEIGHT_CARD
 import dev.kinash.smartscales.ui.history.activeFilter
 import dev.kinash.smartscales.ui.history.matches
 import dev.kinash.smartscales.ui.history.profileTags
+import dev.kinash.smartscales.ui.segments.SegmentSeries
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -199,8 +200,8 @@ class ChartViewModel @Inject constructor(
         /** Units on one chart: the left axis and the right one. */
         const val MAX_AXES = 2
 
-        /** A child's cards: BMI, weight and height (requirements §3). */
-        val CHILD_CHOICES = listOf(WEIGHT_CARD, HEIGHT_SERIES, "bmi")
+        /** A child's cards, BMI, weight and height (requirements §3), and the segments of an 8-electrode scale. */
+        val CHILD_CHOICES = listOf(WEIGHT_CARD, HEIGHT_SERIES, "bmi") + SegmentSeries.all.map { it.id }
 
         /**
          * The shortest period with at least two weighings, so the chart opens with a line; all the history when

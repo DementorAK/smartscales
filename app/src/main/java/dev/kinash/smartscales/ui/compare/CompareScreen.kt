@@ -24,6 +24,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -44,6 +45,8 @@ import dev.kinash.smartscales.ui.history.WEIGHT_CARD
 import dev.kinash.smartscales.ui.history.color
 import dev.kinash.smartscales.ui.history.dateTimeText
 import dev.kinash.smartscales.ui.history.indicatorValueText
+import dev.kinash.smartscales.ui.segments.SegmentSeries
+import dev.kinash.smartscales.ui.segments.title
 import java.math.BigDecimal
 import java.math.RoundingMode
 
@@ -98,7 +101,7 @@ private fun CompareItem(row: CompareRow, profile: Profile, language: String) {
     val title = when (row.id) {
         WEIGHT_CARD -> stringResource(R.string.card_weight)
         HEIGHT_SERIES -> stringResource(R.string.card_height)
-        else -> row.title.text(language)
+        else -> SegmentSeries.of(row.id)?.title(LocalContext.current) ?: row.title.text(language)
     }
     ListItem(
         headlineContent = { Text(title) },
@@ -181,6 +184,7 @@ private fun changeText(row: CompareRow, profile: Profile): String {
         IndicatorUnit.LITER -> stringResource(R.string.unit_liter_value, number)
         IndicatorUnit.KCAL -> stringResource(R.string.unit_kcal_value, number)
         IndicatorUnit.KG_M2 -> stringResource(R.string.unit_kg_m2_value, number)
+        IndicatorUnit.OHM -> stringResource(R.string.unit_ohm_value, number)
         IndicatorUnit.NONE -> number
     }
 }

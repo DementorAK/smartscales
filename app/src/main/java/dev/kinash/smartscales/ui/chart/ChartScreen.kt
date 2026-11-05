@@ -66,6 +66,8 @@ import dev.kinash.smartscales.ui.goal.GoalSection
 import dev.kinash.smartscales.ui.history.TagFilterRow
 import dev.kinash.smartscales.ui.history.WEIGHT_CARD
 import dev.kinash.smartscales.ui.history.color
+import dev.kinash.smartscales.ui.segments.SegmentSeries
+import dev.kinash.smartscales.ui.segments.title
 import java.time.Duration
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -128,8 +130,8 @@ fun ChartScreen(onBack: () -> Unit, viewModel: ChartViewModel = hiltViewModel())
                 onChange = viewModel::setSmoothing,
             )
             val main = ready.shown.first().series
-            // Height is not something to aim at, nor a child's weight
-            if (ready.goalsOffered && main.id != HEIGHT_SERIES) {
+            // Height is not something to aim at, nor a child's weight or a segment's impedance
+            if (ready.goalsOffered && main.id != HEIGHT_SERIES && SegmentSeries.of(main.id) == null) {
                 GoalSection(
                     target = ready.goal?.target,
                     goal = ready.progress,
@@ -300,7 +302,7 @@ private fun seriesTitle(series: ChartSeries, language: String): String = titleOf
 private fun titleOf(context: Context, id: String, title: LocalizedText, language: String): String = when (id) {
     WEIGHT_CARD -> context.getString(R.string.card_weight)
     HEIGHT_SERIES -> context.getString(R.string.card_height)
-    else -> title.text(language)
+    else -> SegmentSeries.of(id)?.title(context) ?: title.text(language)
 }
 
 private fun choiceTitle(context: Context, choice: ChartChoice, language: String) = titleOf(context, choice.id, choice.title, language)
@@ -320,6 +322,7 @@ private fun unitSymbol(context: Context, unit: IndicatorUnit, profile: Profile):
     IndicatorUnit.LITER -> context.getString(R.string.unit_liter)
     IndicatorUnit.KCAL -> context.getString(R.string.unit_kcal)
     IndicatorUnit.KG_M2 -> context.getString(R.string.unit_kg_m2)
+    IndicatorUnit.OHM -> context.getString(R.string.unit_ohm)
     IndicatorUnit.NONE -> null
 }
 
@@ -343,6 +346,7 @@ private fun valueText(context: Context, value: Double, series: ChartSeries, prof
         IndicatorUnit.LITER -> context.getString(R.string.unit_liter_value, number)
         IndicatorUnit.KCAL -> context.getString(R.string.unit_kcal_value, number)
         IndicatorUnit.KG_M2 -> context.getString(R.string.unit_kg_m2_value, number)
+        IndicatorUnit.OHM -> context.getString(R.string.unit_ohm_value, number)
         IndicatorUnit.NONE -> number
     }
 }

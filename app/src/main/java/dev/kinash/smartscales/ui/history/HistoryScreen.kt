@@ -1,5 +1,6 @@
 package dev.kinash.smartscales.ui.history
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,45 +52,34 @@ fun HistoryScreen(
     onWeigh: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenChart: (profileId: Long, indicator: String) -> Unit,
+    onCompare: (profileId: Long, first: Long, second: Long) -> Unit,
     viewModel: HistoryViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val ready = state as? HistoryState.Ready
     val current = ready?.current
+    // Weighings picked to compare, by a long press; a third one replaces the first picked
+    var selected by rememberSaveable(current?.id) { mutableStateOf(longArrayOf()) }
+    BackHandler(enabled = selected.isNotEmpty()) { selected = longArrayOf() }
+    val toggle = { id: Long ->
+        if (selected.isEmpty()) viewModel.hideCompareHint()
+        selected = if (id in selected) selected.filter { it != id }.toLongArray() else (selected + id).takeLast(2).toLongArray()
+    }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    if (ready != null && current != null) {
-                        ProfileSwitcher(ready.profiles, current, viewModel::selectProfile, onAddProfile)
-                    } else {
-                        Text(stringResource(R.string.app_name))
-                    }
-                },
-                // Profiles are edited and deleted in the settings; the bar keeps the weighing, manual entry and
-                // settings, and the inbox while it has weighings to sort
-                actions = {
-                    if (ready != null && ready.inboxCount > 0) {
-                        IconButton(onClick = onOpenInbox) {
-                            BadgedBox(badge = { Badge { Text(ready.inboxCount.toString()) } }) {
-                                Icon(painterResource(R.drawable.ic_inbox), stringResource(R.string.inbox_title))
-                            }
-                        }
-                    }
-                    IconButton(onClick = onWeigh) {
-                        Icon(painterResource(R.drawable.ic_scale), stringResource(R.string.weighing_open))
-                    }
-                    if (current != null) {
-                        IconButton(onClick = { onAddMeasurement(current.id) }) {
-                            Icon(painterResource(R.drawable.ic_manual_entry), stringResource(R.string.measurement_new))
-                        }
-                    }
-                    IconButton(onClick = onOpenSettings) {
-                        Icon(painterResource(R.drawable.ic_settings), stringResource(R.string.settings_title))
-                    }
-                },
-            )
+            if (current != null && selected.isNotEmpty()) {
+                SelectionBar(
+                    count = selected.size,
+                    onCancel = { selected = longArrayOf() },
+                    onCompare = {
+                        onCompare(current.id, selected[0], selected[1])
+                        selected = longArrayOf()
+                    },
+                )
+            } else {
+                MainBar(ready, current, viewModel::selectProfile, onAddProfile, onOpenInbox, onWeigh, onAddMeasurement, onOpenSettings)
+            }
         },
         // Weighing on the scale is the main action: the big button, and the scale in the top bar beside manual entry
         // (the author's choice, requirements §6.1)
@@ -119,14 +109,98 @@ fun HistoryScreen(
                         item(key = "cards") { IndicatorCards(ready.cards, current, onOpen = { onOpenChart(current.id, it) }) }
                         item(key = "cards-divider") { HorizontalDivider() }
                     }
+                    if (ready.compareHint) item(key = "compare-hint") { CompareHint(onClose = viewModel::hideCompareHint) }
                     items(ready.measurements, key = { it.id }) { measurement ->
-                        MeasurementRow(measurement, current.weightUnit, onClick = { onOpenMeasurement(measurement.id) })
+                        MeasurementRow(
+                            measurement,
+                            current.weightUnit,
+                            onClick = { if (selected.isEmpty()) onOpenMeasurement(measurement.id) else toggle(measurement.id) },
+                            onLongClick = { toggle(measurement.id) },
+                            onLongClickLabel = stringResource(R.string.compare_action),
+                            selected = (measurement.id in selected).takeIf { selected.isNotEmpty() },
+                        )
                         HorizontalDivider()
                     }
                 }
             }
         }
     }
+}
+
+/** The top bar: the profile on the left; the inbox while it has weighings to sort, the weighing, manual entry and settings. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MainBar(
+    ready: HistoryState.Ready?,
+    current: Profile?,
+    onSelectProfile: (Long) -> Unit,
+    onAddProfile: () -> Unit,
+    onOpenInbox: () -> Unit,
+    onWeigh: () -> Unit,
+    onAddMeasurement: (profileId: Long) -> Unit,
+    onOpenSettings: () -> Unit,
+) {
+    TopAppBar(
+        title = {
+            if (ready != null && current != null) {
+                ProfileSwitcher(ready.profiles, current, onSelectProfile, onAddProfile)
+            } else {
+                Text(stringResource(R.string.app_name))
+            }
+        },
+        // Profiles are edited and deleted in the settings; the bar keeps the weighing, manual entry and
+        // settings, and the inbox while it has weighings to sort
+        actions = {
+            if (ready != null && ready.inboxCount > 0) {
+                IconButton(onClick = onOpenInbox) {
+                    BadgedBox(badge = { Badge { Text(ready.inboxCount.toString()) } }) {
+                        Icon(painterResource(R.drawable.ic_inbox), stringResource(R.string.inbox_title))
+                    }
+                }
+            }
+            IconButton(onClick = onWeigh) {
+                Icon(painterResource(R.drawable.ic_scale), stringResource(R.string.weighing_open))
+            }
+            if (current != null) {
+                IconButton(onClick = { onAddMeasurement(current.id) }) {
+                    Icon(painterResource(R.drawable.ic_manual_entry), stringResource(R.string.measurement_new))
+                }
+            }
+            IconButton(onClick = onOpenSettings) {
+                Icon(painterResource(R.drawable.ic_settings), stringResource(R.string.settings_title))
+            }
+        },
+    )
+}
+
+/** A long press is found by chance only, so the history tells of it once. */
+@Composable
+private fun CompareHint(onClose: () -> Unit) {
+    Row(Modifier.padding(start = ScreenPadding), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            stringResource(R.string.compare_hint),
+            Modifier.weight(1f),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        IconButton(onClick = onClose) { Icon(painterResource(R.drawable.ic_close), stringResource(R.string.compare_hint_close)) }
+    }
+    HorizontalDivider()
+}
+
+/** The top bar while weighings are picked to compare: two make the comparison. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SelectionBar(count: Int, onCancel: () -> Unit, onCompare: () -> Unit) {
+    TopAppBar(
+        navigationIcon = {
+            IconButton(onClick = onCancel) { Icon(painterResource(R.drawable.ic_close), stringResource(R.string.compare_cancel)) }
+        },
+        title = { Text(stringResource(if (count < 2) R.string.compare_pick_second else R.string.compare_picked)) },
+        actions = {
+            TextButton(onClick = onCompare, enabled = count == 2) { Text(stringResource(R.string.compare_action)) }
+        },
+    )
 }
 
 @Composable

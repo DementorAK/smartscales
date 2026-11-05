@@ -143,7 +143,7 @@ fun childCards(model: FormulaModel, results: FormulaModel.Results, growth: Child
 }
 
 /** Indicators whose value follows a group's variant: their card names the method, as the group's card does. */
-private val FOLLOWS_GROUP = mapOf("fat_mass" to "bf", "fat_free_mass" to "bf", "tbw_percent" to "tbw")
+val FOLLOWS_GROUP = mapOf("fat_mass" to "bf", "fat_free_mass" to "bf", "tbw_percent" to "tbw")
 
 /**
  * The [cards] with a value for this measurement, in their order; hidden indicators and groups, and ids no formula

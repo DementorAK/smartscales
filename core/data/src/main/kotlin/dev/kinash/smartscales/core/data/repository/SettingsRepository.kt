@@ -2,6 +2,7 @@ package dev.kinash.smartscales.core.data.repository
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
@@ -33,9 +34,17 @@ class SettingsRepository @Inject constructor(
         dataStore.edit { it[MATCH_THRESHOLD] = kg }
     }
 
+    /** The history has told how to compare two weighings, and the person has done it or closed the hint. */
+    val compareHintSeen: Flow<Boolean> = dataStore.data.map { it[COMPARE_HINT_SEEN] ?: false }
+
+    suspend fun setCompareHintSeen() {
+        dataStore.edit { it[COMPARE_HINT_SEEN] = true }
+    }
+
     companion object {
         const val DEFAULT_MATCH_THRESHOLD_KG = 3.0
         private val SELECTED_PROFILE = longPreferencesKey("selected_profile")
         private val MATCH_THRESHOLD = doublePreferencesKey("match_threshold_kg")
+        private val COMPARE_HINT_SEEN = booleanPreferencesKey("compare_hint_seen")
     }
 }

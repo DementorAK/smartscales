@@ -281,4 +281,19 @@
         <item quantity="other">%1$s: %2$d weighings, the last %3$s</item>
     </plurals>
     <string name="chart_stones_hint">On the axis in stones as a fraction: 12.5 st is 12 st 7 lb</string>
+    <string name="unit_pp_value">%1$s pp</string>
+    <string name="compare_cancel">Cancel the choice</string>
+    <string name="compare_pick_second">Choose another weighing</string>
+    <string name="compare_picked">Two weighings chosen</string>
+    <string name="compare_action">Compare</string>
+    <string name="compare_title">Comparison</string>
+    <string name="compare_dates">%1$s → %2$s</string>
+    <string name="compare_same_day">On the same day</string>
+    <plurals name="compare_days">
+        <item quantity="one">%1$d day apart</item>
+        <item quantity="other">%1$d days apart</item>
+    </plurals>
+    <string name="compare_methods_differ">Worked out by different methods, so part of the change comes from the method</string>
+    <string name="compare_hint">To compare two weighings, touch and hold one of them</string>
+    <string name="compare_hint_close">Close the hint</string>
 </resources>

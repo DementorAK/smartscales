@@ -293,4 +293,21 @@
         <item quantity="other">%1$s: %2$d взвешивания, последнее %3$s</item>
     </plurals>
     <string name="chart_stones_hint">На оси — стоуны дробью: 12,5 ст — это 12 ст 7 фнт</string>
+    <string name="unit_pp_value">%1$s п.п.</string>
+    <string name="compare_cancel">Отменить выбор</string>
+    <string name="compare_pick_second">Выберите второе взвешивание</string>
+    <string name="compare_picked">Выбрано два взвешивания</string>
+    <string name="compare_action">Сравнить</string>
+    <string name="compare_title">Сравнение</string>
+    <string name="compare_dates">%1$s → %2$s</string>
+    <string name="compare_same_day">В один день</string>
+    <plurals name="compare_days">
+        <item quantity="one">Между ними %1$d день</item>
+        <item quantity="few">Между ними %1$d дня</item>
+        <item quantity="many">Между ними %1$d дней</item>
+        <item quantity="other">Между ними %1$d дня</item>
+    </plurals>
+    <string name="compare_methods_differ">Посчитано разными методами — часть разницы дал метод</string>
+    <string name="compare_hint">Чтобы сравнить два взвешивания, нажмите на одно из них и удерживайте</string>
+    <string name="compare_hint_close">Закрыть подсказку</string>
 </resources>

@@ -32,6 +32,8 @@ sealed interface HistoryState {
         val inboxCount: Int,
         /** Indicators of the newest measurement. */
         val cards: List<IndicatorCard> = emptyList(),
+        /** How to compare two weighings, until the person has done it or closed the hint; with two or more only. */
+        val compareHint: Boolean = false,
     ) : HistoryState
 }
 
@@ -48,15 +50,19 @@ class HistoryViewModel @Inject constructor(
         all to (all.firstOrNull { it.id == id } ?: all.firstOrNull())
     }.flatMapLatest { (all, current) ->
         val history = current?.let { indicators.observeHistory(it.id) } ?: flowOf(emptyList())
-        combine(history, measurements.observeInboxCount()) { items, inboxCount ->
+        combine(history, measurements.observeInboxCount(), settings.compareHintSeen) { items, inboxCount, hintSeen ->
             val newest = items.firstOrNull()
             val cards = newest?.results?.let { results ->
                 newest.growth?.let { childCards(indicators.model, results, it, newest.measurement) }
                     ?: (listOf(weightCard(newest)) + indicatorCards(indicators.model, results, newest.withImpedance, newest.impedance, current?.let(::cardsOf) ?: DEFAULT_CARDS))
             }.orEmpty()
-            HistoryState.Ready(all, current, items.map { it.measurement }, inboxCount, cards)
+            HistoryState.Ready(all, current, items.map { it.measurement }, inboxCount, cards, compareHint = !hintSeen && items.size >= 2)
         }.flowOn(Dispatchers.Default)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HistoryState.Loading)
+
+    fun hideCompareHint() {
+        viewModelScope.launch { settings.setCompareHintSeen() }
+    }
 
     fun selectProfile(id: Long) {
         viewModelScope.launch { settings.selectProfile(id) }

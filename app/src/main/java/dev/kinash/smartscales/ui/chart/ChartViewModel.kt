@@ -10,10 +10,15 @@ import dev.kinash.smartscales.core.data.Profile
 import dev.kinash.smartscales.core.data.repository.ProfileRepository
 import dev.kinash.smartscales.core.formula.LocalizedText
 import dev.kinash.smartscales.indicators.Indicators
+import dev.kinash.smartscales.indicators.MeasuredIndicators
 import dev.kinash.smartscales.ui.ChartRoute
 import dev.kinash.smartscales.ui.goal.GoalProgress
 import dev.kinash.smartscales.ui.goal.goalProgress
+import dev.kinash.smartscales.ui.history.TagFilters
 import dev.kinash.smartscales.ui.history.WEIGHT_CARD
+import dev.kinash.smartscales.ui.history.activeFilter
+import dev.kinash.smartscales.ui.history.matches
+import dev.kinash.smartscales.ui.history.profileTags
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -73,6 +78,11 @@ sealed interface ChartState {
         val latest: Double? = null,
         /** Goals are for adults: a child's weight is read by its percentile (requirements §6.3). */
         val goalsOffered: Boolean = true,
+        /** The profile's tags and those on, as in the history: the series are of the weighings with all of them. */
+        val tags: List<String> = emptyList(),
+        val tagFilter: Set<String> = emptySet(),
+        /** The filter leaves no weighing in the whole history, not only in the period. */
+        val noneTagged: Boolean = false,
     ) : ChartState
 }
 
@@ -81,11 +91,25 @@ class ChartViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val profiles: ProfileRepository,
     private val indicators: Indicators,
+    private val tagFilters: TagFilters,
     private val clock: Clock,
 ) : ViewModel() {
     private val route = savedStateHandle.toRoute<ChartRoute>()
 
     private data class Options(val period: ChartPeriod?, val smoothing: Boolean)
+
+    /**
+     * The [history] and the weighings with the filter's tags, [filtered]; the series of the chart come from those,
+     * while the zones, the goal and what can be added are of the whole history.
+     */
+    private data class Series(
+        val history: List<MeasuredIndicators>,
+        val filtered: List<MeasuredIndicators>,
+        val all: List<ChartSeries>?,
+        val choices: List<ChartChoice>,
+        val tags: List<String>,
+        val filter: Set<String>,
+    )
 
     /** No period until the person picks one: it is then chosen by what the history has, see [defaultPeriod]. */
     private val options = MutableStateFlow(Options(null, smoothing = true))
@@ -99,11 +123,14 @@ class ChartViewModel @Inject constructor(
         .flatMapLatest { profile ->
             if (profile == null) return@flatMapLatest flowOf(ChartState.Gone)
             val history = indicators.observeHistory(profile.id)
-            // The whole history's series and what can be added change with the history and the series chosen,
-            // not with the period or smoothing
-            val series = combine(history, ids) { history, ids ->
+            // The whole history's series and what can be added change with the history, the series chosen and the
+            // tags, not with the period or smoothing
+            val series = combine(history, ids, tagFilters.of(profile.id)) { history, ids, filter ->
                 val model = indicators.model
-                val all = ids.mapNotNull { chartSeries(model, history, it, profile) }
+                val tags = profileTags(history.map { it.measurement })
+                val active = activeFilter(filter, tags)
+                val shown = history.filter { matches(it.measurement, active) }
+                val all = ids.mapNotNull { chartSeries(model, shown, it, profile) }
                 val child = history.firstOrNull()?.growth != null
                 val units = all.map { it.chartUnit(profile) }.distinct()
                 val choices = (if (child) CHILD_CHOICES else chartChoices(model))
@@ -111,10 +138,11 @@ class ChartViewModel @Inject constructor(
                     .mapNotNull { id -> chartSeries(model, history, id, profile) }
                     .filter { it.points.isNotEmpty() }
                     .map { ChartChoice(it.id, it.title, it.chartUnit(profile) in units || units.size < MAX_AXES) }
-                Triple(history, all.takeIf { it.firstOrNull()?.id == ids.first() }, choices)
+                Series(history, shown, all.takeIf { it.firstOrNull()?.id == ids.first() }, choices, tags, active)
             }.flowOn(Dispatchers.Default)
             val goal = profiles.observeGoals(profile.id).map { it[seriesId(route.indicator)] }
-            combine(series, options, goal) { (history, all, choices), options, goal ->
+            combine(series, options, goal) { series, options, goal ->
+                val (history, filtered, all, choices) = series
                 val model = indicators.model
                 val now = clock.instant()
                 val main = all?.first() ?: return@combine ChartState.Gone
@@ -125,7 +153,7 @@ class ChartViewModel @Inject constructor(
                 val child = history.firstOrNull()?.growth != null
                 ChartState.Ready(
                     profile, period, options.smoothing, since, now,
-                    weighings = history.count { since == null || it.measurement.takenAt >= since },
+                    weighings = filtered.count { since == null || it.measurement.takenAt >= since },
                     shown = all.map { series ->
                         ShownSeries(
                             series,
@@ -140,10 +168,18 @@ class ChartViewModel @Inject constructor(
                     goalsOffered = !child,
                     progress = goal?.takeIf { !child }?.let { goalProgress(it, values, now) },
                     latest = values.lastOrNull()?.value,
+                    tags = series.tags,
+                    tagFilter = series.filter,
+                    noneTagged = filtered.isEmpty(),
                 )
             }.flowOn(Dispatchers.Default)
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ChartState.Loading)
+
+    /** The same filter as the history's: one per profile, until it is turned off or the app restarts. */
+    fun toggleTag(tag: String) {
+        tagFilters.toggle(route.profileId, tag)
+    }
 
     fun selectPeriod(period: ChartPeriod) = options.update { it.copy(period = period) }
 

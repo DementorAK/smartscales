@@ -63,6 +63,7 @@ import dev.kinash.smartscales.ui.common.SwitchRow
 import dev.kinash.smartscales.ui.common.formatNumber
 import dev.kinash.smartscales.ui.common.symbol
 import dev.kinash.smartscales.ui.goal.GoalSection
+import dev.kinash.smartscales.ui.history.TagFilterRow
 import dev.kinash.smartscales.ui.history.WEIGHT_CARD
 import dev.kinash.smartscales.ui.history.color
 import java.time.Duration
@@ -103,10 +104,16 @@ fun ChartScreen(onBack: () -> Unit, viewModel: ChartViewModel = hiltViewModel())
                 onSelect = viewModel::selectPeriod,
                 label = { stringResource(it.title()) },
             )
+            if (ready.tags.isNotEmpty()) TagFilterRow(ready.tags, ready.tagFilter, viewModel::toggleTag)
             if (ready.shown.first().points.isEmpty()) {
                 Box(Modifier.fillMaxWidth().height(ChartHeight), contentAlignment = Alignment.Center) {
                     // Weighings without this value (water without impedance) are not "no weighings"
-                    Text(stringResource(if (ready.weighings > 0) R.string.chart_no_values else R.string.chart_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    val empty = when {
+                        ready.weighings > 0 -> R.string.chart_no_values
+                        ready.noneTagged -> R.string.tag_filter_none
+                        else -> R.string.chart_empty
+                    }
+                    Text(stringResource(empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             } else {
                 Chart(ready, language)

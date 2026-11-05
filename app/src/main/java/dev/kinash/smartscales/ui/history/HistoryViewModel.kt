@@ -38,6 +38,12 @@ sealed interface HistoryState {
         val cards: List<IndicatorCard> = emptyList(),
         /** How to compare two weighings, until the person has done it or closed the hint; with two or more only. */
         val compareHint: Boolean = false,
+        /** The profile's tags to filter [measurements] by; the cards stay on the latest weighing. */
+        val tags: List<String> = emptyList(),
+        /** The tags on, normalized; [measurements] are those with all of them. */
+        val tagFilter: Set<String> = emptySet(),
+        /** All the profile's weighings, for "none with these tags" when the filter leaves none. */
+        val total: Int = 0,
     ) : HistoryState
 }
 
@@ -48,6 +54,7 @@ class HistoryViewModel @Inject constructor(
     private val settings: SettingsRepository,
     private val indicators: Indicators,
     private val clock: Clock,
+    private val tagFilters: TagFilters,
 ) : ViewModel() {
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -56,7 +63,8 @@ class HistoryViewModel @Inject constructor(
     }.flatMapLatest { (all, current) ->
         val history = current?.let { indicators.observeHistory(it.id) } ?: flowOf(emptyList())
         val goals = current?.let { profiles.observeGoals(it.id) } ?: flowOf(emptyMap())
-        combine(history, measurements.observeInboxCount(), settings.compareHintSeen, goals) { items, inboxCount, hintSeen, goals ->
+        val filter = current?.let { tagFilters.of(it.id) } ?: flowOf(emptySet())
+        combine(history, measurements.observeInboxCount(), settings.compareHintSeen, goals, filter) { items, inboxCount, hintSeen, goals, filter ->
             val newest = items.firstOrNull()
             val cards = newest?.results?.let { results ->
                 newest.growth?.let { childCards(indicators.model, results, it, newest.measurement) }
@@ -68,9 +76,23 @@ class HistoryViewModel @Inject constructor(
                 val goal = goals[seriesId(card.id)] ?: return@map card
                 card.copy(goal = goalProgress(goal, seriesPoints(indicators.model, items, seriesId(card.id)), clock.instant()))
             }
-            HistoryState.Ready(all, current, items.map { it.measurement }, inboxCount, cards, compareHint = !hintSeen && items.size >= 2)
+            val history = items.map { it.measurement }
+            val tags = profileTags(history)
+            val active = activeFilter(filter, tags)
+            HistoryState.Ready(
+                all, current, history.filter { matches(it, active) }, inboxCount, cards,
+                compareHint = !hintSeen && items.size >= 2,
+                tags = tags,
+                tagFilter = active,
+                total = history.size,
+            )
         }.flowOn(Dispatchers.Default)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HistoryState.Loading)
+
+    fun toggleTag(tag: String) {
+        val profile = (state.value as? HistoryState.Ready)?.current ?: return
+        tagFilters.toggle(profile.id, tag)
+    }
 
     fun hideCompareHint() {
         viewModelScope.launch { settings.setCompareHintSeen() }

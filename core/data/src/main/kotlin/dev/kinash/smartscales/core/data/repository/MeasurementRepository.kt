@@ -8,7 +8,7 @@ import dev.kinash.smartscales.core.data.db.entity.ImportedValueEntity
 import dev.kinash.smartscales.core.data.db.entity.ManualValueEntity
 import dev.kinash.smartscales.core.data.db.entity.MeasurementTagEntity
 import dev.kinash.smartscales.core.data.db.entity.TagEntity
-import dev.kinash.smartscales.core.data.db.entity.normalizeTagName
+import dev.kinash.smartscales.core.data.normalizeTagName
 import dev.kinash.smartscales.core.data.toEntity
 import dev.kinash.smartscales.core.data.toMeasurement
 import dev.kinash.smartscales.core.data.toProfile

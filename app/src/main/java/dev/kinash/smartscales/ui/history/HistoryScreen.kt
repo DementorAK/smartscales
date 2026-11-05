@@ -58,8 +58,9 @@ fun HistoryScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val ready = state as? HistoryState.Ready
     val current = ready?.current
-    // Weighings picked to compare, by a long press; a third one replaces the first picked
-    var selected by rememberSaveable(current?.id) { mutableStateOf(longArrayOf()) }
+    // Weighings picked to compare, by a long press; a third one replaces the first picked. Another profile or
+    // filter starts over, so a picked weighing is never one the list hides
+    var selected by rememberSaveable(current?.id, ready?.tagFilter) { mutableStateOf(longArrayOf()) }
     BackHandler(enabled = selected.isNotEmpty()) { selected = longArrayOf() }
     val toggle = { id: Long ->
         if (selected.isEmpty()) viewModel.hideCompareHint()
@@ -103,13 +104,31 @@ fun HistoryScreen(
                     action = stringResource(R.string.profile_new),
                     onAction = onAddProfile,
                 )
-                ready.measurements.isEmpty() -> EmptyState(text = stringResource(R.string.history_empty))
+                ready.total == 0 -> EmptyState(text = stringResource(R.string.history_empty))
                 else -> LazyColumn {
                     if (ready.cards.isNotEmpty()) {
                         item(key = "cards") { IndicatorCards(ready.cards, current, onOpen = { onOpenChart(current.id, it) }) }
                         item(key = "cards-divider") { HorizontalDivider() }
                     }
                     if (ready.compareHint) item(key = "compare-hint") { CompareHint(onClose = viewModel::hideCompareHint) }
+                    if (ready.tags.isNotEmpty()) {
+                        item(key = "tags") {
+                            TagFilterRow(
+                                ready.tags, ready.tagFilter, viewModel::toggleTag,
+                                Modifier.padding(horizontal = ScreenPadding, vertical = FieldSpacing),
+                            )
+                            HorizontalDivider()
+                        }
+                    }
+                    if (ready.measurements.isEmpty()) {
+                        item(key = "no-match") {
+                            Text(
+                                stringResource(R.string.tag_filter_none),
+                                Modifier.padding(ScreenPadding),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
                     items(ready.measurements, key = { it.id }) { measurement ->
                         MeasurementRow(
                             measurement,

@@ -327,4 +327,6 @@
     <string name="goal_dialog_field">Целевое значение</string>
     <string name="goal_dialog_hint">Прогресс считается от последнего взвешивания до постановки цели. Новое значение начинает его заново.</string>
     <string name="goal_at_latest">Это последнее значение. Цель — куда двигаться: укажите другое</string>
+    <string name="tag_filter_hint">Только взвешивания со всеми выбранными метками</string>
+    <string name="tag_filter_none">Нет взвешиваний со всеми этими метками</string>
 </resources>

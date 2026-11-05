@@ -4,12 +4,12 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import dev.kinash.smartscales.core.data.normalizeTagName
 import dev.kinash.smartscales.core.model.MeasurementSource
 import dev.kinash.smartscales.core.model.Sex
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import java.util.Locale
 
 /**
  * Raw data of one weighing. Indicators are never stored.
@@ -104,8 +104,6 @@ data class TagEntity(
     val name: String,
     val normalizedName: String = normalizeTagName(name),
 )
-
-fun normalizeTagName(name: String): String = name.trim().lowercase(Locale.ROOT)
 
 @Entity(
     tableName = "measurement_tag",

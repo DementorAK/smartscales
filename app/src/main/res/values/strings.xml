@@ -313,4 +313,6 @@
     <string name="goal_dialog_field">Target</string>
     <string name="goal_dialog_hint">The progress counts from the last weighing before the goal is set. A new target starts it again.</string>
     <string name="goal_at_latest">This is the latest value. A goal is where to go: enter another one</string>
+    <string name="tag_filter_hint">Only weighings with all the tags chosen</string>
+    <string name="tag_filter_none">No weighings with all these tags</string>
 </resources>

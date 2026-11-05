@@ -32,6 +32,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -118,7 +119,14 @@ fun ChartScreen(onBack: () -> Unit, viewModel: ChartViewModel = hiltViewModel())
                     Text(stringResource(empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             } else {
-                Chart(ready, language)
+                // Kept while the series stay: a new one, or one removed, starts with both axes as they come
+                var views by rememberSaveable(ready.shown.map { it.series.id }, stateSaver = AxisViewsSaver) { mutableStateOf(AxisViews()) }
+                Chart(ready, language, views) { views = it }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    val twoAxes = ready.shown.any { it.endAxis }
+                    Hint(stringResource(if (twoAxes) R.string.chart_axes_hint else R.string.chart_axis_hint), Modifier.weight(1f))
+                    if (!views.isDefault) TextButton(onClick = { views = AxisViews() }) { Text(stringResource(R.string.chart_axes_reset)) }
+                }
             }
             Legend(ready, language, onRemove = viewModel::remove)
             if (ready.zones.isNotEmpty()) Hint(stringResource(R.string.chart_zones_hint))
@@ -148,6 +156,12 @@ fun ChartScreen(onBack: () -> Unit, viewModel: ChartViewModel = hiltViewModel())
     }
 }
 
+/** The axes' stretch and shift kept across a rotation: four numbers. */
+private val AxisViewsSaver = listSaver<AxisViews, Double>(
+    save = { listOf(it.left.zoom, it.left.shift, it.right.zoom, it.right.shift) },
+    restore = { AxisViews(AxisView(it[0], it[1]), AxisView(it[2], it[3])) },
+)
+
 /** Lines of the series in order, so the second series has the second color wherever it is drawn. */
 @Composable
 private fun seriesColors(): List<Color> = listOf(
@@ -158,7 +172,7 @@ private fun seriesColors(): List<Color> = listOf(
 )
 
 @Composable
-private fun Chart(ready: ChartState.Ready, language: String) {
+private fun Chart(ready: ChartState.Ready, language: String, views: AxisViews, onViewsChange: (AxisViews) -> Unit) {
     val context = LocalContext.current
     val colors = seriesColors()
     val profile = ready.profile
@@ -215,6 +229,8 @@ private fun Chart(ready: ChartState.Ready, language: String) {
             .height(ChartHeight)
             .semantics { contentDescription = summary },
         goal = ready.goal?.let { inProfileUnits(it.target, main.series.unit, profile) to MaterialTheme.colorScheme.tertiary },
+        views = views,
+        onViewsChange = onViewsChange,
     )
 }
 
@@ -291,8 +307,8 @@ private fun AddSeries(choices: List<ChartChoice>, language: String, onAdd: (Stri
 }
 
 @Composable
-private fun Hint(text: String) {
-    Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+private fun Hint(text: String, modifier: Modifier = Modifier) {
+    Text(text, modifier, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
 /** The name of a series; weight and height are named by the app. */

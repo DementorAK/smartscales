@@ -360,4 +360,7 @@
     <string name="segments_card_taken">Взвешивание %1$s</string>
     <string name="segments_hint">Сопротивление тела слабому току весов: оно ниже там, где больше воды и мышц. Сравнивайте сегмент с ним же со временем и правую сторону с левой.</string>
     <string name="segments_change">%1$s к прошлому взвешиванию</string>
+    <string name="chart_axes_hint">Два пальца, разведённые вверх-вниз над левой или правой половиной, растягивают эту ось; палец вдоль её чисел сдвигает её</string>
+    <string name="chart_axis_hint">Два пальца, разведённые вверх-вниз, растягивают ось; палец вдоль её чисел сдвигает её</string>
+    <string name="chart_axes_reset">Сбросить масштаб</string>
 </resources>

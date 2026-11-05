@@ -3,6 +3,7 @@ package dev.kinash.smartscales.ui.chart
 import dev.kinash.smartscales.core.data.Profile
 import dev.kinash.smartscales.core.formula.BuiltinFormulas
 import dev.kinash.smartscales.core.formula.FormulaModel
+import dev.kinash.smartscales.core.formula.IndicatorUnit
 import dev.kinash.smartscales.core.formula.ZoneLevel
 import dev.kinash.smartscales.core.model.Sex
 import dev.kinash.smartscales.core.model.WeightUnit
@@ -87,6 +88,31 @@ class ChartDataTest {
         val bf = chartSeries(model, history, "bf", profile)!!
         assertEquals(history.reversed().map { it.results!!.group("bf")!!.second }, bf.points.map { it.value })
         assertEquals(null, chartSeries(model, history, "gone", profile))
+    }
+
+    @Test
+    fun anAxisIsStretchedAroundItsMiddleAndMovedBySpans() {
+        val range = 80.0..82.0
+        assertEquals(80.5..81.5, range.viewed(AxisView(zoom = 2.0)))
+        // Up by half a span: the values half a span higher, so the line goes down
+        assertEquals(81.0..83.0, range.viewed(AxisView(shift = 0.5)))
+        assertEquals(range, range.viewed(AxisView()))
+        assertTrue(AxisViews().isDefault)
+    }
+
+    @Test
+    fun sameUnitFarApartGoesOnTheRightAxis() {
+        fun series(id: String, unit: IndicatorUnit, vararg values: Double) =
+            ChartSeries(id, emptyMap(), unit, 1, values.mapIndexed { i, v -> ChartPoint(daysAgo(i.toLong()), v) })
+        val fatMass = series("fat_mass", IndicatorUnit.KG, 16.0, 17.0)
+        val leanMass = series("fat_free_mass", IndicatorUnit.KG, 63.0, 64.0)
+        val weight = series("weight", IndicatorUnit.KG, 16.5, 80.0)
+        val bmr = series("bmr", IndicatorUnit.KCAL, 1700.0)
+        assertEquals(listOf(false, true), endAxes(listOf(fatMass, leanMass), profile))
+        // Values that meet share the axis
+        assertEquals(listOf(false, false), endAxes(listOf(fatMass, weight), profile))
+        // Another unit has the right axis, so the same unit stays left however far
+        assertEquals(listOf(false, false, true), endAxes(listOf(fatMass, leanMass, bmr), profile))
     }
 
     @Test

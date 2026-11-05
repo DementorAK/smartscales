@@ -149,18 +149,18 @@ class ChartViewModel @Inject constructor(
                 val main = all?.first() ?: return@combine ChartState.Gone
                 val period = options.period ?: defaultPeriod(main.points, now)
                 val since = period.days?.let { now - Duration.ofDays(it) }
-                val units = all.map { it.chartUnit(profile) }.distinct()
+                val axes = endAxes(all, profile)
                 val values = seriesPoints(model, history, main.id)
                 val child = history.firstOrNull()?.growth != null
                 ChartState.Ready(
                     profile, period, options.smoothing, since, now,
                     weighings = filtered.count { since == null || it.measurement.takenAt >= since },
-                    shown = all.map { series ->
+                    shown = all.mapIndexed { i, series ->
                         ShownSeries(
                             series,
                             series.points.since(since),
                             if (options.smoothing) movingAverage(series.points, period.averageDays).since(since) else null,
-                            endAxis = series.chartUnit(profile) != units.first(),
+                            endAxis = axes[i],
                         )
                     },
                     zones = zoneBands(model, history.firstOrNull(), main.id, profile),

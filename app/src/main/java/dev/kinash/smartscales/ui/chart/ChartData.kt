@@ -113,6 +113,28 @@ data class ChartUnit(val unit: IndicatorUnit, val weightUnit: WeightUnit?)
 
 fun ChartSeries.chartUnit(profile: Profile) = ChartUnit(unit, profile.weightUnit.takeIf { unit == IndicatorUnit.KG })
 
+/**
+ * Which of [series] go on the right axis: another unit than the first series', or the same unit with values
+ * that never meet the first's (fat mass about 16 kg and fat-free mass about 64 kg), which on one axis would both
+ * be flat lines at its edges. The right axis has one unit, so while another unit is on it the same unit stays
+ * left. Decided on the whole history, so a series keeps its axis whatever the period.
+ */
+fun endAxes(series: List<ChartSeries>, profile: Profile): List<Boolean> {
+    val first = series.firstOrNull() ?: return emptyList()
+    val leftUnit = first.chartUnit(profile)
+    val otherUnit = series.any { it.chartUnit(profile) != leftUnit }
+    val leftRange = first.points.map { it.value }.takeIf { it.isNotEmpty() }?.let { it.min()..it.max() }
+    return series.mapIndexed { i, it ->
+        val values = it.points.map { point -> point.value }
+        when {
+            i == 0 -> false
+            it.chartUnit(profile) != leftUnit -> true
+            otherUnit || leftRange == null || values.isEmpty() -> false
+            else -> values.max() < leftRange.start || values.min() > leftRange.endInclusive
+        }
+    }
+}
+
 /** The points from [since] on; all of them when it is null. */
 fun List<ChartPoint>.since(since: Instant?): List<ChartPoint> = if (since == null) this else filter { it.takenAt >= since }
 

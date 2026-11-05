@@ -342,4 +342,7 @@
     <string name="segments_card_taken">From the weighing of %1$s</string>
     <string name="segments_hint">The body\'s resistance to the scale\'s weak current: it is lower where there is more water and muscle. Compare a segment with itself over time, and the right side with the left.</string>
     <string name="segments_change">%1$s since the weighing before</string>
+    <string name="chart_axes_hint">Two fingers moving up and down over the left or right half stretch that axis; a finger along its numbers moves it</string>
+    <string name="chart_axis_hint">Two fingers moving up and down stretch the axis; a finger along its numbers moves it</string>
+    <string name="chart_axes_reset">Reset the scale</string>
 </resources>

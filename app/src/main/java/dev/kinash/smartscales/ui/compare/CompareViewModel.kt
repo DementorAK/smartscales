@@ -56,8 +56,8 @@ class CompareViewModel @Inject constructor(
                 val (before, after) = pair.sortedBy { it.measurement.takenAt }
                 // A child's list only when both are a child's: one across the 18th birthday keeps the adult's values
                 val child = before.growth != null && after.growth != null
-                val ids = if (child) CHILD_COMPARE else compareIds(indicators.model, cardsOf(profile))
-                CompareState.Ready(profile, before.measurement, after.measurement, compareRows(indicators.model, before, after, ids))
+                val ids = if (child) CHILD_COMPARE else compareIds(history.model, cardsOf(profile))
+                CompareState.Ready(profile, before.measurement, after.measurement, compareRows(history.model, before, after, ids))
             }.flowOn(Dispatchers.Default)
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CompareState.Loading)

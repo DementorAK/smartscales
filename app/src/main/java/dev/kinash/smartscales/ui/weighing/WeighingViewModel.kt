@@ -547,7 +547,7 @@ class WeighingViewModel @Inject constructor(
         val profile = saved.profile ?: return
         val history = indicators.observeHistory(profile.id).first()
         val goals = profiles.observeGoals(profile.id).first()
-        val notes = weighingNotes(indicators.model, history, saved.measurementId, goals, settings.matchThresholdKg.first()) ?: return
+        val notes = weighingNotes(history.model, history, saved.measurementId, goals, settings.matchThresholdKg.first()) ?: return
         // Only if it is still the one shown: "Not me" or the next weighing may have come meanwhile
         session.update { state -> if (state.saved?.measurementId == saved.measurementId) state.copy(saved = state.saved.copy(notes = notes)) else state }
     }

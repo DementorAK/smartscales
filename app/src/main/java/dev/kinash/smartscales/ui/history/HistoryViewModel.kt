@@ -8,6 +8,7 @@ import dev.kinash.smartscales.core.data.Profile
 import dev.kinash.smartscales.core.data.repository.MeasurementRepository
 import dev.kinash.smartscales.core.data.repository.ProfileRepository
 import dev.kinash.smartscales.core.data.repository.SettingsRepository
+import dev.kinash.smartscales.indicators.IndicatorHistory
 import dev.kinash.smartscales.indicators.Indicators
 import dev.kinash.smartscales.ui.chart.seriesId
 import dev.kinash.smartscales.ui.chart.seriesPoints
@@ -72,20 +73,20 @@ class HistoryViewModel @Inject constructor(
     val state: StateFlow<HistoryState> = combine(profiles.observeProfiles(), settings.selectedProfileId) { all, id ->
         all to (all.firstOrNull { it.id == id } ?: all.firstOrNull())
     }.flatMapLatest { (all, current) ->
-        val history = current?.let { indicators.observeHistory(it.id) } ?: flowOf(emptyList())
+        val history = current?.let { indicators.observeHistory(it.id) } ?: flowOf(IndicatorHistory(indicators.model, emptyList()))
         val goals = current?.let { profiles.observeGoals(it.id) } ?: flowOf(emptyMap())
         val filter = current?.let { tagFilters.of(it.id) } ?: flowOf(emptySet())
         combine(history, measurements.observeInboxCount(), settings.compareHintSeen, goals, filter) { items, inboxCount, hintSeen, goals, filter ->
             val newest = items.firstOrNull()
             val cards = newest?.results?.let { results ->
-                newest.growth?.let { childCards(indicators.model, results, it, newest.measurement) }
-                    ?: (listOf(weightCard(newest)) + indicatorCards(indicators.model, results, newest.withImpedance, newest.impedance, current?.let(::cardsOf) ?: DEFAULT_CARDS))
+                newest.growth?.let { childCards(items.model, results, it, newest.measurement) }
+                    ?: (listOf(weightCard(newest)) + indicatorCards(items.model, results, newest.withImpedance, newest.impedance, current?.let(::cardsOf) ?: DEFAULT_CARDS))
             }.orEmpty().map { card ->
                 // A goal of the card's indicator: children's weight card has the weight's goal
                 // None for a child, whose weight is read by its percentile
                 if (newest?.growth != null) return@map card
                 val goal = goals[seriesId(card.id)] ?: return@map card
-                card.copy(goal = goalProgress(goal, seriesPoints(indicators.model, items, seriesId(card.id)), clock.instant()))
+                card.copy(goal = goalProgress(goal, seriesPoints(items.model, items, seriesId(card.id)), clock.instant()))
             }
             val history = items.map { it.measurement }
             val withSegments = items.firstOrNull(::hasSegments)

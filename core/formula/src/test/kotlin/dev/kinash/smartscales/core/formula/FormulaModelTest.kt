@@ -156,6 +156,15 @@ class FormulaModelTest {
         assertThrows(FormulaSetException::class.java) {
             FormulaSetFile.parse(set("x", """"indicators": [{"id": "a", "name": {"en": "a"}, "formula": "1", "unit": "stone"}]"""))
         }
+        // The parser's quote of the file is cut off: only what is wrong stays
+        val long = assertThrows(FormulaSetException::class.java) { FormulaSetFile.parse("{\"format\": 1, " + " ".repeat(2000) + "!") }
+        assertFalse(long.message!!, "JSON input" in long.message!!)
+        assertTrue(long.message!!, long.message!!.length < 400)
+    }
+
+    @Test
+    fun aByteOrderMarkIsSkipped() {
+        assertEquals("x", FormulaSetFile.parse("﻿" + set("x", """"indicators": []""")).id)
     }
 
     @Test
@@ -192,8 +201,8 @@ class FormulaModelTest {
                 """,
             ),
         ).issues
-        assertEquals(FormulaIssue("bad", "indicators[0].formula", "Formula ends too early", 9), found[0])
-        assertEquals(FormulaIssue("bad", "indicators[1].formula", "Unknown name 'wieght'", 9), found[1])
+        assertEquals(FormulaIssue("bad", "indicators[0].formula", Problem(ProblemKind.ENDS_EARLY), 9), found[0])
+        assertEquals(FormulaIssue("bad", "indicators[1].formula", Problem(ProblemKind.UNKNOWN_NAME, "wieght"), 9), found[1])
         assertEquals("indicators[2].formula", found[2].path)
         assertEquals("indicators[3].when", found[3].path)
         assertFalse(model(set("bad", """"indicators": [{"id": "a", "name": {"en": "a"}, "formula": "1 +"}]""")).isValid)

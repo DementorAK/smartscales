@@ -9,6 +9,7 @@ import dev.kinash.smartscales.core.data.Goal
 import dev.kinash.smartscales.core.data.Profile
 import dev.kinash.smartscales.core.data.repository.ProfileRepository
 import dev.kinash.smartscales.core.formula.LocalizedText
+import dev.kinash.smartscales.indicators.IndicatorHistory
 import dev.kinash.smartscales.indicators.Indicators
 import dev.kinash.smartscales.indicators.MeasuredIndicators
 import dev.kinash.smartscales.ui.ChartRoute
@@ -104,7 +105,7 @@ class ChartViewModel @Inject constructor(
      * while the zones, the goal and what can be added are of the whole history.
      */
     private data class Series(
-        val history: List<MeasuredIndicators>,
+        val history: IndicatorHistory,
         val filtered: List<MeasuredIndicators>,
         val all: List<ChartSeries>?,
         val choices: List<ChartChoice>,
@@ -127,7 +128,7 @@ class ChartViewModel @Inject constructor(
             // The whole history's series and what can be added change with the history, the series chosen and the
             // tags, not with the period or smoothing
             val series = combine(history, ids, tagFilters.of(profile.id)) { history, ids, filter ->
-                val model = indicators.model
+                val model = history.model
                 val tags = profileTags(history.map { it.measurement })
                 val active = activeFilter(filter, tags)
                 val shown = history.filter { matches(it.measurement, active) }
@@ -144,7 +145,7 @@ class ChartViewModel @Inject constructor(
             val goal = profiles.observeGoals(profile.id).map { it[seriesId(route.indicator)] }
             combine(series, options, goal) { series, options, goal ->
                 val (history, filtered, all, choices) = series
-                val model = indicators.model
+                val model = history.model
                 val now = clock.instant()
                 val main = all?.first() ?: return@combine ChartState.Gone
                 val period = options.period ?: defaultPeriod(main.points, now)

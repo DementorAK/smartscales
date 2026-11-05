@@ -89,7 +89,7 @@ class SettingsViewModel @Inject constructor(
 
 /**
  * All settings in one place, opened by the gear on the main screen (requirements §6.2a): profiles with their
- * formulas, scales, weighing and debugging. Profiles are edited and deleted only here; the weighing screen also
+ * formulas, scales, formula sets, weighing and debugging. Profiles are edited and deleted only here; the weighing screen also
  * opens the scales.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -100,6 +100,7 @@ fun SettingsScreen(
     onAddProfile: () -> Unit,
     onOpenScales: () -> Unit,
     onOpenLog: () -> Unit,
+    onOpenFormulaSets: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val stored by viewModel.matchThresholdKg.collectAsStateWithLifecycle()
@@ -143,6 +144,14 @@ fun SettingsScreen(
                 title = stringResource(R.string.scales_title),
                 hint = stringResource(R.string.settings_scales_hint),
                 onClick = onOpenScales,
+            )
+            Column(Modifier.padding(horizontal = ScreenPadding).padding(top = ScreenPadding)) {
+                SectionTitle(stringResource(R.string.settings_formulas))
+            }
+            SettingsItem(
+                title = stringResource(R.string.formula_sets_title),
+                hint = stringResource(R.string.settings_formulas_hint),
+                onClick = onOpenFormulaSets,
             )
             Column(
                 Modifier.padding(horizontal = ScreenPadding).padding(top = ScreenPadding),

@@ -40,7 +40,10 @@ object SegmentInputs {
 }
 
 /** A problem in a formula set: [set] and [path] say where, [position] is the character in a formula. */
-data class FormulaIssue(val set: String, val path: String, val message: String, val position: Int? = null) {
+data class FormulaIssue(val set: String, val path: String, val problem: Problem, val position: Int? = null) {
+    /** In English; the app shows [problem] in the person's language. */
+    val message: String get() = problem.english
+
     override fun toString() = "$set: $path: $message" + (position?.let { " (character ${it + 1})" } ?: "")
 }
 
@@ -238,10 +241,10 @@ class FormulaModel private constructor(
             for ((id, entry) in entries) compile(entry, nameTypes)?.let { indicators[id] = it }
             if (issues.isEmpty()) findCycles(indicators, groups)
             for ((id, set) in hidden) {
-                if (id !in entries && id !in groups) warnings += FormulaIssue(set, "hidden", "Nothing called '$id' to hide")
+                if (id !in entries && id !in groups) warnings += FormulaIssue(set, "hidden", Problem(ProblemKind.HIDE_NOTHING, id))
             }
             for ((id, named) in groupNames) {
-                if (id !in groups) warnings += FormulaIssue(named.second, "groups", "No indicators in group '$id' to name")
+                if (id !in groups) warnings += FormulaIssue(named.second, "groups", Problem(ProblemKind.GROUP_NAME_UNUSED, id))
             }
             return FormulaModel(
                 indicators, groups, groupNames.mapValues { it.value.first }, inputs.mapValues { it.value.first },
@@ -252,7 +255,7 @@ class FormulaModel private constructor(
         private fun merge(layer: FormulaLayer) {
             val file = layer.file
             val set = file.id
-            if (checkId(set, "id", set) && !setIds.add(set)) issues += FormulaIssue(set, "id", "Another enabled set has the id '$set'")
+            if (checkId(set, "id", set) && !setIds.add(set)) issues += FormulaIssue(set, "id", Problem(ProblemKind.SET_ID_TAKEN, set))
             checkText(set, "name", file.name)
             file.description?.let { checkText(set, "description", it) }
             for ((i, group) in file.groups.withIndex()) {
@@ -264,16 +267,16 @@ class FormulaModel private constructor(
                 val path = "inputs[$i]"
                 if (!checkId(set, "$path.id", input.id)) continue
                 if (input.id in StandardInputs.types) {
-                    issues += FormulaIssue(set, "$path.id", "'${input.id}' is a standard input already")
+                    issues += FormulaIssue(set, "$path.id", Problem(ProblemKind.STANDARD_INPUT, input.id))
                     continue
                 }
                 if (input.unit !in INPUT_UNITS) {
-                    issues += FormulaIssue(set, "$path.unit", "An input is in cm, kg or none")
+                    issues += FormulaIssue(set, "$path.unit", Problem(ProblemKind.INPUT_UNIT))
                 }
                 checkText(set, "$path.name", input.name)
                 inputs[input.id]?.let { (other, from) ->
-                    val units = if (other.unit != input.unit) " with another unit" else ""
-                    warnings += FormulaIssue(set, "$path.id", "Input '${input.id}' from '${from.set}' is replaced by this set$units")
+                    val kind = if (other.unit != input.unit) ProblemKind.INPUT_REPLACED_UNIT else ProblemKind.INPUT_REPLACED
+                    warnings += FormulaIssue(set, "$path.id", Problem(kind, input.id, from.set))
                 }
                 inputs[input.id] = input to Origin(set, path, layer.builtIn)
             }
@@ -283,13 +286,13 @@ class FormulaModel private constructor(
                 if (!checkId(set, "$path.id", def.id)) continue
                 def.group?.let { checkId(set, "$path.group", it) }
                 if (!seen.add(def.id)) {
-                    issues += FormulaIssue(set, "$path.id", "'${def.id}' is defined twice in this set")
+                    issues += FormulaIssue(set, "$path.id", Problem(ProblemKind.DEFINED_TWICE, def.id))
                     continue
                 }
                 entries[def.id]?.let { below ->
                     // Replacing a built-in indicator is what layers are for; two of the person's sets doing it is a conflict
                     if (!below.formulaFrom.builtIn) {
-                        warnings += FormulaIssue(set, "$path.id", "'${def.id}' from '${below.formulaFrom.set}' is replaced by this set")
+                        warnings += FormulaIssue(set, "$path.id", Problem(ProblemKind.INDICATOR_REPLACED, def.id, below.formulaFrom.set))
                     }
                 }
                 checkDef(set, path, def)
@@ -300,11 +303,11 @@ class FormulaModel private constructor(
                 val path = "patches[$i]"
                 val entry = entries[patch.id]
                 if (entry == null) {
-                    issues += FormulaIssue(set, "$path.id", "No indicator '${patch.id}' below this set to change")
+                    issues += FormulaIssue(set, "$path.id", Problem(ProblemKind.PATCH_NOTHING, patch.id))
                     continue
                 }
                 if (entry.patchedBy != null && !entry.patchedBy.builtIn) {
-                    warnings += FormulaIssue(set, "$path.id", "'${patch.id}' is also changed by '${entry.patchedBy.set}'; this set's changes win")
+                    warnings += FormulaIssue(set, "$path.id", Problem(ProblemKind.PATCHED_TWICE, patch.id, entry.patchedBy.set))
                 }
                 val def = entry.def
                 val patched = def.copy(
@@ -331,34 +334,34 @@ class FormulaModel private constructor(
 
         private fun checkId(set: String, path: String, id: String): Boolean {
             if (Expr.isValidName(id)) return true
-            val why = if (id in Expr.RESERVED) "a reserved word" else "not Latin letters, digits and _, starting with a letter or _"
-            issues += FormulaIssue(set, path, "'$id' cannot be an id: $why")
+            val kind = if (id in Expr.RESERVED) ProblemKind.ID_RESERVED else ProblemKind.ID_INVALID
+            issues += FormulaIssue(set, path, Problem(kind, id))
             return false
         }
 
         /** Every text needs English: the app falls back to it in any other language. */
         private fun checkText(set: String, path: String, text: LocalizedText) {
-            if (text["en"].isNullOrBlank()) issues += FormulaIssue(set, path, "English text ('en') is required")
+            if (text["en"].isNullOrBlank()) issues += FormulaIssue(set, path, Problem(ProblemKind.ENGLISH_REQUIRED))
         }
 
         private fun checkDef(set: String, path: String, def: IndicatorDef) {
             checkText(set, "$path.name", def.name)
             def.description?.let { checkText(set, "$path.description", it) }
-            if (def.precision !in 0..MAX_PRECISION) issues += FormulaIssue(set, "$path.precision", "Precision must be 0 to $MAX_PRECISION")
+            if (def.precision !in 0..MAX_PRECISION) issues += FormulaIssue(set, "$path.precision", Problem(ProblemKind.PRECISION, MAX_PRECISION))
             for ((param, value) in def.params) {
-                if (!Expr.isValidName(param)) issues += FormulaIssue(set, "$path.params.$param", "'$param' cannot be a parameter name")
-                if (!value.isFinite()) issues += FormulaIssue(set, "$path.params.$param", "Not a number")
+                if (!Expr.isValidName(param)) issues += FormulaIssue(set, "$path.params.$param", Problem(ProblemKind.PARAM_NAME, param))
+                if (!value.isFinite()) issues += FormulaIssue(set, "$path.params.$param", Problem(ProblemKind.NOT_A_NUMBER))
             }
             for ((i, rule) in def.zones.withIndex()) {
                 val zonePath = "$path.zones[$i]"
                 if (rule.levels.size != rule.bounds.size + 1) {
-                    issues += FormulaIssue(set, "$zonePath.levels", "Needs one level more than bounds: ${rule.bounds.size + 1}")
+                    issues += FormulaIssue(set, "$zonePath.levels", Problem(ProblemKind.ZONE_LEVELS, rule.bounds.size + 1))
                 }
                 if (rule.bounds.zipWithNext().any { (a, b) -> a >= b }) {
-                    issues += FormulaIssue(set, "$zonePath.bounds", "Bounds must go up")
+                    issues += FormulaIssue(set, "$zonePath.bounds", Problem(ProblemKind.ZONE_BOUNDS))
                 }
                 if (rule.labels != null && rule.labels.size != rule.levels.size) {
-                    issues += FormulaIssue(set, "$zonePath.labels", "Needs one label per level")
+                    issues += FormulaIssue(set, "$zonePath.labels", Problem(ProblemKind.ZONE_LABELS))
                 }
                 rule.labels?.forEachIndexed { j, label -> checkText(set, "$zonePath.labels[$j]", label) }
             }
@@ -372,20 +375,20 @@ class FormulaModel private constructor(
             val inputNames = StandardInputs.types.keys + inputs.keys
             for ((group, variants) in groups) {
                 val from = entries.getValue(variants.first()).formulaFrom
-                if (group in entries) issues += FormulaIssue(from.set, "${from.path}.group", "'$group' is both a group and an indicator")
-                if (group in inputNames) issues += FormulaIssue(from.set, "${from.path}.group", "Group '$group' has the name of an input")
+                if (group in entries) issues += FormulaIssue(from.set, "${from.path}.group", Problem(ProblemKind.GROUP_IS_INDICATOR, group))
+                if (group in inputNames) issues += FormulaIssue(from.set, "${from.path}.group", Problem(ProblemKind.GROUP_IS_INPUT, group))
             }
             for ((id, entry) in entries) {
                 val from = entry.formulaFrom
-                if (id in inputNames) issues += FormulaIssue(from.set, "${from.path}.id", "Indicator '$id' has the name of an input")
+                if (id in inputNames) issues += FormulaIssue(from.set, "${from.path}.id", Problem(ProblemKind.INDICATOR_IS_INPUT, id))
                 val owner = entry.patchedBy ?: from
                 for (param in entry.def.params.keys) {
                     when {
                         param in inputNames ->
-                            issues += FormulaIssue(owner.set, "${owner.path}.params.$param", "Parameter '$param' would hide the input of that name")
+                            issues += FormulaIssue(owner.set, "${owner.path}.params.$param", Problem(ProblemKind.PARAM_HIDES_INPUT, param))
                         // A set above may add an indicator with a parameter's name; the formula keeps its parameter
                         param in entries || param in groups ->
-                            warnings += FormulaIssue(owner.set, "${owner.path}.params.$param", "Parameter '$param' hides the indicator of that name in this formula")
+                            warnings += FormulaIssue(owner.set, "${owner.path}.params.$param", Problem(ProblemKind.PARAM_HIDES_INDICATOR, param))
                     }
                 }
             }
@@ -405,7 +408,7 @@ class FormulaModel private constructor(
             val used = formula!!.names().keys + applies?.names()?.keys.orEmpty() + zones.flatMap { it?.names()?.keys.orEmpty() }
             for (param in def.params.keys - used) {
                 val owner = entry.patchedBy ?: entry.formulaFrom
-                warnings += FormulaIssue(owner.set, "${owner.path}.params.$param", "Parameter is not used")
+                warnings += FormulaIssue(owner.set, "${owner.path}.params.$param", Problem(ProblemKind.PARAM_UNUSED))
             }
             return Indicator(def, entry.formulaFrom.set, formula, applies, zones)
         }
@@ -414,14 +417,14 @@ class FormulaModel private constructor(
         private fun parse(origin: Origin, field: String, text: String, typeOf: (String) -> ValueType?, type: ValueType): Expr? = try {
             val expr = Expr.parse(text)
             if (expr.check(typeOf) != type) {
-                val wanted = if (type == ValueType.NUMBER) "a number" else "a yes/no condition"
-                issues += FormulaIssue(origin.set, "${origin.path}.$field", "Must give $wanted", 0)
+                val kind = if (type == ValueType.NUMBER) ProblemKind.MUST_GIVE_NUMBER else ProblemKind.MUST_GIVE_CONDITION
+                issues += FormulaIssue(origin.set, "${origin.path}.$field", Problem(kind), 0)
                 null
             } else {
                 expr
             }
         } catch (e: FormulaException) {
-            issues += FormulaIssue(origin.set, "${origin.path}.$field", e.reason, e.position)
+            issues += FormulaIssue(origin.set, "${origin.path}.$field", e.problem, e.position)
             null
         }
 
@@ -448,7 +451,7 @@ class FormulaModel private constructor(
                     1 -> {
                         val loop = path.subList(path.indexOf(id), path.size) + id
                         val from = entries.getValue(id).formulaFrom
-                        issues += FormulaIssue(from.set, "${from.path}.formula", "Formulas refer to each other in a loop: ${loop.joinToString(" → ")}")
+                        issues += FormulaIssue(from.set, "${from.path}.formula", Problem(ProblemKind.LOOP, loop.joinToString(" → ")))
                         return true
                     }
                     2 -> return false

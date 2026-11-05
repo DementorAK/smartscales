@@ -5,7 +5,7 @@ import androidx.room.PrimaryKey
 import java.time.Instant
 
 enum class FormulaSetOrigin {
-    /** Optional set shipped with the app. The immutable base set lives in assets and is not stored here. */
+    /** Optional set shipped with the app. The immutable built-in set ships in :core:formula and is not stored here. */
     BUILT_IN,
     IMPORTED,
 }

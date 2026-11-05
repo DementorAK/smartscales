@@ -1,18 +1,26 @@
 package dev.kinash.smartscales.indicators
 
 import dev.kinash.smartscales.core.data.Measurement
+import dev.kinash.smartscales.core.data.repository.FormulaSetRepository
 import dev.kinash.smartscales.core.data.repository.MeasurementRepository
 import dev.kinash.smartscales.core.data.repository.ProfileRepository
 import dev.kinash.smartscales.core.data.repository.ScaleBindingRepository
-import dev.kinash.smartscales.core.formula.BuiltinFormulas
 import dev.kinash.smartscales.core.formula.ChildGrowth
 import dev.kinash.smartscales.core.formula.FormulaModel
 import dev.kinash.smartscales.core.formula.MeasurementInputs
 import dev.kinash.smartscales.core.model.Impedance
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -61,6 +69,9 @@ class MeasuredIndicators(
     }
 }
 
+/** A profile's history, newest first, with the model its results were worked out by: the one to read them with. */
+class IndicatorHistory(val model: FormulaModel, items: List<MeasuredIndicators>) : List<MeasuredIndicators> by items
+
 /**
  * Indicators of measurements, computed from their raw data each time the data, the profile's choice of variants
  * or a scale's calibration changes; nothing computed is stored (requirements §4.1). Values are computed when
@@ -72,22 +83,37 @@ class Indicators @Inject constructor(
     private val measurements: MeasurementRepository,
     private val profiles: ProfileRepository,
     private val scales: ScaleBindingRepository,
+    formulaSets: FormulaSetRepository,
 ) {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     /**
-     * The built-in set; the person's own sets join in 0.7. A broken set is left out by
-     * [FormulaModel.buildUsable], and the built-in one is checked by tests.
+     * The built-in set with the person's enabled sets over it, rebuilt when they change; null until read. A
+     * broken set is left out by [FormulaModel.buildUsable], and the built-in one is checked by tests.
      */
-    val model: FormulaModel by lazy { FormulaModel.buildUsable(listOf(BuiltinFormulas.layer)).model }
+    val layers: StateFlow<Layers?> = formulaSets.observeAll()
+        .map(::layersOf)
+        .stateIn(scope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /**
+     * The model of the sets now read; the built-in set alone until then, and [loadedModel] waits for them.
+     * Where a history is at hand, its own [IndicatorHistory.model] goes with its results.
+     */
+    val model: FormulaModel get() = layers.value?.model ?: BuiltinModel
+
+    suspend fun loadedModel(): FormulaModel = layers.filterNotNull().first().model
 
     /** The profile's history, newest first, each measurement with its indicators. */
-    fun observeHistory(profileId: Long): Flow<List<MeasuredIndicators>> = combine(
+    fun observeHistory(profileId: Long): Flow<IndicatorHistory> = combine(
         measurements.observeHistory(profileId),
         profiles.observeMainVariants(profileId),
         scales.observeAll(),
         measurements.observePlaceholderImpedances(),
-    ) { history, primary, bindings, placeholders ->
+        layers.filterNotNull(),
+    ) { history, primary, bindings, placeholders, layers ->
+        val model = layers.model
         val factors = bindings.associate { it.id to it.impedanceFactor }
-        history.map { measurement ->
+        IndicatorHistory(model, history.map { measurement ->
             // A snapshot born after the measurement (old or imported data) gets no indicators instead of failing
             val raw = measurement.takeIf { it.isAfterBirth }?.toRawMeasurement()
             if (raw == null) return@map MeasuredIndicators(measurement, null)
@@ -112,6 +138,6 @@ class Indicators @Inject constructor(
                     bmi = results.value("bmi"), bmiPrecision = model.indicators["bmi"]?.def?.precision ?: 1,
                 )
             }
-        }
+        })
     }.flowOn(Dispatchers.Default)
 }

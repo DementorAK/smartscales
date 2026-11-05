@@ -7,11 +7,13 @@ package dev.kinash.smartscales.core.formula
 object BuiltinFormulas {
     private const val RESOURCE = "builtin.json"
 
-    val file: FormulaSetFile by lazy {
-        val text = BuiltinFormulas::class.java.getResourceAsStream(RESOURCE)?.use { it.readBytes().decodeToString() }
+    /** The file as it ships, for exporting it as a start for a set of one's own. */
+    val text: String by lazy {
+        BuiltinFormulas::class.java.getResourceAsStream(RESOURCE)?.use { it.readBytes().decodeToString() }
             ?: error("Built-in formula set $RESOURCE is missing")
-        FormulaSetFile.parse(text)
     }
+
+    val file: FormulaSetFile by lazy { FormulaSetFile.parse(text) }
 
     val layer: FormulaLayer get() = FormulaLayer(file, builtIn = true)
 }

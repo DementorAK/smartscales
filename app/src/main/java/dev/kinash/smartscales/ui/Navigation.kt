@@ -6,6 +6,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import dev.kinash.smartscales.ui.chart.ChartScreen
 import dev.kinash.smartscales.ui.compare.CompareScreen
+import dev.kinash.smartscales.ui.formulas.FormulaSetsScreen
 import dev.kinash.smartscales.ui.history.HistoryScreen
 import dev.kinash.smartscales.ui.inbox.InboxScreen
 import dev.kinash.smartscales.ui.measurement.MeasurementEditScreen
@@ -63,6 +64,9 @@ data object BluetoothLogRoute
 @Serializable
 data object SettingsRoute
 
+@Serializable
+data object FormulaSetsRoute
+
 @Composable
 fun SmartScalesNavHost() {
     val navController = rememberNavController()
@@ -113,8 +117,10 @@ fun SmartScalesNavHost() {
                 onAddProfile = { navController.navigate(ProfileEditRoute()) },
                 onOpenScales = { navController.navigate(ScalesRoute) },
                 onOpenLog = { navController.navigate(BluetoothLogRoute) },
+                onOpenFormulaSets = { navController.navigate(FormulaSetsRoute) },
             )
         }
+        composable<FormulaSetsRoute> { FormulaSetsScreen(onBack = back) }
         composable<ScaleEditRoute> { ScaleEditScreen(onDone = back) }
         composable<InboxRoute> {
             InboxScreen(

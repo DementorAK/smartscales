@@ -204,6 +204,10 @@ Formula sets are JSON files in the same format as the built-in set. A set can ad
 or ranges of existing ones, or hide them from the screens, without touching the built-in set: sets are layered on top
 of it. A set with errors is not activated, and the app points to the place of each error.
 
+Sets are imported in Settings → Formula sets, where they are ordered (a set higher in the list wins), switched on
+and off, exported and deleted. The built-in set can be exported there too, as a starting point for a set of your own.
+Importing a file with the id of a set already there replaces that set.
+
 ## References
 
 1. WHO. Obesity: preventing and managing the global epidemic. Report of a WHO consultation. WHO Technical Report Series

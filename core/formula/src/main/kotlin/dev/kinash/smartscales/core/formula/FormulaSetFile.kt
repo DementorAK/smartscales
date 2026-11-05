@@ -47,20 +47,29 @@ data class FormulaSetFile(
          * checked first, so a newer file is reported as such and not as one with unknown keys.
          */
         fun parse(text: String): FormulaSetFile = try {
-            val tree = json.parseToJsonElement(text) as? JsonObject ?: throw FormulaSetException("A formula set is a JSON object")
-            val format = (tree["format"] as? JsonPrimitive)?.intOrNull ?: throw FormulaSetException("No format version")
-            if (format != FORMAT) throw FormulaSetException("Unsupported format $format; this app reads format $FORMAT")
+            // Notepad and some phone editors save UTF-8 with a byte order mark, which the parser does not skip
+            val tree = json.parseToJsonElement(text.removePrefix("\uFEFF")) as? JsonObject ?: throw FormulaSetException(Problem(ProblemKind.NOT_OBJECT))
+            val format = (tree["format"] as? JsonPrimitive)?.intOrNull ?: throw FormulaSetException(Problem(ProblemKind.NO_FORMAT))
+            if (format != FORMAT) throw FormulaSetException(Problem(ProblemKind.UNSUPPORTED_FORMAT, format, FORMAT))
             json.decodeFromJsonElement(serializer(), tree)
         } catch (e: SerializationException) {
-            throw FormulaSetException(e.message ?: "Malformed formula set")
+            throw FormulaSetException(Problem(ProblemKind.MALFORMED, brief(e.message)))
         } catch (e: IllegalArgumentException) {
-            throw FormulaSetException(e.message ?: "Malformed formula set")
+            throw FormulaSetException(Problem(ProblemKind.MALFORMED, brief(e.message)))
         }
+
+        /** The parser's message without the piece of JSON it quotes after it, which can be long. */
+        private fun brief(message: String?): String {
+            val text = message.orEmpty().substringBefore("JSON input:").trim()
+            return if (text.length > MAX_MESSAGE) text.take(MAX_MESSAGE).trimEnd() + "…" else text
+        }
+
+        private const val MAX_MESSAGE = 300
     }
 }
 
 /** A malformed formula set file. */
-class FormulaSetException(message: String) : Exception(message)
+class FormulaSetException(val problem: Problem) : Exception(problem.english)
 
 /** A value entered by hand that formulas can use, declared by a set (for example, wrist circumference). */
 @Serializable

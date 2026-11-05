@@ -13,6 +13,12 @@ interface FormulaSetDao {
     @Query("SELECT * FROM formula_set ORDER BY position, id")
     fun observeAll(): Flow<List<FormulaSetEntity>>
 
+    @Query("SELECT * FROM formula_set ORDER BY position, id")
+    suspend fun getAll(): List<FormulaSetEntity>
+
+    @Query("SELECT * FROM formula_set WHERE id = :id")
+    suspend fun get(id: Long): FormulaSetEntity?
+
     @Query("SELECT MAX(position) FROM formula_set")
     suspend fun maxPosition(): Int?
 
@@ -21,6 +27,12 @@ interface FormulaSetDao {
 
     @Update
     suspend fun update(set: FormulaSetEntity)
+
+    @Query("UPDATE formula_set SET enabled = :enabled WHERE id = :id")
+    suspend fun setEnabled(id: Long, enabled: Boolean)
+
+    @Query("UPDATE formula_set SET position = :position WHERE id = :id")
+    suspend fun setPosition(id: Long, position: Int)
 
     @Query("DELETE FROM formula_set WHERE id = :id")
     suspend fun delete(id: Long)

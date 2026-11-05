@@ -16,7 +16,12 @@ import kotlin.math.truncate
 enum class ValueType { NUMBER, BOOLEAN }
 
 /** A mistake in a formula, at [position] (0-based character index in the text). */
-class FormulaException(val reason: String, val position: Int) : Exception("$reason at ${position + 1}")
+class FormulaException(val problem: Problem, val position: Int) : Exception("${problem.english} at ${position + 1}") {
+    constructor(kind: ProblemKind, position: Int, vararg args: Any) : this(Problem(kind, *args), position)
+
+    /** In English. */
+    val reason: String get() = problem.english
+}
 
 /**
  * An expression of the formula language, parsed from text.
@@ -76,7 +81,7 @@ sealed interface Expr {
         const val MAX_DEPTH = 100
 
         fun parse(text: String): Expr {
-            if (text.length > MAX_LENGTH) throw FormulaException("Formula is longer than $MAX_LENGTH characters", MAX_LENGTH)
+            if (text.length > MAX_LENGTH) throw FormulaException(ProblemKind.TOO_LONG, MAX_LENGTH, MAX_LENGTH)
             val expr = Parser(text).parseAll()
             checkDepth(expr)
             return expr
@@ -93,7 +98,7 @@ private fun checkDepth(root: Expr) {
     stack.addLast(root to 1)
     while (stack.isNotEmpty()) {
         val (expr, depth) = stack.removeLast()
-        if (depth > Expr.MAX_DEPTH * 4) throw FormulaException("Formula is too deeply nested", expr.position)
+        if (depth > Expr.MAX_DEPTH * 4) throw FormulaException(ProblemKind.TOO_DEEP, expr.position)
         when (expr) {
             is Expr.Unary -> stack.addLast(expr.operand to depth + 1)
             is Expr.Binary -> {
@@ -134,7 +139,7 @@ private fun tokenize(text: String): List<Token> {
             c.isWhitespace() -> i++
             // ASCII only: other scripts' digits look like numbers but are not read as such
             c in '0'..'9' || (c == '.' && text.getOrNull(i + 1)?.let { it in '0'..'9' } == true) -> {
-                val match = NUMBER.matchAt(text, i) ?: throw FormulaException("Bad number", i)
+                val match = NUMBER.matchAt(text, i) ?: throw FormulaException(ProblemKind.BAD_NUMBER, i)
                 tokens += Token(Token.Kind.NUMBER, match.value, i)
                 i += match.value.length
             }
@@ -145,7 +150,7 @@ private fun tokenize(text: String): List<Token> {
             }
             else -> {
                 val symbol = SYMBOLS.firstOrNull { text.startsWith(it, i) }
-                    ?: throw FormulaException("Unexpected character '$c'", i)
+                    ?: throw FormulaException(ProblemKind.UNEXPECTED_CHARACTER, i, c)
                 tokens += Token(Token.Kind.SYMBOL, symbol, i)
                 i += symbol.length
             }
@@ -175,7 +180,7 @@ private class Parser(text: String) {
 
     /** Runs [parse] one nesting level deeper, failing with a message instead of a stack overflow. */
     private inline fun <T> nested(position: Int, parse: () -> T): T {
-        if (++depth > Expr.MAX_DEPTH) throw FormulaException("Formula is too deeply nested", position)
+        if (++depth > Expr.MAX_DEPTH) throw FormulaException(ProblemKind.TOO_DEEP, position)
         try {
             return parse()
         } finally {
@@ -184,9 +189,9 @@ private class Parser(text: String) {
     }
 
     fun parseAll(): Expr {
-        if (current.kind == Token.Kind.END) throw FormulaException("Empty formula", 0)
+        if (current.kind == Token.Kind.END) throw FormulaException(ProblemKind.EMPTY, 0)
         val expr = or()
-        if (current.kind != Token.Kind.END) throw FormulaException("Unexpected '${current.text}'", current.position)
+        if (current.kind != Token.Kind.END) throw FormulaException(ProblemKind.UNEXPECTED, current.position, current.text)
         return expr
     }
 
@@ -228,7 +233,7 @@ private class Parser(text: String) {
         at++
         val right = additive()
         if (current.kind == Token.Kind.SYMBOL && current.text in COMPARISONS) {
-            throw FormulaException("Comparisons cannot be chained; use 'and'", current.position)
+            throw FormulaException(ProblemKind.CHAINED_COMPARISON, current.position)
         }
         return Expr.Binary(op.text, left, right, op.position)
     }
@@ -284,19 +289,19 @@ private class Parser(text: String) {
                 when {
                     token.text == "true" -> Expr.Bool(true, token.position)
                     token.text == "false" -> Expr.Bool(false, token.position)
-                    token.text in KEYWORDS -> throw FormulaException("Unexpected '${token.text}'", token.position)
+                    token.text in KEYWORDS -> throw FormulaException(ProblemKind.UNEXPECTED, token.position, token.text)
                     isSymbol("(") -> call(token)
                     else -> Expr.Name(token.text, token.position)
                 }
             }
             Token.Kind.SYMBOL -> {
-                if (token.text != "(") throw FormulaException("Unexpected '${token.text}'", token.position)
+                if (token.text != "(") throw FormulaException(ProblemKind.UNEXPECTED, token.position, token.text)
                 at++
                 val inner = nested(token.position) { or() }
                 expect(")")
                 inner
             }
-            Token.Kind.END -> throw FormulaException("Formula ends too early", token.position)
+            Token.Kind.END -> throw FormulaException(ProblemKind.ENDS_EARLY, token.position)
         }
     }
 
@@ -316,8 +321,11 @@ private class Parser(text: String) {
 
     private fun expect(symbol: String) {
         if (!isSymbol(symbol)) {
-            val found = if (current.kind == Token.Kind.END) "end of formula" else "'${current.text}'"
-            throw FormulaException("Expected '$symbol' but found $found", current.position)
+            throw if (current.kind == Token.Kind.END) {
+                FormulaException(ProblemKind.EXPECTED_BUT_END, current.position, symbol)
+            } else {
+                FormulaException(ProblemKind.EXPECTED_BUT, current.position, symbol, current.text)
+            }
         }
         at++
     }
@@ -376,8 +384,8 @@ private class TypeChecker(private val typeOf: (String) -> ValueType?) {
         is Expr.Number -> ValueType.NUMBER
         is Expr.Bool -> ValueType.BOOLEAN
         is Expr.Name -> {
-            if (expr.name in Functions.names) throw FormulaException("'${expr.name}' is a function; call it with ( )", expr.position)
-            typeOf(expr.name) ?: throw FormulaException("Unknown name '${expr.name}'", expr.position)
+            if (expr.name in Functions.names) throw FormulaException(ProblemKind.FUNCTION_NOT_CALLED, expr.position, expr.name)
+            typeOf(expr.name) ?: throw FormulaException(ProblemKind.UNKNOWN_NAME, expr.position, expr.name)
         }
         is Expr.Unary -> when (expr.op) {
             "not" -> expect(expr.operand, ValueType.BOOLEAN).let { ValueType.BOOLEAN }
@@ -395,7 +403,7 @@ private class TypeChecker(private val typeOf: (String) -> ValueType?) {
         }
         "==", "!=" -> {
             val left = check(expr.left)
-            if (check(expr.right) != left) throw FormulaException("Cannot compare a number with a yes/no value", expr.opPosition)
+            if (check(expr.right) != left) throw FormulaException(ProblemKind.COMPARE_TYPES, expr.opPosition)
             ValueType.BOOLEAN
         }
         "<", "<=", ">", ">=" -> {
@@ -413,7 +421,7 @@ private class TypeChecker(private val typeOf: (String) -> ValueType?) {
     private fun call(expr: Expr.Call): ValueType {
         val name = expr.function
         Functions.numeric(name)?.let { (arity, _) ->
-            if (expr.args.size !in arity) throw FormulaException(arityMessage(name, arity), expr.position)
+            if (expr.args.size !in arity) throw FormulaException(arityProblem(name, arity), expr.position)
             expr.args.forEach { expect(it, ValueType.NUMBER) }
             return ValueType.NUMBER
         }
@@ -422,7 +430,7 @@ private class TypeChecker(private val typeOf: (String) -> ValueType?) {
                 // if(condition, value, [condition, value]..., otherwise)
                 val args = expr.args
                 if (args.size < 3 || args.size % 2 == 0) {
-                    throw FormulaException("'if' takes a condition and a value, any more such pairs, then the value otherwise", expr.position)
+                    throw FormulaException(ProblemKind.IF_ARGUMENTS, expr.position)
                 }
                 val type = check(args[1])
                 for (i in args.indices) {
@@ -435,31 +443,31 @@ private class TypeChecker(private val typeOf: (String) -> ValueType?) {
                 type
             }
             "coalesce" -> {
-                if (expr.args.isEmpty()) throw FormulaException("'coalesce' needs at least one value", expr.position)
+                if (expr.args.isEmpty()) throw FormulaException(ProblemKind.COALESCE_ARGUMENTS, expr.position)
                 val type = check(expr.args[0])
                 expr.args.drop(1).forEach { expect(it, type) }
                 type
             }
             "has" -> {
-                if (expr.args.size != 1) throw FormulaException("'has' takes one value", expr.position)
+                if (expr.args.size != 1) throw FormulaException(ProblemKind.HAS_ARGUMENTS, expr.position)
                 check(expr.args[0])
                 ValueType.BOOLEAN
             }
-            else -> throw FormulaException("Unknown function '$name'", expr.position)
+            else -> throw FormulaException(ProblemKind.UNKNOWN_FUNCTION, expr.position, name)
         }
     }
 
     private fun expect(expr: Expr, type: ValueType) {
         if (check(expr) != type) {
-            val wanted = if (type == ValueType.NUMBER) "a number" else "a yes/no value"
-            throw FormulaException("Expected $wanted", expr.position)
+            throw FormulaException(if (type == ValueType.NUMBER) ProblemKind.EXPECTED_NUMBER else ProblemKind.EXPECTED_CONDITION, expr.position)
         }
     }
 
-    private fun arityMessage(name: String, arity: IntRange) = when {
-        arity.first == arity.last -> "'$name' takes ${arity.first} argument${if (arity.first == 1) "" else "s"}"
-        arity.last == Int.MAX_VALUE -> "'$name' takes at least ${arity.first} argument"
-        else -> "'$name' takes ${arity.first} to ${arity.last} arguments"
+    private fun arityProblem(name: String, arity: IntRange) = when {
+        arity.first == arity.last && arity.first == 1 -> Problem(ProblemKind.ARGUMENTS_ONE, name)
+        arity.first == arity.last -> Problem(ProblemKind.ARGUMENTS_EXACTLY, name, arity.first)
+        arity.last == Int.MAX_VALUE -> Problem(ProblemKind.ARGUMENTS_AT_LEAST, name, arity.first)
+        else -> Problem(ProblemKind.ARGUMENTS_RANGE, name, arity.first, arity.last)
     }
 }
 

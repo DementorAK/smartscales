@@ -157,8 +157,11 @@ class ProfileEditViewModel @Inject constructor(
     val state: StateFlow<ProfileEditState> = _state.asStateFlow()
 
     init {
-        if (profileId != null) {
-            viewModelScope.launch {
+        viewModelScope.launch {
+            // The person's formula sets bring their own groups and indicators to choose
+            val model = indicators.loadedModel()
+            _state.update { it.copy(variantGroups = variantGroups(model, DEFAULT_CARDS), cardChoices = cardChoices(model)) }
+            if (profileId != null) {
                 val profile = profiles.get(profileId)
                 if (profile == null) {
                     _state.update { it.copy(done = true) }

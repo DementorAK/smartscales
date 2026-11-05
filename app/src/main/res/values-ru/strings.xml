@@ -329,4 +329,20 @@
     <string name="goal_at_latest">Это последнее значение. Цель — куда двигаться: укажите другое</string>
     <string name="tag_filter_hint">Только взвешивания со всеми выбранными метками</string>
     <string name="tag_filter_none">Нет взвешиваний со всеми этими метками</string>
+    <string name="weighing_change">%1$s к прошлому взвешиванию</string>
+    <string name="weighing_goal_reached">Цель достигнута: %1$s %2$s</string>
+    <plurals name="weighing_deviation_up">
+        <item quantity="one">На %1$s больше обычного веса за последний %2$d день. Если это не %3$s, нажмите «Это не я».</item>
+        <item quantity="few">На %1$s больше обычного веса за последние %2$d дня. Если это не %3$s, нажмите «Это не я».</item>
+        <item quantity="many">На %1$s больше обычного веса за последние %2$d дней. Если это не %3$s, нажмите «Это не я».</item>
+        <item quantity="other">На %1$s больше обычного веса за последние %2$d дня. Если это не %3$s, нажмите «Это не я».</item>
+    </plurals>
+    <plurals name="weighing_deviation_down">
+        <item quantity="one">На %1$s меньше обычного веса за последний %2$d день. Если это не %3$s, нажмите «Это не я».</item>
+        <item quantity="few">На %1$s меньше обычного веса за последние %2$d дня. Если это не %3$s, нажмите «Это не я».</item>
+        <item quantity="many">На %1$s меньше обычного веса за последние %2$d дней. Если это не %3$s, нажмите «Это не я».</item>
+        <item quantity="other">На %1$s меньше обычного веса за последние %2$d дня. Если это не %3$s, нажмите «Это не я».</item>
+    </plurals>
+    <string name="weighing_change_since">%1$s с %2$s</string>
+    <string name="weighing_saved_close">Закрыть</string>
 </resources>

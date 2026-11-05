@@ -315,4 +315,16 @@
     <string name="goal_at_latest">This is the latest value. A goal is where to go: enter another one</string>
     <string name="tag_filter_hint">Only weighings with all the tags chosen</string>
     <string name="tag_filter_none">No weighings with all these tags</string>
+    <string name="weighing_change">%1$s since the weighing before</string>
+    <string name="weighing_goal_reached">Goal reached: %1$s %2$s</string>
+    <plurals name="weighing_deviation_up">
+        <item quantity="one">%1$s more than the usual weight of the last %2$d day. If this is not %3$s, tap “Not me”.</item>
+        <item quantity="other">%1$s more than the usual weight of the last %2$d days. If this is not %3$s, tap “Not me”.</item>
+    </plurals>
+    <plurals name="weighing_deviation_down">
+        <item quantity="one">%1$s less than the usual weight of the last %2$d day. If this is not %3$s, tap “Not me”.</item>
+        <item quantity="other">%1$s less than the usual weight of the last %2$d days. If this is not %3$s, tap “Not me”.</item>
+    </plurals>
+    <string name="weighing_change_since">%1$s since %2$s</string>
+    <string name="weighing_saved_close">Close</string>
 </resources>

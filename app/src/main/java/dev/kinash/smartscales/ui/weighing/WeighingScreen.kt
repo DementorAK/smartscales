@@ -18,7 +18,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -66,17 +65,13 @@ fun WeighingScreen(
     val resources = LocalResources.current
     var retry by rememberSaveable { mutableIntStateOf(0) }
 
+    // A weighing for a profile stays on the screen as a card with what there is to say about it; one left in the
+    // inbox has nothing more to say than that
     LaunchedEffect(state.saved) {
-        val saved = state.saved ?: return@LaunchedEffect
-        val message = saved.profile?.let { resources.getString(R.string.weighing_saved, it.name) }
-            ?: resources.getString(R.string.weighing_saved_inbox)
+        val saved = state.saved?.takeIf { it.profile == null } ?: return@LaunchedEffect
         // Cleared only after showing: clearing first changes the key and cancels this effect
-        val result = snackbar.showSnackbar(
-            message = message,
-            actionLabel = saved.profile?.let { resources.getString(R.string.weighing_not_me) },
-            duration = SnackbarDuration.Long,
-        )
-        if (result == SnackbarResult.ActionPerformed) viewModel.notMe(saved) else viewModel.savedShown()
+        snackbar.showSnackbar(resources.getString(R.string.weighing_saved_inbox), duration = SnackbarDuration.Long)
+        viewModel.savedShown()
     }
 
     Scaffold(
@@ -91,42 +86,57 @@ fun WeighingScreen(
         },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
-        Box(
+        Column(
             Modifier
                 .padding(padding)
                 .fillMaxSize(),
         ) {
-            when {
-                !state.loaded -> Unit
-                state.scales.isEmpty() -> EmptyState(
-                    text = stringResource(R.string.weighing_no_scales),
-                    action = stringResource(R.string.scales_add),
-                    onAction = onAddScale,
+            // Above whatever the screen shows, a scan error or Bluetooth turned off included: "Not me" stays at hand
+            state.saved?.takeIf { it.profile != null }?.let { saved ->
+                SavedCard(
+                    saved,
+                    onNotMe = { viewModel.notMe(saved) },
+                    onClose = viewModel::savedShown,
+                    modifier = Modifier.padding(start = ScreenPadding, top = ScreenPadding, end = ScreenPadding),
                 )
-                else -> BluetoothGate(viewModel.scanner) {
-                    ScanWhileVisible(retry) { viewModel.scan() }
-                    val error = state.scanError
-                    if (error != null) {
-                        EmptyState(stringResource(R.string.bt_scan_failed, error), stringResource(R.string.bt_retry)) { retry++ }
-                    } else {
-                        LazyColumn(
-                            contentPadding = PaddingValues(ScreenPadding),
-                            verticalArrangement = Arrangement.spacedBy(ScreenPadding),
-                        ) {
-                            // A forgotten log keeps growing with every weighing, so it is visible here
-                            if (logRecording) {
-                                item {
-                                    AssistChip(
-                                        onClick = onOpenLog,
-                                        label = { Text(stringResource(R.string.weighing_log_recording)) },
+            }
+            Box(
+                Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+            ) {
+                when {
+                    !state.loaded -> Unit
+                    state.scales.isEmpty() -> EmptyState(
+                        text = stringResource(R.string.weighing_no_scales),
+                        action = stringResource(R.string.scales_add),
+                        onAction = onAddScale,
+                    )
+                    else -> BluetoothGate(viewModel.scanner) {
+                        ScanWhileVisible(retry) { viewModel.scan() }
+                        val error = state.scanError
+                        if (error != null) {
+                            EmptyState(stringResource(R.string.bt_scan_failed, error), stringResource(R.string.bt_retry)) { retry++ }
+                        } else {
+                            LazyColumn(
+                                contentPadding = PaddingValues(ScreenPadding),
+                                verticalArrangement = Arrangement.spacedBy(ScreenPadding),
+                            ) {
+                                // A forgotten log keeps growing with every weighing, so it is visible here
+                                if (logRecording) {
+                                    item {
+                                        AssistChip(
+                                            onClick = onOpenLog,
+                                            label = { Text(stringResource(R.string.weighing_log_recording)) },
+                                        )
+                                    }
+                                }
+                                items(state.scales, key = { it.binding.id }) { scale ->
+                                    ScaleCard(
+                                        scale = scale,
+                                        onOpenScale = { onOpenScale(scale.binding.id) },
                                     )
                                 }
-                            }
-                            items(state.scales, key = { it.binding.id }) { scale ->
-                                ScaleCard(
-                                    scale = scale,
-                                    onOpenScale = { onOpenScale(scale.binding.id) },
-                                )
                             }
                         }
                     }

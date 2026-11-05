@@ -29,6 +29,7 @@ import dev.kinash.smartscales.core.model.WeightUnit
 import dev.kinash.smartscales.core.protocol.ScaleUnit
 import dev.kinash.smartscales.core.protocol.ScaleWeight
 import dev.kinash.smartscales.core.protocol.V2Cipher
+import dev.kinash.smartscales.indicators.Indicators
 import dev.kinash.smartscales.ui.scale.scanUntilError
 import dev.kinash.smartscales.ui.scale.titleOf
 import kotlinx.coroutines.CoroutineScope
@@ -115,12 +116,14 @@ data class WhoQuestion(
     val choices: List<Profile>,
 )
 
-/** A weighing saved just now, for the message with "Not me". */
+/** A weighing saved just now, for the result with "Not me". */
 data class SavedWeighing(
     val measurementId: Long,
     val profile: Profile?,
     val weight: ScaleWeight,
     val choices: List<Profile>,
+    /** What to say about it, once worked out from the profile's history; null in the inbox. */
+    val notes: WeighingNotes? = null,
 )
 
 /**
@@ -164,6 +167,7 @@ class WeighingViewModel @Inject constructor(
     private val settings: SettingsRepository,
     private val clock: Clock,
     private val connector: GattConnector,
+    private val indicators: Indicators,
     log: BluetoothLog,
 ) : ViewModel() {
     /** The Bluetooth log records this session's frames. */
@@ -497,7 +501,7 @@ class WeighingViewModel @Inject constructor(
             ),
         )
         if (match != null) {
-            session.update { it.copy(saved = SavedWeighing(id, match, weight, choices)) }
+            showSaved(SavedWeighing(id, match, weight, choices))
         } else {
             session.update { it.copy(questions = it.questions + WhoQuestion(id, weight, choices)) }
         }
@@ -508,8 +512,7 @@ class WeighingViewModel @Inject constructor(
         session.update { state -> state.copy(questions = state.questions - question) }
         viewModelScope.launch {
             if (profile != null) measurements.transfer(question.measurementId, profile.id)
-            val saved = SavedWeighing(question.measurementId, profile, question.weight, question.choices)
-            session.update { it.copy(saved = saved) }
+            showSaved(SavedWeighing(question.measurementId, profile, question.weight, question.choices))
         }
     }
 
@@ -534,6 +537,20 @@ class WeighingViewModel @Inject constructor(
     }
 
     fun savedShown() = session.update { it.copy(saved = null) }
+
+    /**
+     * Shows [saved], then what to say about it: the change, goals reached and a weight far from the usual one
+     * (requirements §6.2), here and not in a notification.
+     */
+    private suspend fun showSaved(saved: SavedWeighing) {
+        session.update { it.copy(saved = saved) }
+        val profile = saved.profile ?: return
+        val history = indicators.observeHistory(profile.id).first()
+        val goals = profiles.observeGoals(profile.id).first()
+        val notes = weighingNotes(indicators.model, history, saved.measurementId, goals, settings.matchThresholdKg.first()) ?: return
+        // Only if it is still the one shown: "Not me" or the next weighing may have come meanwhile
+        session.update { state -> if (state.saved?.measurementId == saved.measurementId) state.copy(saved = state.saved.copy(notes = notes)) else state }
+    }
 
     private companion object {
         /** A result equal to the newest weighing from the scale within this time is that weighing. */

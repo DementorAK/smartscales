@@ -290,6 +290,50 @@ class WeighingFlowTest {
         assertEquals(0, runBlocking { measurements.observeInbox().first() }.size)
     }
 
+    @Test
+    fun goalReachedByTheWeighingIsSaidOnTheScreen() {
+        addScale()
+        val dmitry = addProfile("Dmitry", lastWeightKg = 80.6)
+        runBlocking { profiles.setGoal(dmitry, ProfileRepository.WEIGHT_GOAL, 80.5) }
+        openWeighing()
+        waitForListener()
+
+        scanner.advertise(v2Frame(seq = 5, weightRaw = 803, locked = true))
+        waitFor(hasText("Saved for Dmitry"))
+        waitFor(hasText("Goal reached: Weight 80.5 kg"))
+        compose.onNodeWithText("\u22120.3 kg since the weighing before").assertExists()
+        // Stays until closed, not a message that goes by itself
+        compose.onNodeWithText("Close").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Saved for Dmitry")).fetchSemanticsNodes().isEmpty() }
+    }
+
+    @Test
+    fun weightFarFromTheUsualOneIsSaid() {
+        addScale()
+        val dmitry = addProfile("Dmitry", lastWeightKg = 76.0)
+        // A fortnight about 76 kg, then 79.5 yesterday: the new 80.3 is close to the last, far from the usual
+        runBlocking {
+            listOf(8L to 76.0, 6L to 76.0, 1L to 79.5).forEach { (days, kg) ->
+                measurements.add(
+                    Measurement(
+                        profileId = dmitry,
+                        takenAt = Instant.now() - java.time.Duration.ofDays(days),
+                        zone = ZoneId.systemDefault(),
+                        source = MeasurementSource.MANUAL,
+                        weightKg = kg,
+                        person = profiles.get(dmitry)!!.snapshot(),
+                    ),
+                )
+            }
+        }
+        openWeighing()
+        waitForListener()
+
+        scanner.advertise(v2Frame(seq = 5, weightRaw = 803, locked = true))
+        waitFor(hasText("Saved for Dmitry"))
+        waitFor(hasText("4.3 kg more than the usual weight of the last 14 days. If this is not Dmitry, tap “Not me”."))
+    }
+
     private fun openWeighing() {
         compose.onNodeWithText("Weigh", useUnmergedTree = true).performClick()
     }

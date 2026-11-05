@@ -5,11 +5,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dev.kinash.smartscales.core.data.Goal
 import dev.kinash.smartscales.core.data.Profile
 import dev.kinash.smartscales.core.data.repository.ProfileRepository
 import dev.kinash.smartscales.core.formula.LocalizedText
 import dev.kinash.smartscales.indicators.Indicators
 import dev.kinash.smartscales.ui.ChartRoute
+import dev.kinash.smartscales.ui.goal.GoalProgress
+import dev.kinash.smartscales.ui.goal.goalProgress
 import dev.kinash.smartscales.ui.history.WEIGHT_CARD
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -23,6 +26,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -61,13 +65,21 @@ sealed interface ChartState {
         /** The first series' zones of the norm. */
         val zones: List<ZoneBand>,
         val choices: List<ChartChoice>,
+        /** The profile's goal for the first series, in its own unit (kilograms, centimetres); null without one. */
+        val goal: Goal? = null,
+        /** How far the goal has come; null without a goal or without values. */
+        val progress: GoalProgress? = null,
+        /** The first series' latest value in its own unit, which a new goal cannot be. */
+        val latest: Double? = null,
+        /** Goals are for adults: a child's weight is read by its percentile (requirements §6.3). */
+        val goalsOffered: Boolean = true,
     ) : ChartState
 }
 
 @HiltViewModel
 class ChartViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    profiles: ProfileRepository,
+    private val profiles: ProfileRepository,
     private val indicators: Indicators,
     private val clock: Clock,
 ) : ViewModel() {
@@ -101,13 +113,16 @@ class ChartViewModel @Inject constructor(
                     .map { ChartChoice(it.id, it.title, it.chartUnit(profile) in units || units.size < MAX_AXES) }
                 Triple(history, all.takeIf { it.firstOrNull()?.id == ids.first() }, choices)
             }.flowOn(Dispatchers.Default)
-            combine(series, options) { (history, all, choices), options ->
+            val goal = profiles.observeGoals(profile.id).map { it[seriesId(route.indicator)] }
+            combine(series, options, goal) { (history, all, choices), options, goal ->
                 val model = indicators.model
                 val now = clock.instant()
                 val main = all?.first() ?: return@combine ChartState.Gone
                 val period = options.period ?: defaultPeriod(main.points, now)
                 val since = period.days?.let { now - Duration.ofDays(it) }
                 val units = all.map { it.chartUnit(profile) }.distinct()
+                val values = seriesPoints(model, history, main.id)
+                val child = history.firstOrNull()?.growth != null
                 ChartState.Ready(
                     profile, period, options.smoothing, since, now,
                     weighings = history.count { since == null || it.measurement.takenAt >= since },
@@ -121,6 +136,10 @@ class ChartViewModel @Inject constructor(
                     },
                     zones = zoneBands(model, history.firstOrNull(), main.id, profile),
                     choices = choices,
+                    goal = goal?.takeIf { !child },
+                    goalsOffered = !child,
+                    progress = goal?.takeIf { !child }?.let { goalProgress(it, values, now) },
+                    latest = values.lastOrNull()?.value,
                 )
             }.flowOn(Dispatchers.Default)
         }
@@ -129,6 +148,11 @@ class ChartViewModel @Inject constructor(
     fun selectPeriod(period: ChartPeriod) = options.update { it.copy(period = period) }
 
     fun setSmoothing(on: Boolean) = options.update { it.copy(smoothing = on) }
+
+    /** Sets the goal of the series the chart was opened for, in its own unit; null removes it. */
+    fun setGoal(target: Double?) {
+        viewModelScope.launch { profiles.setGoal(route.profileId, seriesId(route.indicator), target) }
+    }
 
     fun add(id: String) = ids.update { if (id in it) it else it + id }
 

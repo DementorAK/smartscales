@@ -296,4 +296,21 @@
     <string name="compare_methods_differ">Worked out by different methods, so part of the change comes from the method</string>
     <string name="compare_hint">To compare two weighings, touch and hold one of them</string>
     <string name="compare_hint_close">Close the hint</string>
+    <string name="goal_card_left">Goal %1$s, %2$s to go</string>
+    <string name="goal_card_achieved">Goal %1$s reached</string>
+    <string name="goal_set">Set a goal</string>
+    <string name="goal_title">Goal: %1$s</string>
+    <string name="goal_progress">%1$d%% of the way, %2$s to go</string>
+    <string name="goal_left">%1$s to go</string>
+    <string name="goal_achieved">Goal reached</string>
+    <string name="goal_forecast_on">At the current trend, by %1$s</string>
+    <string name="goal_forecast_away">At the last month\'s trend it is not getting closer</string>
+    <string name="goal_forecast_far">At the current trend, more than two years away</string>
+    <string name="goal_forecast_few">A forecast needs at least 3 weighings over a week or more within the last month</string>
+    <string name="goal_change">Change</string>
+    <string name="goal_remove">Remove</string>
+    <string name="goal_dialog_title">Goal</string>
+    <string name="goal_dialog_field">Target</string>
+    <string name="goal_dialog_hint">The progress counts from the last weighing before the goal is set. A new target starts it again.</string>
+    <string name="goal_at_latest">This is the latest value. A goal is where to go: enter another one</string>
 </resources>

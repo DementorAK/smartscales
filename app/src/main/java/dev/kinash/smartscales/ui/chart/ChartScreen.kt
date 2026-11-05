@@ -62,6 +62,7 @@ import dev.kinash.smartscales.ui.common.ScreenPadding
 import dev.kinash.smartscales.ui.common.SwitchRow
 import dev.kinash.smartscales.ui.common.formatNumber
 import dev.kinash.smartscales.ui.common.symbol
+import dev.kinash.smartscales.ui.goal.GoalSection
 import dev.kinash.smartscales.ui.history.WEIGHT_CARD
 import dev.kinash.smartscales.ui.history.color
 import java.time.Duration
@@ -119,6 +120,20 @@ fun ChartScreen(onBack: () -> Unit, viewModel: ChartViewModel = hiltViewModel())
                 enabled = true,
                 onChange = viewModel::setSmoothing,
             )
+            val main = ready.shown.first().series
+            // Height is not something to aim at, nor a child's weight
+            if (ready.goalsOffered && main.id != HEIGHT_SERIES) {
+                GoalSection(
+                    target = ready.goal?.target,
+                    goal = ready.progress,
+                    unit = main.unit,
+                    precision = main.precision,
+                    unitSymbol = unitSymbol(LocalContext.current, main.unit, ready.profile),
+                    profile = ready.profile,
+                    latest = ready.latest,
+                    onSet = viewModel::setGoal,
+                )
+            }
             AddSeries(ready.choices, language, onAdd = viewModel::add)
         }
     }
@@ -190,6 +205,7 @@ private fun Chart(ready: ChartState.Ready, language: String) {
             .fillMaxWidth()
             .height(ChartHeight)
             .semantics { contentDescription = summary },
+        goal = ready.goal?.let { inProfileUnits(it.target, main.series.unit, profile) to MaterialTheme.colorScheme.tertiary },
     )
 }
 

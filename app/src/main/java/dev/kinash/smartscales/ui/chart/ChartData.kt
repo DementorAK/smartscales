@@ -74,17 +74,25 @@ fun chartSeries(model: FormulaModel, history: List<MeasuredIndicators>, id: Stri
         in model.groups -> model.groupName(id, history.firstNotNullOfOrNull { it.results?.group(id)?.first } ?: model.groups.getValue(id).first())
         else -> model.indicators.getValue(id).def.name
     }
-    val points = history.asReversed().mapNotNull { measured ->
+    val points = seriesPoints(model, history, id).map { ChartPoint(it.takenAt, inProfileUnits(it.value, unit, profile)) }
+    return ChartSeries(id, title, unit, precision, points)
+}
+
+/**
+ * The values of [id] over [history] (newest first), oldest first, in the indicator's own unit (kilograms,
+ * centimetres): the weight, the height, a group by the profile's variant or one indicator. Measurements without
+ * a value are left out.
+ */
+fun seriesPoints(model: FormulaModel, history: List<MeasuredIndicators>, id: String): List<ChartPoint> =
+    history.asReversed().mapNotNull { measured ->
         val value = when (id) {
             WEIGHT_CARD -> measured.measurement.weightKg
             HEIGHT_SERIES -> measured.measurement.person?.heightCm
             in model.groups -> measured.results?.group(id)?.second
             else -> measured.results?.value(id)
         } ?: return@mapNotNull null
-        ChartPoint(measured.measurement.takenAt, inProfileUnits(value, unit, profile))
+        ChartPoint(measured.measurement.takenAt, value)
     }
-    return ChartSeries(id, title, unit, precision, points)
-}
 
 /** Kilograms and centimetres in the profile's units; stones as a fraction, so the axis is one number. */
 fun inProfileUnits(value: Double, unit: IndicatorUnit, profile: Profile): Double = when (unit) {

@@ -142,6 +142,20 @@ class ProfileRepositoryTest : DatabaseTestBase() {
     }
 
     @Test
+    fun goalsOfAnyIndicatorAreObservedWithTheTimeTheyWereSet() = runTest {
+        val profileId = profiles.add(profile())
+        profiles.setGoal(profileId, "bf", 18.0)
+        profiles.setGoal(profileId, ProfileRepository.WEIGHT_GOAL, 75.0)
+        val goals = profiles.observeGoals(profileId).first()
+        assertEquals(setOf("bf", ProfileRepository.WEIGHT_GOAL), goals.keys)
+        assertEquals(18.0, goals.getValue("bf").target, 0.0)
+        // The same target again is the same goal, still counted from when it was set
+        val setAt = goals.getValue("bf").setAt
+        profiles.setGoal(profileId, "bf", 18.0)
+        assertEquals(setAt, profiles.observeGoals(profileId).first().getValue("bf").setAt)
+    }
+
+    @Test
     fun mainVariantIsOnePerGroup() = runTest {
         val profileId = profiles.add(profile())
         val dao = database.profileDao()

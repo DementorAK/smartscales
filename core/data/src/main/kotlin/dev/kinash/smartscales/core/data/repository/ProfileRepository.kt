@@ -1,12 +1,14 @@
 package dev.kinash.smartscales.core.data.repository
 
 import androidx.room.withTransaction
+import dev.kinash.smartscales.core.data.Goal
 import dev.kinash.smartscales.core.data.Profile
 import dev.kinash.smartscales.core.data.db.SmartScalesDatabase
 import dev.kinash.smartscales.core.data.db.entity.ProfileGoalEntity
 import dev.kinash.smartscales.core.data.db.entity.ProfileMainVariantEntity
 import dev.kinash.smartscales.core.data.db.entity.ProfileManualValueEntity
 import dev.kinash.smartscales.core.data.toEntity
+import dev.kinash.smartscales.core.data.toGoal
 import dev.kinash.smartscales.core.data.toProfile
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -95,7 +97,14 @@ class ProfileRepository @Inject constructor(
     suspend fun getGoal(profileId: Long, indicatorId: String): Double? =
         dao.getGoal(profileId, indicatorId)?.targetValue
 
-    /** Sets the goal, or removes it when [target] is null. */
+    /** The profile's goals, by indicator id. */
+    fun observeGoals(profileId: Long): Flow<Map<String, Goal>> =
+        dao.observeGoals(profileId).map { list -> list.associate { it.indicatorId to it.toGoal() } }
+
+    /**
+     * Sets the goal, or removes it when [target] is null. A new target is a new goal: its progress counts from
+     * now, so the time it was set changes with it; the same target again keeps it.
+     */
     suspend fun setGoal(profileId: Long, indicatorId: String, target: Double?) {
         if (target == null) {
             dao.deleteGoal(profileId, indicatorId)

@@ -9,6 +9,9 @@ import dev.kinash.smartscales.core.data.repository.MeasurementRepository
 import dev.kinash.smartscales.core.data.repository.ProfileRepository
 import dev.kinash.smartscales.core.data.repository.SettingsRepository
 import dev.kinash.smartscales.indicators.Indicators
+import dev.kinash.smartscales.ui.chart.seriesId
+import dev.kinash.smartscales.ui.chart.seriesPoints
+import dev.kinash.smartscales.ui.goal.goalProgress
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
@@ -19,6 +22,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.Clock
 import javax.inject.Inject
 
 sealed interface HistoryState {
@@ -39,10 +43,11 @@ sealed interface HistoryState {
 
 @HiltViewModel
 class HistoryViewModel @Inject constructor(
-    profiles: ProfileRepository,
+    private val profiles: ProfileRepository,
     private val measurements: MeasurementRepository,
     private val settings: SettingsRepository,
     private val indicators: Indicators,
+    private val clock: Clock,
 ) : ViewModel() {
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -50,12 +55,19 @@ class HistoryViewModel @Inject constructor(
         all to (all.firstOrNull { it.id == id } ?: all.firstOrNull())
     }.flatMapLatest { (all, current) ->
         val history = current?.let { indicators.observeHistory(it.id) } ?: flowOf(emptyList())
-        combine(history, measurements.observeInboxCount(), settings.compareHintSeen) { items, inboxCount, hintSeen ->
+        val goals = current?.let { profiles.observeGoals(it.id) } ?: flowOf(emptyMap())
+        combine(history, measurements.observeInboxCount(), settings.compareHintSeen, goals) { items, inboxCount, hintSeen, goals ->
             val newest = items.firstOrNull()
             val cards = newest?.results?.let { results ->
                 newest.growth?.let { childCards(indicators.model, results, it, newest.measurement) }
                     ?: (listOf(weightCard(newest)) + indicatorCards(indicators.model, results, newest.withImpedance, newest.impedance, current?.let(::cardsOf) ?: DEFAULT_CARDS))
-            }.orEmpty()
+            }.orEmpty().map { card ->
+                // A goal of the card's indicator: children's weight card has the weight's goal
+                // None for a child, whose weight is read by its percentile
+                if (newest?.growth != null) return@map card
+                val goal = goals[seriesId(card.id)] ?: return@map card
+                card.copy(goal = goalProgress(goal, seriesPoints(indicators.model, items, seriesId(card.id)), clock.instant()))
+            }
             HistoryState.Ready(all, current, items.map { it.measurement }, inboxCount, cards, compareHint = !hintSeen && items.size >= 2)
         }.flowOn(Dispatchers.Default)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HistoryState.Loading)

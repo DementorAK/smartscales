@@ -310,4 +310,21 @@
     <string name="compare_methods_differ">Посчитано разными методами — часть разницы дал метод</string>
     <string name="compare_hint">Чтобы сравнить два взвешивания, нажмите на одно из них и удерживайте</string>
     <string name="compare_hint_close">Закрыть подсказку</string>
+    <string name="goal_card_left">Цель %1$s, осталось %2$s</string>
+    <string name="goal_card_achieved">Цель %1$s достигнута</string>
+    <string name="goal_set">Поставить цель</string>
+    <string name="goal_title">Цель: %1$s</string>
+    <string name="goal_progress">Пройдено %1$d %%, осталось %2$s</string>
+    <string name="goal_left">Осталось %1$s</string>
+    <string name="goal_achieved">Цель достигнута</string>
+    <string name="goal_forecast_on">По текущему тренду — к %1$s</string>
+    <string name="goal_forecast_away">По тренду последнего месяца к цели не приближается</string>
+    <string name="goal_forecast_far">По текущему тренду — дальше чем через два года</string>
+    <string name="goal_forecast_few">Для прогноза нужно хотя бы 3 взвешивания за неделю и больше в последний месяц</string>
+    <string name="goal_change">Изменить</string>
+    <string name="goal_remove">Убрать</string>
+    <string name="goal_dialog_title">Цель</string>
+    <string name="goal_dialog_field">Целевое значение</string>
+    <string name="goal_dialog_hint">Прогресс считается от последнего взвешивания до постановки цели. Новое значение начинает его заново.</string>
+    <string name="goal_at_latest">Это последнее значение. Цель — куда двигаться: укажите другое</string>
 </resources>

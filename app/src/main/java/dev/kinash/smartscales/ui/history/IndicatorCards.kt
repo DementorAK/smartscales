@@ -9,9 +9,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
@@ -41,6 +43,8 @@ import dev.kinash.smartscales.ui.common.ScreenPadding
 import dev.kinash.smartscales.ui.common.formatNumber
 import dev.kinash.smartscales.ui.common.lengthText
 import dev.kinash.smartscales.ui.common.weightText
+import dev.kinash.smartscales.ui.goal.GoalProgress
+import kotlin.math.abs
 
 /** One value on the main screen: an indicator, or a group with the variant that gave its value. */
 data class IndicatorCard(
@@ -59,6 +63,8 @@ data class IndicatorCard(
     val needsImpedance: ImpedanceStatus? = null,
     /** The weight card's impedance line. */
     val impedance: ImpedanceReading? = null,
+    /** The profile's goal for this indicator. */
+    val goal: GoalProgress? = null,
 )
 
 /** The impedance of a weighing as the formulas took it: [ohms] with the scale's calibration, or as sent for a placeholder. */
@@ -219,6 +225,7 @@ private fun IndicatorCardView(card: IndicatorCard, profile: Profile, onClick: ()
                 )
             }
             card.zone?.let { ZoneLine(it, language) }
+            card.goal?.let { GoalLine(it, card, profile) }
             card.percentile?.let {
                 Text(stringResource(R.string.card_percentile, percentileText(it)), style = MaterialTheme.typography.bodyMedium)
             }
@@ -234,6 +241,29 @@ private fun IndicatorCardView(card: IndicatorCard, profile: Profile, onClick: ()
         }
     }
 }
+
+/** The goal in short: what is left, or that it is reached; the forecast is on the chart. */
+@Composable
+private fun GoalLine(goal: GoalProgress, card: IndicatorCard, profile: Profile) {
+    val target = goalValueText(goal.target, card.unit, card.precision, profile)
+    Text(
+        if (goal.achieved) {
+            stringResource(R.string.goal_card_achieved, target)
+        } else {
+            stringResource(R.string.goal_card_left, target, goalValueText(abs(goal.remaining), card.unit, card.precision, profile))
+        },
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    goal.fraction?.let { fraction ->
+        LinearProgressIndicator(progress = { fraction.toFloat() }, modifier = Modifier.fillMaxWidth().padding(top = 2.dp))
+    }
+}
+
+/** A goal's value or what is left to it: the weight to a tenth, as people set it, not with the scale's resolution. */
+@Composable
+fun goalValueText(value: Double, unit: IndicatorUnit, precision: Int, profile: Profile): String =
+    indicatorValueText(value, unit, if (unit == IndicatorUnit.KG) 1 else precision, profile)
 
 /** The impedance under the weight; a placeholder is said to be one, since the cards below are then without it. */
 @Composable

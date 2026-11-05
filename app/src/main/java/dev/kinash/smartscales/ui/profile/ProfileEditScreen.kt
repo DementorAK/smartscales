@@ -190,14 +190,16 @@ fun ProfileEditScreen(onDone: () -> Unit, viewModel: ProfileEditViewModel = hilt
                     modifier = Modifier.weight(1f),
                 )
             }
-            WeightField(
-                value = form.goal,
-                onValueChange = { goal -> viewModel.edit { it.copy(goal = goal) } },
-                unit = form.weightUnit,
-                label = stringResource(R.string.profile_goal_weight),
-                isError = ProfileField.GOAL in state.errors,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            if (!viewModel.isChild(form)) {
+                WeightField(
+                    value = form.goal,
+                    onValueChange = { goal -> viewModel.edit { it.copy(goal = goal) } },
+                    unit = form.weightUnit,
+                    label = stringResource(R.string.profile_goal_weight),
+                    isError = ProfileField.GOAL in state.errors,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
             Text(
                 stringResource(R.string.profile_units_hint),
                 style = MaterialTheme.typography.bodySmall,

@@ -15,6 +15,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
@@ -51,7 +52,8 @@ data class TooltipLine(val color: Color?, val text: String)
 /**
  * A line chart over time, drawn on a canvas: the [bands] of the left axis behind the lines, a left axis and,
  * when a line goes on it, a right one, dates below. A tap shows what [tooltip] says about the nearest weighing.
- * The time spans [from] to [to], or the points' own times when they are null.
+ * The time spans [from] to [to], or the points' own times when they are null. [goal] is a dashed line across at
+ * that value of the left axis, which then reaches it.
  */
 @Composable
 fun LineChart(
@@ -63,6 +65,7 @@ fun LineChart(
     dateLabel: (Instant) -> String,
     tooltip: (Instant) -> List<TooltipLine>,
     modifier: Modifier = Modifier,
+    goal: Pair<Double, Color>? = null,
 ) {
     val measurer = rememberTextMeasurer()
     val labelStyle = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -78,7 +81,8 @@ fun LineChart(
     val end = (to ?: all.maxOf { it.takenAt }).epochSecond.toDouble().let { if (it > start) it else start + DAY_SECONDS }
     val left = lines.filter { !it.endAxis }.flatMap { it.points }.map { it.value }
     val right = lines.filter { it.endAxis }.flatMap { it.points }.map { it.value }
-    val leftRange = left.takeIf { it.isNotEmpty() }?.let(::axisRange)
+    // The goal's line is on the chart even when the values are far from it
+    val leftRange = (left + listOfNotNull(goal?.first).takeIf { left.isNotEmpty() }.orEmpty()).takeIf { it.isNotEmpty() }?.let(::axisRange)
     val rightRange = right.takeIf { it.isNotEmpty() }?.let(::axisRange)
 
     // The plot's sides come from the axis labels and the width, worked out here so drawing and taps share them
@@ -136,6 +140,14 @@ fun LineChart(
         }
 
         clipRect(plotLeft, plotTop, plotRight, plotBottom) {
+            if (goal != null && leftRange != null) {
+                val y = yOf(goal.first, leftRange)
+                val dash = 6.dp.toPx()
+                drawLine(
+                    goal.second, Offset(plotLeft, y), Offset(plotRight, y), 2.dp.toPx(),
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(dash, dash)),
+                )
+            }
             lines.forEach { line ->
                 val range = (if (line.endAxis) rightRange else leftRange) ?: return@forEach
                 val offsets = line.points.map { Offset(xOf(it.takenAt), yOf(it.value, range)) }

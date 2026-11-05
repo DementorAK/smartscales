@@ -309,7 +309,7 @@ class ProfileEditViewModel @Inject constructor(
                 add(ProfileField.BIRTH_DATE)
             }
             if (heightCm == null || heightCm !in HEIGHT_RANGE_CM) add(ProfileField.HEIGHT)
-            if (!form.goal.isBlank && goalKg(form)?.let { it in WEIGHT_RANGE_KG } != true) add(ProfileField.GOAL)
+            if (!isChild(form) && !form.goal.isBlank && goalKg(form)?.let { it in WEIGHT_RANGE_KG } != true) add(ProfileField.GOAL)
             if (circumferencesCm(form).values.any { it != null && it !in MeasurementEditViewModel.CIRCUMFERENCE_RANGE_CM }) {
                 add(ProfileField.CIRCUMFERENCES)
             }
@@ -397,8 +397,20 @@ class ProfileEditViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Whether the form is for a child under 18 today: a child's weight is read by its percentile, not aimed at
+     * in kilograms, so there is no goal (requirements §6.3).
+     */
+    fun isChild(form: ProfileForm): Boolean {
+        val today = LocalDate.now(clock.withZone(ZoneId.systemDefault()))
+        // The same age the growth charts end at, where the cards and charts stop being a child's
+        return form.birthDate?.let { it.plusMonths(ChildGrowth.ADULT_MONTHS.toLong()) > today } == true
+    }
+
     private fun persist(profile: Profile, applyToPastMeasurements: Boolean) {
         val goalKg = goalKg(_state.value.form)
+        // A child's goal is not offered; one kept from before is left as it is
+        val child = isChild(_state.value.form)
         val circumferences = circumferencesCm(_state.value.form).mapNotNull { (field, cm) -> cm?.let { field to it } }.toMap()
         _state.update { it.copy(saving = true) }
         // Every offered group is written, so a choice set back to the first variant or not offered to the
@@ -408,7 +420,7 @@ class ProfileEditViewModel @Inject constructor(
             groups.any { it.id == group && it.allows(variant, profile.sex) }
         }
         suspend fun saveDetails(id: Long) {
-            profiles.setGoal(id, ProfileRepository.WEIGHT_GOAL, goalKg)
+            if (!child) profiles.setGoal(id, ProfileRepository.WEIGHT_GOAL, goalKg)
             profiles.setManualValues(id, circumferences)
             profiles.setMainVariants(id, groups.map { it.id }, choices)
         }

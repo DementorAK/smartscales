@@ -254,4 +254,31 @@
         <item quantity="one">The scale asks whose weighing it is, to work out its own numbers for that person. Without an answer the app picks the closest by last weight in %1$d second.</item>
         <item quantity="other">The scale asks whose weighing it is, to work out its own numbers for that person. Without an answer the app picks the closest by last weight in %1$d seconds.</item>
     </plurals>
+    <string name="unit_percent">%</string>
+    <string name="unit_liter">l</string>
+    <string name="unit_kcal">kcal</string>
+    <string name="unit_kg_m2">kg/m²</string>
+    <string name="chart_period_week">Week</string>
+    <string name="chart_period_month">Month</string>
+    <string name="chart_period_year">Year</string>
+    <string name="chart_period_all">All</string>
+    <string name="chart_empty">No weighings in this period</string>
+    <string name="chart_no_values">No values in this period</string>
+    <string name="chart_zones_hint">Coloured bands: the zones of the norm for the latest weighing</string>
+    <string name="chart_smoothing">Moving average</string>
+    <plurals name="chart_smoothing_hint">
+        <item quantity="one">The average of the %1$d day up to each weighing</item>
+        <item quantity="other">The average of the %1$d days up to each weighing</item>
+    </plurals>
+    <string name="chart_add">Add to the chart</string>
+    <string name="chart_add_unfit">Another unit: the chart already has two axes</string>
+    <string name="chart_remove">Remove %1$s from the chart</string>
+    <string name="chart_axis_left">Left axis</string>
+    <string name="chart_axis_right">Right axis</string>
+    <string name="chart_series_unit">%1$s, %2$s</string>
+    <plurals name="chart_summary">
+        <item quantity="one">%1$s: %2$d weighing, the last %3$s</item>
+        <item quantity="other">%1$s: %2$d weighings, the last %3$s</item>
+    </plurals>
+    <string name="chart_stones_hint">On the axis in stones as a fraction: 12.5 st is 12 st 7 lb</string>
 </resources>

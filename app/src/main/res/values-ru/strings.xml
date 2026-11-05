@@ -262,4 +262,35 @@
         <item quantity="many">Весы спрашивают, чьё это взвешивание, чтобы посчитать свои числа для этого человека. Без ответа через %1$d секунд приложение выберет ближайшего по последнему весу.</item>
         <item quantity="other">Весы спрашивают, чьё это взвешивание, чтобы посчитать свои числа для этого человека. Без ответа через %1$d секунды приложение выберет ближайшего по последнему весу.</item>
     </plurals>
+    <string name="unit_percent">%</string>
+    <string name="unit_liter">л</string>
+    <string name="unit_kcal">ккал</string>
+    <string name="unit_kg_m2">кг/м²</string>
+    <string name="chart_period_week">Неделя</string>
+    <string name="chart_period_month">Месяц</string>
+    <string name="chart_period_year">Год</string>
+    <string name="chart_period_all">Всё</string>
+    <string name="chart_empty">Нет взвешиваний за этот период</string>
+    <string name="chart_no_values">Нет значений за этот период</string>
+    <string name="chart_zones_hint">Цветные полосы — зоны нормы для последнего взвешивания</string>
+    <string name="chart_smoothing">Скользящее среднее</string>
+    <plurals name="chart_smoothing_hint">
+        <item quantity="one">Среднее за %1$d день до каждого взвешивания</item>
+        <item quantity="few">Среднее за %1$d дня до каждого взвешивания</item>
+        <item quantity="many">Среднее за %1$d дней до каждого взвешивания</item>
+        <item quantity="other">Среднее за %1$d дня до каждого взвешивания</item>
+    </plurals>
+    <string name="chart_add">Добавить на график</string>
+    <string name="chart_add_unfit">Другая единица: у графика уже две оси</string>
+    <string name="chart_remove">Убрать %1$s с графика</string>
+    <string name="chart_axis_left">Левая ось</string>
+    <string name="chart_axis_right">Правая ось</string>
+    <string name="chart_series_unit">%1$s, %2$s</string>
+    <plurals name="chart_summary">
+        <item quantity="one">%1$s: %2$d взвешивание, последнее %3$s</item>
+        <item quantity="few">%1$s: %2$d взвешивания, последнее %3$s</item>
+        <item quantity="many">%1$s: %2$d взвешиваний, последнее %3$s</item>
+        <item quantity="other">%1$s: %2$d взвешивания, последнее %3$s</item>
+    </plurals>
+    <string name="chart_stones_hint">На оси — стоуны дробью: 12,5 ст — это 12 ст 7 фнт</string>
 </resources>

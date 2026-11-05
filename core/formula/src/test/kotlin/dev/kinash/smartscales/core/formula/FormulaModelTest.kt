@@ -97,6 +97,16 @@ class FormulaModelTest {
     }
 
     @Test
+    fun zoneRuleIsTheOneForThePersonWithoutTheValue() {
+        val woman = man + mapOf("sex" to 0.0, "male" to false, "female" to true)
+        assertEquals(listOf(8.0, 20.0, 25.0), model().evaluate(man).zoneRule("bf")!!.bounds)
+        assertEquals(listOf(21.0, 33.0, 39.0), model().evaluate(woman).zoneRule("bf")!!.bounds)
+        // The rule depends on who is weighed, not on the value, so a chart has its zones without one
+        assertEquals(listOf(18.5, 25.0, 30.0), model().evaluate(man + ("weight" to null)).zoneRule("bmi")!!.bounds)
+        assertNull(model().evaluate(man).zoneRule("ffm_wu"))
+    }
+
+    @Test
     fun patchChangesParametersOnly() {
         val patched = model(set("tweak", """"patches": [{"id": "ffm_wu", "params": {"a": 10.0}}]"""))
         assertTrue(patched.issues.isEmpty())

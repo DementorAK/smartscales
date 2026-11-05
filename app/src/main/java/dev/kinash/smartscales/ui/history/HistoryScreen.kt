@@ -50,6 +50,7 @@ fun HistoryScreen(
     onOpenInbox: () -> Unit,
     onWeigh: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenChart: (profileId: Long, indicator: String) -> Unit,
     viewModel: HistoryViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -115,7 +116,7 @@ fun HistoryScreen(
                 ready.measurements.isEmpty() -> EmptyState(text = stringResource(R.string.history_empty))
                 else -> LazyColumn {
                     if (ready.cards.isNotEmpty()) {
-                        item(key = "cards") { IndicatorCards(ready.cards, current) }
+                        item(key = "cards") { IndicatorCards(ready.cards, current, onOpen = { onOpenChart(current.id, it) }) }
                         item(key = "cards-divider") { HorizontalDivider() }
                     }
                     items(ready.measurements, key = { it.id }) { measurement ->

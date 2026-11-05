@@ -109,17 +109,25 @@ class FormulaModel private constructor(
         fun zone(id: String): Zone? {
             val value = value(id) ?: return null
             val indicator = model.indicators.getValue(id)
+            val rule = zoneRule(id) ?: return null
             val shown = BigDecimal(value.toString()).setScale(indicator.def.precision, RoundingMode.HALF_UP).toDouble()
+            val index = rule.bounds.indexOfFirst { bound ->
+                if (rule.atBound == BoundSide.ABOVE) shown < bound else shown <= bound
+            }.let { if (it < 0) rule.bounds.size else it }
+            return Zone(rule.levels[index], rule.labels?.get(index), indicator.def.approximateZones)
+        }
+
+        /**
+         * The zone rule of the indicator that applies to this measurement (by sex, age and the like), or null
+         * when none does; its bounds draw the zones on a chart. It does not need the indicator's value.
+         */
+        fun zoneRule(id: String): ZoneRule? {
+            val indicator = model.indicators[id] ?: return null
             val nameValue = { name: String -> lookup(indicator, name) }
-            for ((i, rule) in indicator.def.zones.withIndex()) {
+            return indicator.def.zones.withIndex().firstOrNull { (i, _) ->
                 val condition = indicator.zoneConditions[i]
-                if (condition != null && condition.evaluate(nameValue) != true) continue
-                val index = rule.bounds.indexOfFirst { bound ->
-                    if (rule.atBound == BoundSide.ABOVE) shown < bound else shown <= bound
-                }.let { if (it < 0) rule.bounds.size else it }
-                return Zone(rule.levels[index], rule.labels?.get(index), indicator.def.approximateZones)
-            }
-            return null
+                condition == null || condition.evaluate(nameValue) == true
+            }?.value
         }
 
         private fun lookup(indicator: Indicator, name: String): Any? = when (name) {

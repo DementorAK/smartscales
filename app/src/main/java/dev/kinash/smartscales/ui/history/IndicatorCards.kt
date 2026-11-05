@@ -180,12 +180,12 @@ fun indicatorCards(
     }
 
 @Composable
-fun IndicatorCards(cards: List<IndicatorCard>, profile: Profile, modifier: Modifier = Modifier) {
+fun IndicatorCards(cards: List<IndicatorCard>, profile: Profile, onOpen: (String) -> Unit, modifier: Modifier = Modifier) {
     // Two equal columns, and both cards of a row as tall as the taller one, so they line up whatever their texts
     Column(modifier.padding(ScreenPadding), verticalArrangement = Arrangement.spacedBy(FieldSpacing)) {
         cards.chunked(2).forEach { row ->
             Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(FieldSpacing)) {
-                row.forEach { IndicatorCardView(it, profile, Modifier.weight(1f).fillMaxHeight()) }
+                row.forEach { card -> IndicatorCardView(card, profile, { onOpen(card.id) }, Modifier.weight(1f).fillMaxHeight()) }
                 if (row.size == 1) Spacer(Modifier.weight(1f))
             }
         }
@@ -193,9 +193,10 @@ fun IndicatorCards(cards: List<IndicatorCard>, profile: Profile, modifier: Modif
 }
 
 @Composable
-private fun IndicatorCardView(card: IndicatorCard, profile: Profile, modifier: Modifier) {
+private fun IndicatorCardView(card: IndicatorCard, profile: Profile, onClick: () -> Unit, modifier: Modifier) {
     val language = currentLanguage()
-    OutlinedCard(modifier) {
+    // A card opens its chart
+    OutlinedCard(onClick, modifier) {
         Column(Modifier.padding(ScreenPadding), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(cardTitle(card, language), style = MaterialTheme.typography.labelLarge)
             Text(
@@ -308,7 +309,7 @@ fun indicatorValueText(value: Double, unit: IndicatorUnit, precision: Int, profi
     }
 }
 
-private fun ZoneLevel.title(): Int = when (this) {
+fun ZoneLevel.title(): Int = when (this) {
     ZoneLevel.VERY_LOW -> R.string.zone_very_low
     ZoneLevel.LOW -> R.string.zone_low
     ZoneLevel.NORMAL -> R.string.zone_normal
@@ -318,7 +319,7 @@ private fun ZoneLevel.title(): Int = when (this) {
 }
 
 /** Blue below the norm, green in it, then amber, orange and red; readable on light and dark backgrounds. */
-private fun ZoneLevel.color(): Color = when (this) {
+fun ZoneLevel.color(): Color = when (this) {
     ZoneLevel.VERY_LOW -> Color(0xFF1E5AA8)
     ZoneLevel.LOW -> Color(0xFF4A90D9)
     ZoneLevel.NORMAL -> Color(0xFF2E9E4F)

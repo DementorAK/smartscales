@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import dev.kinash.smartscales.ui.chart.ChartScreen
 import dev.kinash.smartscales.ui.history.HistoryScreen
 import dev.kinash.smartscales.ui.inbox.InboxScreen
 import dev.kinash.smartscales.ui.measurement.MeasurementEditScreen
@@ -29,6 +30,10 @@ data class ProfileEditRoute(val profileId: Long? = null, val assignMeasurementId
 /** A new manual measurement for [profileId] when [measurementId] is null. */
 @Serializable
 data class MeasurementEditRoute(val measurementId: Long? = null, val profileId: Long? = null)
+
+/** The chart of [indicator] (a card id) for [profileId]. */
+@Serializable
+data class ChartRoute(val profileId: Long, val indicator: String)
 
 @Serializable
 data object WeighingRoute
@@ -61,8 +66,10 @@ fun SmartScalesNavHost() {
                 onOpenInbox = { navController.navigate(InboxRoute) },
                 onWeigh = { navController.navigate(WeighingRoute) },
                 onOpenSettings = { navController.navigate(SettingsRoute) },
+                onOpenChart = { profileId, indicator -> navController.navigate(ChartRoute(profileId, indicator)) },
             )
         }
+        composable<ChartRoute> { ChartScreen(onBack = back) }
         composable<WeighingRoute> {
             WeighingScreen(
                 onBack = back,

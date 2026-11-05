@@ -10,6 +10,7 @@ import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -149,7 +150,7 @@ class AppFlowTest {
         compose.onNodeWithText("Anna").performClick()
         compose.onNodeWithText("Dmitry").performClick()
         waitForRow("80.0 kg")
-        compose.onNode(row("80.0 kg")).performClick()
+        historyRow("80.0 kg").performClick()
         waitFor(hasText("Height at that time"))
         // An edit made before moving is saved, not lost
         compose.onNodeWithTag("measurement_weight").performTextClearance()
@@ -200,7 +201,7 @@ class AppFlowTest {
         val measurementId = addMeasurement(profileId, weightKg = 80.123, waistCm = 85.3)
 
         waitForRow("12 st 8.6 lb")
-        compose.onNode(row("12 st 8.6 lb")).performClick()
+        historyRow("12 st 8.6 lb").performClick()
         waitFor(hasText("Height at that time"))
         compose.onNodeWithText("Note").performTextInput("only the note")
         compose.onNodeWithText("Save").performClick()
@@ -226,7 +227,7 @@ class AppFlowTest {
         val measurementId = addMeasurement(dmitry, takenAt = "2026-10-27T07:00:00Z")
         waitForRow("80.0 kg")
 
-        compose.onNode(row("80.0 kg")).performClick()
+        historyRow("80.0 kg").performClick()
         compose.onNodeWithContentDescription("Move to another profile").performClick()
         waitFor(hasText("Born after this measurement was taken"))
         compose.onNode(hasText("Kid") and hasAnyAncestor(isDialog()), useUnmergedTree = true).performClick()
@@ -275,6 +276,16 @@ class AppFlowTest {
 
     /** A row of the history: the cards above it show the same weight, but only the row opens the measurement. */
     private fun row(text: String) = hasText(text) and hasClickAction()
+
+    /**
+     * The history's row, scrolled to: the cards above it may fill the screen, and the weight card, which opens
+     * the chart, has the same text.
+     */
+    private fun historyRow(text: String): SemanticsNodeInteraction {
+        val matcher = row(text) and !hasText("Weight")
+        compose.onNode(hasScrollToNodeAction()).performScrollToNode(matcher)
+        return compose.onNode(matcher)
+    }
 
     private fun addProfile(
         name: String,

@@ -1,5 +1,6 @@
 package dev.kinash.smartscales.core.formula
 
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
@@ -41,6 +42,18 @@ data class FormulaSetFile(
             ignoreUnknownKeys = false
             isLenient = false
         }
+
+        @OptIn(ExperimentalSerializationApi::class)
+        private val writer = Json {
+            prettyPrint = true
+            prettyPrintIndent = "  "
+            // A file as someone would write it by hand: without the values left as they are
+            encodeDefaults = false
+            explicitNulls = false
+        }
+
+        /** The text of [file] in the format [parse] reads, as the editor saves a set. */
+        fun encode(file: FormulaSetFile): String = writer.encodeToString(serializer(), file) + "\n"
 
         /**
          * Reads a set; a malformed file throws [FormulaSetException] naming the place. The format version is

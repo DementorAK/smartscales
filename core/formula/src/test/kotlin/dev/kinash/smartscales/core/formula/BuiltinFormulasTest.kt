@@ -38,6 +38,15 @@ class BuiltinFormulasTest {
     }
 
     @Test
+    fun theSetWrittenOutReadsBackTheSame() {
+        val text = FormulaSetFile.encode(BuiltinFormulas.file)
+        assertEquals(BuiltinFormulas.file, FormulaSetFile.parse(text))
+        // Values left as they are stay out, as in a file written by hand
+        assertTrue("\"atBound\": \"above\"" !in text)
+        assertTrue("null" !in text)
+    }
+
+    @Test
     fun everyTextIsInEnglishAndRussian() {
         val file = BuiltinFormulas.file
         val texts = listOf(file.name) + listOfNotNull(file.description) +

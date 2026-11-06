@@ -60,7 +60,12 @@ import dev.kinash.smartscales.ui.common.ScreenPadding
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FormulaSetsScreen(onBack: () -> Unit, viewModel: FormulaSetsViewModel = hiltViewModel()) {
+fun FormulaSetsScreen(
+    onBack: () -> Unit,
+    onCreate: () -> Unit,
+    onEdit: (Long) -> Unit,
+    viewModel: FormulaSetsViewModel = hiltViewModel(),
+) {
     val layers by viewModel.layers.collectAsStateWithLifecycle()
     val pending by viewModel.pending.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
@@ -96,6 +101,7 @@ fun FormulaSetsScreen(onBack: () -> Unit, viewModel: FormulaSetsViewModel = hilt
                 title = { Text(stringResource(R.string.formula_sets_title)) },
                 navigationIcon = { BackButton(onBack) },
                 actions = {
+                    TextButton(onClick = onCreate) { Text(stringResource(R.string.formula_sets_create)) }
                     // JSON files often come without their type from messengers and downloads
                     TextButton(onClick = { importLauncher.launch(arrayOf("*/*")) }) { Text(stringResource(R.string.formula_sets_import)) }
                 },
@@ -129,6 +135,7 @@ fun FormulaSetsScreen(onBack: () -> Unit, viewModel: FormulaSetsViewModel = hilt
                         exportLauncher.launch(fileName(layer.file?.id ?: layer.stored.name))
                     },
                     onDelete = { deleting = layer.stored.id },
+                    onEdit = { onEdit(layer.stored.id) },
                 )
             }
             BuiltinCard(language) {
@@ -173,6 +180,7 @@ private fun SetCard(
     onMove: (up: Boolean) -> Unit,
     onExport: () -> Unit,
     onDelete: () -> Unit,
+    onEdit: () -> Unit,
 ) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(start = ScreenPadding, end = ScreenPadding, top = ScreenPadding)) {
@@ -210,6 +218,8 @@ private fun SetCard(
                 Icon(painterResource(R.drawable.ic_arrow_downward), stringResource(R.string.formula_set_down))
             }
             Row(Modifier.weight(1f), horizontalArrangement = Arrangement.End) {
+                // A set of an unknown format cannot be read into the editor
+                if (layer.file != null) TextButton(onClick = onEdit) { Text(stringResource(R.string.formula_set_edit)) }
                 TextButton(onClick = onExport) { Text(stringResource(R.string.formula_set_export)) }
                 IconButton(onClick = onDelete) {
                     Icon(painterResource(R.drawable.ic_delete), stringResource(R.string.formula_set_delete))
@@ -258,7 +268,7 @@ private fun Issues(issues: List<FormulaIssue>, error: Boolean, owner: String?, n
  * language, after `Set 'Other' · ` when the place is in another set than [owner].
  */
 @Composable
-private fun issueText(issue: FormulaIssue, owner: String?, names: Map<String, String>): String {
+internal fun issueText(issue: FormulaIssue, owner: String?, names: Map<String, String>): String {
     val problem = stringResource(issue.problem.kind.text, *issue.problem.args.toTypedArray())
     val place = listOf(issue.path, problem).filter { it.isNotEmpty() }.joinToString(": ")
     val text = issue.position?.let { stringResource(R.string.formula_issue_at, place, it + 1) } ?: place

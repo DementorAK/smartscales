@@ -25,6 +25,9 @@ enum class ProblemKind(val english: String) {
 
     // The set
     SET_ID_TAKEN("Another enabled set has the id '%1\$s'"),
+
+    /** In the editor: a set switched off counts too, as importing a file of that id would replace it. */
+    SET_ID_USED("Another set has the id '%1\$s'"),
     ID_RESERVED("'%1\$s' cannot be an id: a reserved word"),
     ID_INVALID("'%1\$s' cannot be an id: not Latin letters, digits and _, starting with a letter or _"),
     ENGLISH_REQUIRED("English text ('en') is required"),
@@ -40,6 +43,9 @@ enum class ProblemKind(val english: String) {
     GROUP_NAME_UNUSED("No indicators in group '%1\$s' to name"),
     PRECISION("Precision must be 0 to %1\$s"),
     PARAM_NAME("'%1\$s' cannot be a parameter name"),
+
+    /** In the editor: two fields of one indicator name the same parameter. */
+    PARAM_TWICE("Parameter '%1\$s' is given twice"),
     NOT_A_NUMBER("Not a number"),
     ZONE_LEVELS("Needs one level more than bounds: %1\$s"),
     ZONE_BOUNDS("Bounds must go up"),

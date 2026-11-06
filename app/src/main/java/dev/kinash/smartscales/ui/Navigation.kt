@@ -8,6 +8,7 @@ import dev.kinash.smartscales.ui.chart.ChartScreen
 import dev.kinash.smartscales.ui.compare.CompareScreen
 import dev.kinash.smartscales.ui.formulas.ChildNormsScreen
 import dev.kinash.smartscales.ui.formulas.FormulaSetsScreen
+import dev.kinash.smartscales.ui.formulas.editor.FormulaSetEditScreen
 import dev.kinash.smartscales.ui.history.HistoryScreen
 import dev.kinash.smartscales.ui.inbox.InboxScreen
 import dev.kinash.smartscales.ui.measurement.MeasurementEditScreen
@@ -71,6 +72,10 @@ data object FormulaSetsRoute
 @Serializable
 data object ChildNormsRoute
 
+/** The editor of the person's formula set [setId], or of a new one. */
+@Serializable
+data class FormulaSetEditRoute(val setId: Long? = null)
+
 @Composable
 fun SmartScalesNavHost() {
     val navController = rememberNavController()
@@ -125,7 +130,14 @@ fun SmartScalesNavHost() {
                 onOpenChildNorms = { navController.navigate(ChildNormsRoute) },
             )
         }
-        composable<FormulaSetsRoute> { FormulaSetsScreen(onBack = back) }
+        composable<FormulaSetsRoute> {
+            FormulaSetsScreen(
+                onBack = back,
+                onCreate = { navController.navigate(FormulaSetEditRoute()) },
+                onEdit = { navController.navigate(FormulaSetEditRoute(it)) },
+            )
+        }
+        composable<FormulaSetEditRoute> { FormulaSetEditScreen(onDone = back) }
         composable<ChildNormsRoute> { ChildNormsScreen(onBack = back) }
         composable<ScaleEditRoute> { ScaleEditScreen(onDone = back) }
         composable<InboxRoute> {

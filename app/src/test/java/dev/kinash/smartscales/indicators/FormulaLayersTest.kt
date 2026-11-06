@@ -1,6 +1,8 @@
 package dev.kinash.smartscales.indicators
 
 import dev.kinash.smartscales.core.data.FormulaSet
+import dev.kinash.smartscales.core.formula.FormulaSetFile
+import dev.kinash.smartscales.core.formula.ProblemKind
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -83,6 +85,33 @@ class FormulaLayersTest {
         check as ImportCheck.Rejected
         assertEquals("mine", check.set)
         assertTrue(check.errors.toString(), check.errors.any { it.set == "below" && it.path == "indicators[0].group" })
+    }
+
+    @Test
+    fun anEditedSetIsCheckedInItsPlaceAndNeedsAnIdOfItsOwn() {
+        val mine = stored(set("mine"), 1, enabled = false)
+        val above = stored(set("above", indicators = "", patches = """{"id": "double_bmi", "precision": 2}"""), 2)
+        val file = FormulaSetFile.parse(set("mine", indicators = DOUBLE_BMI + "," + TRIPLE_BMI))
+        // A set switched off is checked as if on, under the set above, which sees its indicators
+        val check = checkEdit(file, mine, listOf(mine, above))
+        assertEquals(emptyList<Any>(), check.errors)
+        assertTrue("triple_bmi" in check.model!!.indicators)
+        assertFalse("double_bmi" in check.below.indicators)
+        // The stored text changed since the editor opened: the place is found by the set's id in the database
+        assertEquals(emptyList<Any>(), checkEdit(file, mine.copy(json = "{}"), listOf(mine, above)).errors)
+
+        // Dropping what the set above patches would leave it out
+        val dropping = checkEdit(FormulaSetFile.parse(set("mine", indicators = TRIPLE_BMI)), mine.copy(enabled = true), listOf(mine.copy(enabled = true), above))
+        assertEquals(listOf(above), dropping.breaks)
+
+        // A new set goes on top and may not take another set's id, though that one is off, nor the built-in one's
+        val taken = checkEdit(FormulaSetFile.parse(set("mine", indicators = TRIPLE_BMI)), null, listOf(mine, above))
+        assertEquals(listOf("id"), taken.errors.map { it.path })
+        assertNull(taken.model)
+        assertEquals(ProblemKind.SET_ID_USED, taken.errors.single().problem.kind)
+        assertEquals(ProblemKind.BUILTIN_ID, checkEdit(FormulaSetFile.parse(set("builtin")), null, emptyList()).errors.first().problem.kind)
+        val new = checkEdit(FormulaSetFile.parse(set("new", indicators = "", patches = """{"id": "bmi", "precision": 3}""")), null, listOf(mine, above))
+        assertEquals(emptyList<Any>(), new.errors.map { it.toString() })
     }
 
     private companion object {

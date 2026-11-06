@@ -14,6 +14,7 @@ val ProblemKind.text: Int
         ProblemKind.MALFORMED -> R.string.problem_malformed
         ProblemKind.BUILTIN_ID -> R.string.problem_builtin_id
         ProblemKind.SET_ID_TAKEN -> R.string.problem_set_id_taken
+        ProblemKind.SET_ID_USED -> R.string.problem_set_id_used
         ProblemKind.ID_RESERVED -> R.string.problem_id_reserved
         ProblemKind.ID_INVALID -> R.string.problem_id_invalid
         ProblemKind.ENGLISH_REQUIRED -> R.string.problem_english_required
@@ -29,6 +30,7 @@ val ProblemKind.text: Int
         ProblemKind.GROUP_NAME_UNUSED -> R.string.problem_group_name_unused
         ProblemKind.PRECISION -> R.string.problem_precision
         ProblemKind.PARAM_NAME -> R.string.problem_param_name
+        ProblemKind.PARAM_TWICE -> R.string.problem_param_twice
         ProblemKind.NOT_A_NUMBER -> R.string.problem_not_a_number
         ProblemKind.ZONE_LEVELS -> R.string.problem_zone_levels
         ProblemKind.ZONE_BOUNDS -> R.string.problem_zone_bounds

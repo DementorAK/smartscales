@@ -107,22 +107,81 @@ fun checkImport(text: String, stored: List<FormulaSet>): ImportCheck {
         return ImportCheck.Rejected(listOf(FormulaIssue(file.id, "id", Problem(ProblemKind.BUILTIN_ID))), file.id)
     }
     val replaces = stored.firstOrNull { readSet(it.json).file?.id == file.id }
-    // The sets in use now, with the new file in its place; null stands for the new file
+    val placed = place(file, replaces, stored)
+    placed.errors.takeIf { it.isNotEmpty() }?.let { return ImportCheck.Rejected(it, file.id) }
+    return ImportCheck.Accepted(file, replaces, placed.warnings, placed.breaks)
+}
+
+/**
+ * A set from the editor checked as saving it would leave it: [model] has it in its place (on top for a new one),
+ * and is null with [errors]; [breaks] as in [ImportCheck.Accepted]. [below] is the model of the layers under it,
+ * the indicators it can change or hide.
+ */
+class EditCheck(
+    val model: FormulaModel?,
+    val below: FormulaModel,
+    val errors: List<FormulaIssue>,
+    val warnings: List<FormulaIssue>,
+    val breaks: List<FormulaSet>,
+)
+
+/**
+ * Checks [file] made in the editor as [editing] (null for a new set) among [stored] ones, as [checkImport] checks a
+ * file; a set switched off is checked as if it were on. Its id must be its own: the built-in one's or another
+ * stored set's would make importing a file of that id replace the wrong set.
+ */
+fun checkEdit(file: FormulaSetFile, editing: FormulaSet?, stored: List<FormulaSet>): EditCheck {
+    val placed = place(file, editing, stored)
+    val taken = when {
+        file.id == BuiltinFormulas.file.id -> Problem(ProblemKind.BUILTIN_ID)
+        stored.any { it.id != editing?.id && readSet(it.json).file?.id == file.id } -> Problem(ProblemKind.SET_ID_USED, file.id)
+        else -> null
+    }
+    val errors = listOfNotNull(taken?.let { FormulaIssue(file.id, "id", it) }) + placed.errors
+    return EditCheck(placed.model.takeIf { errors.isEmpty() }, placed.below, errors, placed.warnings, placed.breaks)
+}
+
+private class Placed(
+    val model: FormulaModel,
+    val below: FormulaModel,
+    val errors: List<FormulaIssue>,
+    val warnings: List<FormulaIssue>,
+    val breaks: List<FormulaSet>,
+)
+
+/** The sets in use with [file] in the place of [at] (by its id: its text may have changed since), or on top without one. */
+private fun place(file: FormulaSetFile, at: FormulaSet?, stored: List<FormulaSet>): Placed {
+    val place = at?.let { set -> stored.firstOrNull { it.id == set.id } }
+    // Null stands for the new file
     val layers = stored.mapNotNull { set ->
-        if (set == replaces) null to file else readSet(set.json).file?.takeIf { set.enabled }?.let { set to it }
-    }.let { if (replaces == null) it + (null to file) else it }
+        if (set == place) null to file else readSet(set.json).file?.takeIf { set.enabled }?.let { set to it }
+    }.let { if (place == null) it + (null to file) else it }
     val stack = stack<FormulaSet?>(layers)
-    stack.rejected[null]?.let { return ImportCheck.Rejected(it, file.id) }
+    val below = stack(layers.takeWhile { it.first != null }).model
+    val errors = stack.rejected[null].orEmpty()
     val before = layersOf(stored).sets.filter { it.active }.map { it.stored }
-    val breaks = if (replaces?.enabled == false) emptyList() else before.filter { it != replaces && it in stack.rejected }
-    return ImportCheck.Accepted(file, replaces, stack.model.warnings.filter { it.set == file.id }, breaks)
+    val breaks = if (errors.isNotEmpty() || place?.enabled == false) emptyList() else before.filter { it != place && it in stack.rejected }
+    return Placed(stack.model, below, errors, stack.model.warnings.filter { it.set == file.id }.takeIf { errors.isEmpty() }.orEmpty(), breaks)
 }
 
 private class ReadSet(val file: FormulaSetFile?, val error: FormulaIssue?)
 
-/** The file, or why it does not read: an issue of the file as a whole, with no set, since its id is unknown. */
-private fun readSet(text: String): ReadSet = try {
-    ReadSet(FormulaSetFile.parse(text), null)
-} catch (e: FormulaSetException) {
-    ReadSet(null, FormulaIssue("", "", e.problem))
+/**
+ * The file, or why it does not read: an issue of the file as a whole, with no set, since its id is unknown. The
+ * editor checks its draft among the stored sets at every pause in the typing, so the last texts read are kept.
+ */
+private fun readSet(text: String): ReadSet = synchronized(readCache) {
+    readCache.getOrPut(text) {
+        try {
+            ReadSet(FormulaSetFile.parse(text), null)
+        } catch (e: FormulaSetException) {
+            ReadSet(null, FormulaIssue("", "", e.problem))
+        }
+    }
+}
+
+private const val READ_CACHE_SIZE = 32
+
+private val readCache = object : LinkedHashMap<String, ReadSet>(READ_CACHE_SIZE, 0.75f, true) {
+    override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, ReadSet>?) = size > READ_CACHE_SIZE
 }

@@ -29,7 +29,9 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
@@ -41,8 +43,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import java.io.File
+import java.io.IOException
 import java.time.Instant
 import java.time.ZoneId
+import java.util.UUID
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 /** What the editor shows: the set, or one of its parts by its place in the set. */
@@ -64,9 +70,12 @@ sealed interface EditorPage {
     data class Group(val index: Int) : EditorPage
 }
 
-/** What the editor keeps in the saved state, so that a long edit outlives the app being unloaded in the background. */
+/**
+ * What the editor keeps so that a long edit outlives the app being unloaded in the background. It goes to a file, not
+ * to the saved state: a big imported set would not fit in the saved state's Binder transaction.
+ */
 @Serializable
-private class EditorSnapshot(val draft: SetDraft, val original: SetDraft, val pages: List<EditorPage>)
+private class EditorSnapshot(val draft: SetDraft, val pages: List<EditorPage>)
 
 /** The draft [draft] checked: the fields that do not read, and what the model says of the [file] they make. */
 class EditorCheck(val draft: SetDraft, val file: FormulaSetFile, val fieldErrors: List<FormulaIssue>, val result: EditCheck) {
@@ -97,6 +106,11 @@ class FormulaSetEditViewModel @Inject constructor(
 ) : ViewModel() {
     private val route = savedStateHandle.toRoute<FormulaSetEditRoute>()
 
+    private val snapshots = File(context.cacheDir, SNAPSHOT_DIR)
+
+    /** The file of this editor's snapshot; only its name is in the saved state. */
+    private val snapshot = File(snapshots, (savedStateHandle.get<String>(SNAPSHOT) ?: UUID.randomUUID().toString().also { savedStateHandle[SNAPSHOT] = it }) + ".json")
+
     /** The phone's language, the one texts are written in beside English. */
     val language: String = context.resources.configuration.locales[0].language
 
@@ -126,22 +140,16 @@ class FormulaSetEditViewModel @Inject constructor(
                     null
                 }
             }
-            val restored = savedStateHandle.get<String>(SNAPSHOT)?.let { text ->
-                try {
-                    snapshotJson.decodeFromString(EditorSnapshot.serializer(), text)
-                } catch (e: IllegalArgumentException) {
-                    null
-                }
-            }
+            val restored = withContext(Dispatchers.IO) { readSnapshot() }
+            // Rebuilt from the stored set rather than kept: had the set been replaced meanwhile (a file with its id
+            // imported), the restored draft counts as changed against the new version, and saving it replaces that
             val start = file?.let { SetDraft.of(it, language) } ?: SetDraft(id = freeId(stored))
-            original = restored?.original ?: start
+            original = start
             pages.value = restored?.pages ?: listOf(EditorPage.Set)
             draft.value = restored?.draft ?: start
+            launch { keepSnapshot() }
             combine(draft.filterNotNull(), pages) { d, p -> EditorState(d, editing == null, d != original, p) }
-                .collect { state ->
-                    _state.value = state
-                    savedStateHandle[SNAPSHOT] = snapshotJson.encodeToString(EditorSnapshot.serializer(), EditorSnapshot(state.draft, original ?: state.draft, state.pages))
-                }
+                .collect { _state.value = it }
         }
     }
 
@@ -245,6 +253,43 @@ class FormulaSetEditViewModel @Inject constructor(
         }
     }
 
+    override fun onCleared() {
+        // The editor is closed for good: the snapshot is needed no more. Unloaded in the background, it is not cleared
+        snapshot.delete()
+    }
+
+    private fun readSnapshot(): EditorSnapshot? {
+        // Left behind by editors that were never come back to
+        snapshots.listFiles()?.filter { it != snapshot && it.lastModified() < System.currentTimeMillis() - SNAPSHOT_LIFE_MS }?.forEach { it.delete() }
+        return try {
+            if (snapshot.exists()) snapshotJson.decodeFromString(EditorSnapshot.serializer(), snapshot.readText()) else null
+        } catch (e: IOException) {
+            null
+        } catch (e: IllegalArgumentException) {
+            // Also a snapshot of another version of the app: the edit starts over from the stored set
+            null
+        }
+    }
+
+    /** Writes the snapshot a moment after each change, off the main thread, so that typing in a big set stays quick. */
+    private suspend fun keepSnapshot() {
+        combine(draft.filterNotNull(), pages) { d, p -> EditorSnapshot(d, p) }
+            .drop(1)
+            .debounce(SNAPSHOT_DELAY_MS)
+            .collectLatest { state ->
+                withContext(Dispatchers.IO) {
+                    try {
+                        snapshots.mkdirs()
+                        val next = File(snapshots, snapshot.name + ".tmp")
+                        next.writeText(snapshotJson.encodeToString(EditorSnapshot.serializer(), state))
+                        if (!next.renameTo(snapshot)) next.delete()
+                    } catch (e: IOException) {
+                        // Without the snapshot only an edit unloaded in the background is lost
+                    }
+                }
+            }
+    }
+
     private fun freeId(stored: List<FormulaSet>): String {
         val taken = stored.mapNotNull { set ->
             try {
@@ -259,6 +304,9 @@ class FormulaSetEditViewModel @Inject constructor(
     private companion object {
         const val CHECK_DELAY_MS = 250L
         const val SNAPSHOT = "editor"
+        const val SNAPSHOT_DIR = "editor"
+        const val SNAPSHOT_DELAY_MS = 500L
+        val SNAPSHOT_LIFE_MS = TimeUnit.DAYS.toMillis(7)
         val snapshotJson = Json { ignoreUnknownKeys = true }
 
         fun freeName(base: String, taken: Set<String>): String =

@@ -272,6 +272,9 @@
         <item quantity="other">The average of the %1$d days up to each weighing</item>
     </plurals>
     <string name="chart_add">Add to the chart</string>
+    <string name="chart_compare_variants">Compare formulas</string>
+    <string name="chart_by_variant">Formula: %1$s</string>
+    <string name="chart_by_variants">Formulas, the latest value\'s first: %1$s</string>
     <string name="chart_add_unfit">Another unit: the chart already has two axes</string>
     <string name="chart_remove">Remove %1$s from the chart</string>
     <string name="chart_axis_left">Left axis</string>

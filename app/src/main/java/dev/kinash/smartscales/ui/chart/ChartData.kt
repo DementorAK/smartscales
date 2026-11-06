@@ -46,7 +46,17 @@ data class ChartSeries(
     val unit: IndicatorUnit,
     val precision: Int,
     val points: List<ChartPoint>,
-)
+    /**
+     * For a group of several variants, those its values came from, the newest value's first: one when the line
+     * goes by one formula, more when it does not (impedance in some weighings only). Empty otherwise.
+     */
+    val variants: List<String> = emptyList(),
+    /** The names of [variants]. */
+    val variantNames: List<LocalizedText> = emptyList(),
+) {
+    /** The one formula the line goes by; null when it mixes several, or for anything but a group. */
+    val variant: String? get() = variants.singleOrNull()
+}
 
 /** A zone of the norm as a band of values, open at the ends: below the first bound and above the last. */
 data class ZoneBand(val from: Double?, val to: Double?, val level: ZoneLevel)
@@ -72,14 +82,29 @@ fun chartSeries(model: FormulaModel, history: List<MeasuredIndicators>, id: Stri
         id in model.groups -> model.indicators.getValue(model.groups.getValue(id).first()).def.let { it.unit to it.precision }
         else -> model.indicators[id]?.def?.let { it.unit to it.precision } ?: return null
     }
+    // Newest first, as the history comes
+    val used = if (id in model.groups) history.mapNotNull { it.results?.group(id)?.first }.distinct() else emptyList()
     // Weight, height and segments are named by the app
     val title = when {
         id == WEIGHT_CARD || id == HEIGHT_SERIES || segment != null -> emptyMap()
-        id in model.groups -> model.groupName(id, history.firstNotNullOfOrNull { it.results?.group(id)?.first } ?: model.groups.getValue(id).first())
+        id in model.groups -> model.groupName(id, used.firstOrNull() ?: model.groups.getValue(id).first())
         else -> model.indicators.getValue(id).def.name
     }
     val points = seriesPoints(model, history, id).map { ChartPoint(it.takenAt, inProfileUnits(it.value, unit, profile)) }
-    return ChartSeries(id, title, unit, precision, points)
+    val variants = used.takeIf { id in model.groups && model.groups.getValue(id).size > 1 }.orEmpty()
+    return ChartSeries(id, title, unit, precision, points, variants, variants.mapNotNull { model.indicators[it]?.def?.name })
+}
+
+/**
+ * The other variants of the group of [series] to compare it with (fat by two formulas): for a group, its variants
+ * but the one its line goes by (all of them when the line mixes formulas, since none is its line all along); for a
+ * variant, the other variants of its group. Hidden ones are left out, as they are from the cards; empty for
+ * anything without a group.
+ */
+fun otherVariants(model: FormulaModel, series: ChartSeries): List<String> {
+    val group = if (series.id in model.groups) series.id else model.indicators[series.id]?.def?.group ?: return emptyList()
+    val variants = model.groups[group] ?: return emptyList()
+    return variants.filter { it != series.id && it != series.variant && it !in model.hidden }
 }
 
 /**

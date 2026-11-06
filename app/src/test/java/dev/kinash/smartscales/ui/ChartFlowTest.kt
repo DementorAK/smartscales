@@ -115,5 +115,18 @@ class ChartFlowTest {
         compose.onNodeWithText("No weighings in this period").assertDoesNotExist()
     }
 
+    @Test
+    fun aGroupsChartComparesItsFormulas() {
+        waitFor(hasText("Body fat"))
+        compose.onNodeWithText("Body fat").performScrollTo().performClick()
+        // Without impedance the group goes by BMI, and the legend says so
+        waitFor(hasText("Formula: Gallagher 2000, from BMI"))
+        compose.onNodeWithText("Compare formulas").performScrollTo().performClick()
+        // Only the variants with values: by impedance and by circumferences there are none
+        waitFor(hasText("Body fat (Deurenberg 1991, from BMI), %"))
+        compose.onNodeWithText("Body fat (from fat-free mass), %").assertDoesNotExist()
+        compose.onNodeWithText("Compare formulas").assertDoesNotExist()
+    }
+
     private fun waitFor(matcher: SemanticsMatcher) = compose.waitUntilAtLeastOneExists(matcher, timeoutMillis = 5_000)
 }

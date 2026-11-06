@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -67,6 +68,7 @@ import dev.kinash.smartscales.ui.goal.GoalSection
 import dev.kinash.smartscales.ui.history.TagFilterRow
 import dev.kinash.smartscales.ui.history.WEIGHT_CARD
 import dev.kinash.smartscales.ui.history.color
+import dev.kinash.smartscales.ui.profile.variantMethod
 import dev.kinash.smartscales.ui.segments.SegmentSeries
 import dev.kinash.smartscales.ui.segments.title
 import java.time.Duration
@@ -151,7 +153,13 @@ fun ChartScreen(onBack: () -> Unit, viewModel: ChartViewModel = hiltViewModel())
                     onSet = viewModel::setGoal,
                 )
             }
-            AddSeries(ready.choices, language, onAdd = viewModel::add)
+            // Side by side when they fit, one under the other on a narrow screen
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(FieldSpacing)) {
+                if (ready.compare.isNotEmpty()) {
+                    OutlinedButton(onClick = viewModel::compareVariants) { Text(stringResource(R.string.chart_compare_variants)) }
+                }
+                AddSeries(ready.choices, language, onAdd = viewModel::add)
+            }
         }
     }
 }
@@ -162,13 +170,18 @@ private val AxisViewsSaver = listSaver<AxisViews, Double>(
     restore = { AxisViews(AxisView(it[0], it[1]), AxisView(it[2], it[3])) },
 )
 
-/** Lines of the series in order, so the second series has the second color wherever it is drawn. */
+/**
+ * Lines of the series in order, so the second series has the second color wherever it is drawn: one for each of
+ * [ChartViewModel.MAX_SERIES], enough for a group with all its variants (fat has four) and one more indicator.
+ */
 @Composable
 private fun seriesColors(): List<Color> = listOf(
     MaterialTheme.colorScheme.primary,
     Color(0xFFC2185B),
     Color(0xFF00897B),
     Color(0xFF8E24AA),
+    Color(0xFFEF6C00),
+    Color(0xFF546E7A),
 )
 
 @Composable
@@ -248,6 +261,8 @@ private fun Legend(ready: ChartState.Ready, language: String, onRemove: (String)
             Column(Modifier.weight(1f)) {
                 Text(seriesText(context, shown.series, language, ready.profile), style = MaterialTheme.typography.bodyLarge)
                 val notes = listOfNotNull(
+                    // A group's line goes by one of its formulas: the profile's, or the next with a value
+                    variantNote(context, shown.series, language),
                     stringResource(if (shown.endAxis) R.string.chart_axis_right else R.string.chart_axis_left).takeIf { ready.shown.any { it.endAxis } },
                     // The first series' empty chart says it already
                     stringResource(R.string.chart_no_values).takeIf { index > 0 && shown.points.isEmpty() },
@@ -322,6 +337,21 @@ private fun titleOf(context: Context, id: String, title: LocalizedText, language
 }
 
 private fun choiceTitle(context: Context, choice: ChartChoice, language: String) = titleOf(context, choice.id, choice.title, language)
+
+/**
+ * "Formula: Wu 2015, foot to foot": the formula a group's line goes by, named without the group; the formulas,
+ * the newest value's first, when the line mixes them (impedance in some weighings only).
+ */
+private fun variantNote(context: Context, series: ChartSeries, language: String): String? {
+    if (series.variantNames.isEmpty()) return null
+    val group = series.title.text(language)
+    val methods = series.variantNames.map { variantMethod(it.text(language), group) }
+    return if (methods.size == 1) {
+        context.getString(R.string.chart_by_variant, methods.single())
+    } else {
+        context.getString(R.string.chart_by_variants, methods.joinToString("; "))
+    }
+}
 
 /** The name with the unit, "Weight, kg", for the legend, where the axes have numbers only. */
 private fun seriesText(context: Context, series: ChartSeries, language: String, profile: Profile): String {

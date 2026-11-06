@@ -68,14 +68,14 @@ class ChartDataTest {
         color = 0, createdAt = now,
     )
 
-    private fun measured(weight: Double, at: Instant): MeasuredIndicators {
+    private fun measured(weight: Double, at: Instant, impedance: Double? = null): MeasuredIndicators {
         val measurement = Measurement(
             profileId = 1, takenAt = at, zone = ZoneOffset.UTC, source = MeasurementSource.MANUAL,
             weightKg = weight, person = profile.snapshot(),
         )
         val inputs = mapOf<String, Any?>(
             "weight" to weight, "height" to 180.0, "age" to 35.0, "sex" to 1.0, "male" to true, "female" to false,
-        )
+        ) + listOfNotNull(impedance?.let { "impedance" to it })
         return MeasuredIndicators(measurement, model.evaluate(inputs), inputs)
     }
 
@@ -88,6 +88,27 @@ class ChartDataTest {
         val bf = chartSeries(model, history, "bf", profile)!!
         assertEquals(history.reversed().map { it.results!!.group("bf")!!.second }, bf.points.map { it.value })
         assertEquals(null, chartSeries(model, history, "gone", profile))
+    }
+
+    @Test
+    fun aGroupIsComparedWithItsOtherVariants() {
+        val history = listOf(measured(81.0, daysAgo(1)))
+        // Without impedance the group goes by BMI, so that variant is its own line already
+        val bf = chartSeries(model, history, "bf", profile)!!
+        assertEquals("bf_gallagher", bf.variant)
+        assertEquals(listOf("Body fat (Gallagher 2000, from BMI)"), bf.variantNames.map { it.getValue("en") })
+        assertEquals(listOf("bf_bia", "bf_deurenberg", "bf_navy"), otherVariants(model, bf))
+        // A variant is compared with the rest of its group
+        val navy = chartSeries(model, history, "bf_navy", profile)!!
+        assertEquals(null, navy.variant)
+        assertEquals(listOf("bf_bia", "bf_gallagher", "bf_deurenberg"), otherVariants(model, navy))
+        assertEquals(emptyList<String>(), otherVariants(model, chartSeries(model, history, "bmi", profile)!!))
+
+        // Impedance in the newest weighing only: the line mixes two formulas, so none of them is left out
+        val mixed = chartSeries(model, listOf(measured(81.0, daysAgo(1), impedance = 500.0)) + history, "bf", profile)!!
+        assertEquals(listOf("bf_bia", "bf_gallagher"), mixed.variants)
+        assertEquals(null, mixed.variant)
+        assertEquals(listOf("bf_bia", "bf_gallagher", "bf_deurenberg", "bf_navy"), otherVariants(model, mixed))
     }
 
     @Test

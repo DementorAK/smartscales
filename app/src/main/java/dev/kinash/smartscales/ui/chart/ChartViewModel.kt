@@ -72,6 +72,8 @@ sealed interface ChartState {
         /** The first series' zones of the norm. */
         val zones: List<ZoneBand>,
         val choices: List<ChartChoice>,
+        /** Other variants of the first series' group with values, to add at once; empty when there are none to add. */
+        val compare: List<String> = emptyList(),
         /** The profile's goal for the first series, in its own unit (kilograms, centimetres); null without one. */
         val goal: Goal? = null,
         /** How far the goal has come; null without a goal or without values. */
@@ -109,6 +111,7 @@ class ChartViewModel @Inject constructor(
         val filtered: List<MeasuredIndicators>,
         val all: List<ChartSeries>?,
         val choices: List<ChartChoice>,
+        val compare: List<String>,
         val tags: List<String>,
         val filter: Set<String>,
     )
@@ -139,8 +142,16 @@ class ChartViewModel @Inject constructor(
                     .filter { it !in ids }
                     .mapNotNull { id -> chartSeries(model, history, id, profile) }
                     .filter { it.points.isNotEmpty() }
-                    .map { ChartChoice(it.id, it.title, it.chartUnit(profile) in units || units.size < MAX_AXES) }
-                Series(history, shown, all.takeIf { it.firstOrNull()?.id == ids.first() }, choices, tags, active)
+                    .map { ChartChoice(it.id, it.title, ids.size < MAX_SERIES && (it.chartUnit(profile) in units || units.size < MAX_AXES)) }
+                // Of the whole history, as what can be added: a variant with no values is not worth a line
+                val compare = if (child) {
+                    emptyList()
+                } else {
+                    all.firstOrNull()?.let { main -> otherVariants(model, main) }.orEmpty()
+                        .filter { it !in ids && seriesPoints(model, history, it).isNotEmpty() }
+                        .take(MAX_SERIES - ids.size)
+                }
+                Series(history, shown, all.takeIf { it.firstOrNull()?.id == ids.first() }, choices, compare, tags, active)
             }.flowOn(Dispatchers.Default)
             val goal = profiles.observeGoals(profile.id).map { it[seriesId(route.indicator)] }
             combine(series, options, goal) { series, options, goal ->
@@ -166,6 +177,7 @@ class ChartViewModel @Inject constructor(
                     },
                     zones = zoneBands(model, history.firstOrNull(), main.id, profile),
                     choices = choices,
+                    compare = series.compare,
                     goal = goal?.takeIf { !child },
                     goalsOffered = !child,
                     progress = goal?.takeIf { !child }?.let { goalProgress(it, values, now) },
@@ -194,12 +206,21 @@ class ChartViewModel @Inject constructor(
 
     fun add(id: String) = ids.update { if (id in it) it else it + id }
 
+    /** Adds the other variants of the first series' group, to see how the formulas differ. */
+    fun compareVariants() {
+        val compare = (state.value as? ChartState.Ready)?.compare ?: return
+        ids.update { current -> current + compare.filter { it !in current } }
+    }
+
     /** Removes a series added to compare; the one the chart was opened for stays. */
     fun remove(id: String) = ids.update { listOf(it.first()) + (it.drop(1) - id) }
 
     companion object {
         /** Units on one chart: the left axis and the right one. */
         const val MAX_AXES = 2
+
+        /** Lines on one chart: each has its own color, and more would not be told apart. */
+        const val MAX_SERIES = 6
 
         /** A child's cards, BMI, weight and height (requirements §3), and the segments of an 8-electrode scale. */
         val CHILD_CHOICES = listOf(WEIGHT_CARD, HEIGHT_SERIES, "bmi") + SegmentSeries.all.map { it.id }

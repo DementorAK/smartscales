@@ -385,12 +385,24 @@ class FormulaModelTest {
         )
         val two = set(
             "two",
-            """"inputs": [{"id": "wrist", "name": {"en": "Wrist"}, "unit": "kg"}], "patches": [{"id": "bmi", "precision": 0}]""",
+            """"inputs": [{"id": "wrist", "name": {"en": "Wrist"}, "unit": "cm"}], "patches": [{"id": "bmi", "precision": 0}]""",
         )
         val both = model(one, two)
         assertTrue(both.isValid)
-        assertTrue(both.warnings.any { it.set == "two" && it.path == "inputs[0].id" && it.message.contains("another unit") })
+        assertTrue(both.warnings.any { it.set == "two" && it.path == "inputs[0].id" && it.problem == Problem(ProblemKind.INPUT_REPLACED, "wrist", "one") })
         assertTrue(both.warnings.any { it.set == "two" && it.path == "patches[0].id" && it.message.contains("'one'") })
+    }
+
+    @Test
+    fun anInputDeclaredAgainInAnotherUnitIsAnError() {
+        val one = set("one", """"inputs": [{"id": "wrist", "name": {"en": "Wrist"}, "unit": "cm"}]""")
+        val two = set("two", """"inputs": [{"id": "wrist", "name": {"en": "Wrist"}, "unit": "kg"}]""")
+        val both = model(one, two)
+        assertFalse(both.isValid)
+        assertEquals(
+            listOf(FormulaIssue("two", "inputs[0].unit", Problem(ProblemKind.INPUT_REPLACED_UNIT, "wrist", "one"))),
+            both.issues,
+        )
     }
 
     @Test

@@ -91,11 +91,18 @@ data class VariantGroup(
      */
     fun method(variant: String, language: String): String {
         val full = variants.firstOrNull { it.first == variant }?.second?.text(language) ?: return variant
-        val group = name.text(language)
-        val rest = full.removePrefix(group).trim()
-        if (rest == full || !rest.startsWith("(") || !rest.endsWith(")")) return full
-        return rest.removeSurrounding("(", ")").trim().replaceFirstChar { it.uppercase() }
+        return variantMethod(full, name.text(language))
     }
+}
+
+/**
+ * A variant's name [full] without its [group]'s: "Body fat (Gallagher 2000, from BMI)" in the group "Body fat"
+ * is "Gallagher 2000, from BMI". A name that does not start with the group's is returned whole.
+ */
+fun variantMethod(full: String, group: String): String {
+    val rest = full.removePrefix(group).trim()
+    if (rest == full || !rest.startsWith("(") || !rest.endsWith(")")) return full
+    return rest.removeSurrounding("(", ")").trim().replaceFirstChar { it.uppercase() }
 }
 
 enum class ProfileField { NAME, SEX, BIRTH_DATE, HEIGHT, GOAL, CIRCUMFERENCES }

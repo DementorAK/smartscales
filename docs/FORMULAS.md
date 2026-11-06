@@ -189,6 +189,28 @@ stature-for-age), a work of the U.S. government in the public domain, unchanged.
 - **Under 2 years**: weight and height only, without BMI or percentiles.
 - From 18 years the adult indicators and ranges apply.
 
+### WHO tables
+
+The WHO Child Growth Standards (0 to 5 years) [23] and Growth Reference (5 to 19 years) [24] can be used instead of
+the CDC charts. WHO publishes them under CC BY-NC-SA 3.0 IGO, which does not allow them inside GPL code, so they are
+not built into the app: download the expanded z-score tables (`.xlsx`) of BMI-for-age, weight-for-age and
+length/height-for-age for boys and girls from the WHO website and import them in Settings → Children's norms, all at
+once. The files are recognised by their names (`bfa`, `bmi`, `wfa`, `lhfa`, `hfa`; `boys`, `girls`); the age is read
+from their `Day`, `Week` or `Month` column (a month is 30.4375 days, as WHO counts), and L, M and S from theirs. The
+tables stay on the phone.
+
+- With WHO tables, children are placed on them from birth wherever they cover the age, and on the CDC charts where
+  they do not (WHO's weight-for-age ends at 10 years). Each card says which chart it is on.
+- Weight and BMI z-scores beyond ±3 are computed as WHO does: past the 3 SD curve, in steps of the distance between
+  the 2 and 3 SD curves [23].
+- **BMI-for-age weight status** (WHO): under 5 years, below −3 severe wasting, below −2 wasting, above +1 risk of
+  overweight, above +2 overweight, above +3 obesity; from 5 years, below −3 severe thinness, below −2 thinness,
+  above +1 overweight, above +2 obesity. The card shows the z-score with the percentile.
+- BMI is still shown from 2 years, as the built-in BMI indicator is; under 2, weight and length get percentiles.
+- Where two tables picked together share an age, the one that starts later keeps it: WHO's older separate BMI tables
+  for 0–2 years (by recumbent length) and 2–5 years (by standing height) both have 24 months, and the 2–5 value is
+  kept. A table imported later on its own replaces the ages it covers.
+
 ## Not included
 
 - **Visceral fat level, bone mass, protein, body age and body score.** Manufacturers' scales use their own proprietary
@@ -267,3 +289,8 @@ field without a unit, and a typing slip such as 1750 cm for 17.5 is taken as it 
 21. Cole T.J. The LMS method for constructing normalized growth standards. Eur J Clin Nutr 1990;44:45–60.
 22. Watson P.E., Watson I.D., Batt R.D. Total body water volumes for adult males and females estimated from simple
     anthropometric measurements. Am J Clin Nutr 1980;33:27–39. https://doi.org/10.1093/ajcn/33.1.27
+23. WHO Multicentre Growth Reference Study Group. WHO Child Growth Standards: length/height-for-age, weight-for-age,
+    weight-for-length, weight-for-height and body mass index-for-age. Methods and development. Geneva: WHO, 2006.
+    https://www.who.int/tools/child-growth-standards
+24. de Onis M., Onyango A.W., Borghi E. et al. Development of a WHO growth reference for school-aged children and
+    adolescents. Bull World Health Organ 2007;85:660–667. https://doi.org/10.2471/BLT.07.043497

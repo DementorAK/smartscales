@@ -60,15 +60,15 @@ class ChildCardsFlowTest {
 
         waitFor(hasText("Weight"))
         compose.onNodeWithText("Height").assertExists()
-        compose.onNodeWithText("Percentile: $heightPercentile").assertExists()
-        compose.onNodeWithText("Percentile: $bmiPercentile").assertExists()
+        compose.onNodeWithText("Percentile: $heightPercentile (CDC)").assertExists()
+        compose.onNodeWithText("Percentile: $bmiPercentile (CDC)").assertExists()
         compose.onNodeWithText("17.9 kg/m²").assertExists()
-        // CDC weight status: below the 5th percentile low, to the 85th normal, to the 95th elevated, then high
+        // CDC weight status: below the 5th percentile underweight, to the 85th normal, to the 95th overweight, then obesity
         val status = when {
-            bmiExact < 5 -> "Low"
-            bmiExact < 85 -> "Normal"
-            bmiExact < 95 -> "Elevated"
-            else -> "High"
+            bmiExact < 5 -> "Underweight"
+            bmiExact < 85 -> "Normal weight"
+            bmiExact < 95 -> "Overweight"
+            else -> "Obesity"
         }
         compose.onNodeWithText(status).assertExists()
         // Body composition is for adults, even with impedance

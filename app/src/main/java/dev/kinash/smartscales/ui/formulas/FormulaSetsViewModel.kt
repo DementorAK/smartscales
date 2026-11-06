@@ -17,6 +17,7 @@ import dev.kinash.smartscales.indicators.Indicators
 import dev.kinash.smartscales.indicators.Layers
 import dev.kinash.smartscales.indicators.MAX_SET_BYTES
 import dev.kinash.smartscales.indicators.checkImport
+import dev.kinash.smartscales.ui.common.readAtMost
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,8 +26,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.ByteArrayOutputStream
-import java.io.InputStream
 import javax.inject.Inject
 
 /** A file read for importing, waiting for the person to confirm it, or the reasons it is not taken. */
@@ -122,16 +121,4 @@ class FormulaSetsViewModel @Inject constructor(
             _message.value = if (result.isSuccess) R.string.formula_set_exported else R.string.formula_set_export_failed
         }
     }
-}
-
-/** Up to [limit] bytes of [stream]; `readNBytes` needs API 33. */
-private fun readAtMost(stream: InputStream, limit: Int): ByteArray {
-    val out = ByteArrayOutputStream()
-    val buffer = ByteArray(8192)
-    while (out.size() < limit) {
-        val read = stream.read(buffer, 0, minOf(buffer.size, limit - out.size()))
-        if (read < 0) break
-        out.write(buffer, 0, read)
-    }
-    return out.toByteArray()
 }

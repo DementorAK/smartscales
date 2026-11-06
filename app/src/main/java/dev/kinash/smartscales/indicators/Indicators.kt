@@ -84,6 +84,7 @@ class Indicators @Inject constructor(
     private val profiles: ProfileRepository,
     private val scales: ScaleBindingRepository,
     formulaSets: FormulaSetRepository,
+    private val growthTables: GrowthTables,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -109,8 +110,9 @@ class Indicators @Inject constructor(
         profiles.observeMainVariants(profileId),
         scales.observeAll(),
         measurements.observePlaceholderImpedances(),
-        layers.filterNotNull(),
-    ) { history, primary, bindings, placeholders, layers ->
+        // The children's norms with the formulas: changing either recounts the history
+        combine(layers.filterNotNull(), growthTables.active) { layers, who -> layers to who },
+    ) { history, primary, bindings, placeholders, (layers, who) ->
         val model = layers.model
         val factors = bindings.associate { it.id to it.impedanceFactor }
         IndicatorHistory(model, history.map { measurement ->
@@ -135,7 +137,7 @@ class Indicators @Inject constructor(
                 val age = raw.ageMonthsOrNull ?: return@MeasuredIndicators null
                 ChildGrowth.of(
                     raw.person.sex, age, raw.weightKg, raw.person.heightCm,
-                    bmi = results.value("bmi"), bmiPrecision = model.indicators["bmi"]?.def?.precision ?: 1,
+                    bmi = results.value("bmi"), bmiPrecision = model.indicators["bmi"]?.def?.precision ?: 1, who = who,
                 )
             }
         })

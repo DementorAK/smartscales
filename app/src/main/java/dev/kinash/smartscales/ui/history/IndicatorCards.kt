@@ -1,5 +1,6 @@
 package dev.kinash.smartscales.ui.history
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,8 +29,11 @@ import androidx.compose.ui.unit.dp
 import dev.kinash.smartscales.R
 import dev.kinash.smartscales.core.data.Measurement
 import dev.kinash.smartscales.core.data.Profile
+import dev.kinash.smartscales.core.formula.BmiStatus
 import dev.kinash.smartscales.core.formula.ChildGrowth
 import dev.kinash.smartscales.core.formula.FormulaModel
+import dev.kinash.smartscales.core.formula.GrowthPosition
+import dev.kinash.smartscales.core.formula.GrowthReference
 import dev.kinash.smartscales.core.formula.IndicatorUnit
 import dev.kinash.smartscales.core.formula.LocalizedText
 import dev.kinash.smartscales.core.formula.ZoneLevel
@@ -57,8 +61,10 @@ data class IndicatorCard(
     val unit: IndicatorUnit,
     val precision: Int,
     val zone: FormulaModel.Zone?,
-    /** Position on the CDC growth chart, for children. */
-    val percentile: Double? = null,
+    /** Position on the growth chart, for children. */
+    val growth: GrowthPosition? = null,
+    /** The name of the zone, for a child's weight status, which formula sets do not name. */
+    @param:StringRes val zoneName: Int? = null,
     /** Without a value: the indicator has one with an impedance, and this is why the weighing has none. */
     val needsImpedance: ImpedanceStatus? = null,
     /** The weight card's impedance line. */
@@ -130,8 +136,8 @@ const val CHILD_WEIGHT_CARD = "child_weight"
 const val CHILD_HEIGHT_CARD = "child_height"
 
 /**
- * A child's cards (requirements §3): BMI with its CDC percentile and weight status from 2 years, weight and height
- * with their percentiles; body composition is not calculated for children.
+ * A child's cards (requirements §3): BMI with its percentile and weight status from 2 years, weight and height with
+ * their percentiles, on the CDC charts or the WHO tables; body composition is not calculated for children.
  */
 fun childCards(model: FormulaModel, results: FormulaModel.Results, growth: ChildGrowth, measurement: Measurement): List<IndicatorCard> {
     val person = measurement.person ?: return emptyList()
@@ -139,12 +145,13 @@ fun childCards(model: FormulaModel, results: FormulaModel.Results, growth: Child
     return listOfNotNull(
         bmi?.let { def ->
             results.value("bmi")?.let { value ->
-                val zone = growth.bmiLevel?.let { FormulaModel.Zone(it, null, approximate = false) }
-                IndicatorCard("bmi", def.name, null, value, def.unit, def.precision, zone, growth.bmiPercentile)
+                val status = growth.bmiStatus
+                val zone = status?.let { FormulaModel.Zone(it.level, null, approximate = false) }
+                IndicatorCard("bmi", def.name, null, value, def.unit, def.precision, zone, growth.bmi, zoneName = status?.title())
             }
         },
-        IndicatorCard(CHILD_WEIGHT_CARD, emptyMap(), null, measurement.weightKg, IndicatorUnit.KG, 1, null, growth.weightPercentile),
-        IndicatorCard(CHILD_HEIGHT_CARD, emptyMap(), null, person.heightCm, IndicatorUnit.CM, 1, null, growth.heightPercentile),
+        IndicatorCard(CHILD_WEIGHT_CARD, emptyMap(), null, measurement.weightKg, IndicatorUnit.KG, 1, null, growth.weight),
+        IndicatorCard(CHILD_HEIGHT_CARD, emptyMap(), null, person.heightCm, IndicatorUnit.CM, 1, null, growth.height),
     )
 }
 
@@ -224,11 +231,9 @@ private fun IndicatorCardView(card: IndicatorCard, profile: Profile, onClick: ()
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            card.zone?.let { ZoneLine(it, language) }
+            card.zone?.let { ZoneLine(it, language, card.zoneName) }
             card.goal?.let { GoalLine(it, card, profile) }
-            card.percentile?.let {
-                Text(stringResource(R.string.card_percentile, percentileText(it)), style = MaterialTheme.typography.bodyMedium)
-            }
+            card.growth?.let { GrowthLine(it) }
             card.variant?.let {
                 Text(
                     it.text(language),
@@ -293,6 +298,44 @@ private fun cardTitle(card: IndicatorCard, language: String): String = when (car
     else -> card.title.text(language)
 }
 
+/**
+ * The percentile and the charts it is on: "Percentile: 62 (CDC)"; on WHO's, with the z-score WHO reads them by,
+ * "Percentile: 62, z +0.3 (WHO)".
+ */
+@Composable
+private fun GrowthLine(growth: GrowthPosition) {
+    val percentile = percentileText(growth.percentile)
+    val text = if (growth.reference == GrowthReference.WHO) {
+        stringResource(R.string.card_percentile_who, percentile, zText(growth.z))
+    } else {
+        stringResource(R.string.card_percentile_cdc, percentile)
+    }
+    Text(text, style = MaterialTheme.typography.bodyMedium)
+}
+
+/** A z-score to a tenth with its sign: "+0.3", "−1.2". */
+private fun zText(z: Double): String {
+    val text = formatNumber(abs(z), 1, 1)
+    return when {
+        text == formatNumber(0.0, 1, 1) -> text
+        z > 0 -> "+$text"
+        else -> "\u2212$text"
+    }
+}
+
+@StringRes
+fun BmiStatus.title(): Int = when (this) {
+    BmiStatus.SEVERE_WASTING -> R.string.bmi_status_severe_wasting
+    BmiStatus.WASTING -> R.string.bmi_status_wasting
+    BmiStatus.SEVERE_THINNESS -> R.string.bmi_status_severe_thinness
+    BmiStatus.THINNESS -> R.string.bmi_status_thinness
+    BmiStatus.UNDERWEIGHT -> R.string.bmi_status_underweight
+    BmiStatus.NORMAL -> R.string.bmi_status_normal
+    BmiStatus.RISK_OF_OVERWEIGHT -> R.string.bmi_status_risk_of_overweight
+    BmiStatus.OVERWEIGHT, BmiStatus.OVERWEIGHT_UNDER_5 -> R.string.bmi_status_overweight
+    BmiStatus.OBESITY, BmiStatus.OBESITY_UNDER_5 -> R.string.bmi_status_obesity
+}
+
 /** Whole percentiles; the ends of the chart as "below 1" and "above 99", where a number would claim too much. */
 @Composable
 private fun percentileText(percentile: Double): String = when {
@@ -303,8 +346,8 @@ private fun percentileText(percentile: Double): String = when {
 
 /** The zone in words as well as colour, so it reads without telling colours apart. */
 @Composable
-private fun ZoneLine(zone: FormulaModel.Zone, language: String) {
-    val name = zone.label?.text(language) ?: stringResource(zone.level.title())
+private fun ZoneLine(zone: FormulaModel.Zone, language: String, @StringRes nameRes: Int? = null) {
+    val name = nameRes?.let { stringResource(it) } ?: zone.label?.text(language) ?: stringResource(zone.level.title())
     val text = if (zone.approximate) stringResource(R.string.zone_approximate, name) else name
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Box(

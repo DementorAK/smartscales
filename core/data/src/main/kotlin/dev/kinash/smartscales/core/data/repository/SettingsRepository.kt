@@ -6,10 +6,20 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
+
+/** The growth charts children are placed on (requirements §3). */
+enum class ChildNorms {
+    /** CDC 2000, built in. */
+    CDC,
+
+    /** The WHO tables the person imported. */
+    WHO,
+}
 
 /** App settings that are not part of the measurement history. */
 @Singleton
@@ -41,8 +51,16 @@ class SettingsRepository @Inject constructor(
         dataStore.edit { it[COMPARE_HINT_SEEN] = true }
     }
 
+    /** The person's choice of children's norms; null until chosen, which means WHO once its tables are imported. */
+    val childNorms: Flow<ChildNorms?> = dataStore.data.map { prefs -> prefs[CHILD_NORMS]?.let { name -> ChildNorms.entries.firstOrNull { it.name == name } } }
+
+    suspend fun setChildNorms(norms: ChildNorms) {
+        dataStore.edit { it[CHILD_NORMS] = norms.name }
+    }
+
     companion object {
         const val DEFAULT_MATCH_THRESHOLD_KG = 3.0
+        private val CHILD_NORMS = stringPreferencesKey("child_norms")
         private val SELECTED_PROFILE = longPreferencesKey("selected_profile")
         private val MATCH_THRESHOLD = doublePreferencesKey("match_threshold_kg")
         private val COMPARE_HINT_SEEN = booleanPreferencesKey("compare_hint_seen")

@@ -11,11 +11,15 @@ import kotlin.math.sqrt
 data class LmsRow(val ageMonths: Double, val l: Double, val m: Double, val s: Double)
 
 /**
- * A growth reference by the LMS method (Cole 1990), as the CDC 2000 growth charts publish it: for each sex, rows of
- * L, M and S by age in months. A measurement's z-score is `((x/M)^L − 1) / (L·S)`, or `ln(x/M) / S` when L is 0;
- * L, M and S between two tabulated ages are interpolated linearly.
+ * A growth reference by the LMS method (Cole 1990), as the CDC 2000 growth charts and the WHO tables publish it: for
+ * each sex, rows of L, M and S by age in months. A measurement's z-score is `((x/M)^L − 1) / (L·S)`, or `ln(x/M) / S`
+ * when L is 0; L, M and S between two tabulated ages are interpolated linearly.
+ *
+ * With [restrictedTails], beyond ±3 the z-score goes on in steps of the distance between the 2 and 3 SD curves, as
+ * WHO computes weight-based indicators ("Computation of centiles and z-scores", WHO 2007): their skewed
+ * distributions would otherwise stretch the far tails.
  */
-class GrowthChart(private val rows: Map<Sex, List<LmsRow>>) {
+class GrowthChart(private val rows: Map<Sex, List<LmsRow>>, private val restrictedTails: Boolean = false) {
     init {
         rows.values.forEach { list ->
             require(list.size >= 2) { "A growth chart needs at least two ages" }
@@ -42,8 +46,13 @@ class GrowthChart(private val rows: Map<Sex, List<LmsRow>>) {
     /** The z-score of [value] at [ageMonths], or null outside the chart's ages or for a value that is not positive. */
     fun zScore(sex: Sex, ageMonths: Double, value: Double): Double? {
         if (value <= 0) return null
-        val (_, l, m, s) = lmsAt(sex, ageMonths) ?: return null
-        return if (abs(l) < 1e-12) ln(value / m) / s else ((value / m).pow(l) - 1) / (l * s)
+        val lms = lmsAt(sex, ageMonths) ?: return null
+        val z = lms.zOf(value)
+        if (!restrictedTails || abs(z) <= 3) return z
+        val sd3 = lms.valueOf(if (z > 0) 3.0 else -3.0)
+        val sd2 = lms.valueOf(if (z > 0) 2.0 else -2.0)
+        val step = abs(sd3 - sd2)
+        return if (z > 0) 3 + (value - sd3) / step else -3 + (value - sd3) / step
     }
 
     /** The percentile of [value], 0 to 100, or null where [zScore] is. */
@@ -51,10 +60,11 @@ class GrowthChart(private val rows: Map<Sex, List<LmsRow>>) {
         zScore(sex, ageMonths, value)?.let { normalCdf(it) * 100 }
 
     /** The value at z-score [z]: the inverse of [zScore], for drawing percentile curves. */
-    fun valueAt(sex: Sex, ageMonths: Double, z: Double): Double? {
-        val (_, l, m, s) = lmsAt(sex, ageMonths) ?: return null
-        return if (abs(l) < 1e-12) m * exp(s * z) else m * (1 + l * s * z).pow(1 / l)
-    }
+    fun valueAt(sex: Sex, ageMonths: Double, z: Double): Double? = lmsAt(sex, ageMonths)?.valueOf(z)
+
+    private fun LmsRow.zOf(value: Double): Double = if (abs(l) < 1e-12) ln(value / m) / s else ((value / m).pow(l) - 1) / (l * s)
+
+    private fun LmsRow.valueOf(z: Double): Double = if (abs(l) < 1e-12) m * exp(s * z) else m * (1 + l * s * z).pow(1 / l)
 
     companion object {
         /**

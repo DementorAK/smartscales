@@ -101,6 +101,7 @@ fun SettingsScreen(
     onOpenScales: () -> Unit,
     onOpenLog: () -> Unit,
     onOpenFormulaSets: () -> Unit,
+    onOpenChildNorms: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val stored by viewModel.matchThresholdKg.collectAsStateWithLifecycle()
@@ -152,6 +153,11 @@ fun SettingsScreen(
                 title = stringResource(R.string.formula_sets_title),
                 hint = stringResource(R.string.settings_formulas_hint),
                 onClick = onOpenFormulaSets,
+            )
+            SettingsItem(
+                title = stringResource(R.string.child_norms_title),
+                hint = stringResource(R.string.settings_child_norms_hint),
+                onClick = onOpenChildNorms,
             )
             Column(
                 Modifier.padding(horizontal = ScreenPadding).padding(top = ScreenPadding),

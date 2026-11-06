@@ -71,6 +71,7 @@
     <string name="measurement_waist">Талия</string>
     <string name="measurement_hip">Бёдра</string>
     <string name="measurement_neck">Шея</string>
+    <string name="measurement_set_inputs">Поля наборов формул (необязательно)</string>
     <string name="measurement_note">Заметка</string>
     <string name="measurement_tags">Метки</string>
     <string name="measurement_new_tag">Новая метка</string>
@@ -415,7 +416,7 @@
     <string name="problem_standard_input">«%1$s» уже есть среди стандартных входов</string>
     <string name="problem_input_unit">Единица входа — cm, kg или none</string>
     <string name="problem_input_replaced">Вход «%1$s» из «%2$s» заменён этим набором</string>
-    <string name="problem_input_replaced_unit">Вход «%1$s» из «%2$s» заменён этим набором, и у него другая единица</string>
+    <string name="problem_input_replaced_unit">Вход «%1$s» уже есть в «%2$s» с другой единицей: сохранённые значения прочитались бы неверно</string>
     <string name="problem_defined_twice">«%1$s» описан в этом наборе дважды</string>
     <string name="problem_indicator_replaced">«%1$s» из «%2$s» заменён этим набором</string>
     <string name="problem_patch_nothing">Ниже этого набора нет показателя «%1$s», чтобы его изменить</string>

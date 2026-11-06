@@ -10,9 +10,11 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dev.kinash.smartscales.MainActivity
@@ -58,6 +60,8 @@ class FormulaSetsFlowTest {
     @Inject
     lateinit var sets: FormulaSetRepository
 
+    private var profileId = 0L
+
     @Before
     fun setUp() {
         hilt.inject()
@@ -74,6 +78,7 @@ class FormulaSetsFlowTest {
                     source = MeasurementSource.MANUAL, weightKg = 80.0, person = profiles.get(id)!!.snapshot(),
                 ),
             )
+            profileId = id
         }
     }
 
@@ -125,6 +130,35 @@ class FormulaSetsFlowTest {
         assertEquals(true, "\"precision\": 3" in stored.single().json)
     }
 
+    @Test
+    fun aSetsFieldIsInTheManualEntryForm() {
+        runBlocking { sets.add("Frame", FRAME, 1) }
+        compose.waitUntilAtLeastOneExists(hasContentDescription("New measurement"), timeoutMillis = 5_000)
+        compose.onNodeWithContentDescription("New measurement").performClick()
+        waitFor(hasText("Fields of formula sets (optional)"))
+        compose.onNodeWithText("Around the wrist bone").assertExists()
+        compose.onNodeWithTag("measurement_weight").performTextInput("81")
+        compose.onNodeWithTag("input_wrist").performScrollTo().performTextInput("17,5")
+        compose.onNodeWithText("Save").performClick()
+        waitFor(hasText("81.0 kg"))
+        val newest = runBlocking { measurements.observeHistory(profileId).first().first() }
+        assertEquals(mapOf("wrist" to 17.5), newest.manualValues)
+    }
+
+    @Test
+    fun aFieldThatIsNotANumberKeepsTheFormOpen() {
+        runBlocking { sets.add("Frame", FRAME, 1) }
+        compose.waitUntilAtLeastOneExists(hasContentDescription("New measurement"), timeoutMillis = 5_000)
+        compose.onNodeWithContentDescription("New measurement").performClick()
+        waitFor(hasText("Fields of formula sets (optional)"))
+        compose.onNodeWithTag("measurement_weight").performTextInput("81")
+        compose.onNodeWithTag("input_wrist").performScrollTo().performTextInput("-3")
+        compose.onNodeWithText("Save").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("Fields of formula sets (optional)").assertExists()
+        assertEquals(1, runBlocking { measurements.observeHistory(profileId).first().size })
+    }
+
     private fun openSets() {
         compose.waitUntilAtLeastOneExists(hasContentDescription("Settings"), timeoutMillis = 5_000)
         compose.onNodeWithContentDescription("Settings").performClick()
@@ -150,6 +184,11 @@ class FormulaSetsFlowTest {
         const val PRECISE_BMI = """{
             "format": 1, "id": "precise_bmi", "name": {"en": "Precise BMI"},
             "patches": [{"id": "bmi", "precision": 2}]
+        }"""
+        const val FRAME = """{
+            "format": 1, "id": "frame", "name": {"en": "Frame"},
+            "inputs": [{"id": "wrist", "name": {"en": "Wrist"}, "unit": "cm", "description": {"en": "Around the wrist bone"}}],
+            "indicators": [{"id": "frame", "name": {"en": "Frame size"}, "formula": "height / wrist"}]
         }"""
     }
 }

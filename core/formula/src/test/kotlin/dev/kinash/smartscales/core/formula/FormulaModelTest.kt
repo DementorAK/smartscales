@@ -146,6 +146,15 @@ class FormulaModelTest {
         )
         val results = model(wrist).evaluate(man + ("wrist" to 18.0))
         assertEquals(10.0, results.value("frame")!!, 1e-9)
+        // `hip` is the stored name of the hip circumference, which formulas get as `hips`
+        val hip = set("hip", """"inputs": [{"id": "hip", "name": {"en": "Hip"}, "unit": "cm"}]""")
+        assertTrue(issues(hip).toString(), issues(hip).any { "inputs[0].id" in it })
+        // The same field in another unit would read the stored values wrong; in the same unit it only warns
+        val inKg = set("kg", """"inputs": [{"id": "wrist", "name": {"en": "Wrist"}, "unit": "kg"}]""")
+        assertTrue(issues(wrist, inKg).toString(), issues(wrist, inKg).any { it.startsWith("kg: inputs[0].unit") })
+        val again = set("again", """"inputs": [{"id": "wrist", "name": {"en": "Wrist"}, "unit": "cm", "description": {"en": "Below the bone"}}]""")
+        assertEquals(emptyList<String>(), issues(wrist, again))
+        assertEquals(1, model(wrist, again).warnings.size)
     }
 
     @Test

@@ -208,6 +208,14 @@ Sets are imported in Settings → Formula sets, where they are ordered (a set hi
 and off, exported and deleted. The built-in set can be exported there too, as a starting point for a set of your own.
 Importing a file with the id of a set already there replaces that set.
 
+A set can also declare fields of its own (`inputs`), such as the wrist circumference, with the unit `cm`, `kg` or
+`none`, and a `description` shown under the field (what to enter and how to measure it; most needed by a field
+without a unit). They appear in the manual entry form under "Fields of formula sets", in the profile's units (pounds
+for a profile in stones), and formulas get them in centimetres and kilograms under their id. A value stays with the
+weighing when its set is switched off and comes back with it. Values are stored by id alone, so two sets may share a
+field only in the same unit. Fields have no range yet: a length or weight must be positive, any number goes for a
+field without a unit, and a typing slip such as 1750 cm for 17.5 is taken as it is.
+
 ## References
 
 1. WHO. Obesity: preventing and managing the global epidemic. Report of a WHO consultation. WHO Technical Report Series

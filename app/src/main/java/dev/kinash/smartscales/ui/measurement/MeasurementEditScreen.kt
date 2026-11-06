@@ -30,6 +30,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -38,6 +39,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.kinash.smartscales.R
+import dev.kinash.smartscales.core.formula.IndicatorUnit
+import dev.kinash.smartscales.core.formula.text
 import dev.kinash.smartscales.core.model.ManualFields
 import dev.kinash.smartscales.ui.common.BackButton
 import dev.kinash.smartscales.ui.common.ConfirmDialog
@@ -171,6 +174,36 @@ fun MeasurementEditScreen(onDone: () -> Unit, viewModel: MeasurementEditViewMode
                         label = stringResource(circumferenceLabel(field)),
                         suffix = stringResource(state.lengthUnit.symbol()),
                         modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+            if (state.inputs.isNotEmpty()) {
+                val language = LocalConfiguration.current.locales[0].language
+                Text(
+                    stringResource(R.string.measurement_set_inputs),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (MeasurementField.INPUTS in state.errors) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    modifier = Modifier.padding(top = FieldSpacing),
+                )
+                state.inputs.forEach { input ->
+                    NumberField(
+                        value = form.inputs[input.id].orEmpty(),
+                        onValueChange = { text -> viewModel.edit { it.copy(inputs = it.inputs + (input.id to text)) } },
+                        label = input.name.text(language),
+                        suffix = when (input.unit) {
+                            IndicatorUnit.CM -> stringResource(state.lengthUnit.symbol())
+                            IndicatorUnit.KG -> stringResource(setInputWeightUnit(state.weightUnit).symbol())
+                            else -> ""
+                        },
+                        isError = input.id in state.invalidInputs,
+                        supportingText = input.description?.text(language),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("input_${input.id}"),
                     )
                 }
             }

@@ -69,6 +69,8 @@ fun NumberField(
     isError: Boolean = false,
     decimal: Boolean = true,
     trailingUnit: (@Composable () -> Unit)? = null,
+    /** A line under the field, such as what to enter. */
+    supportingText: String? = null,
 ) {
     OutlinedTextField(
         value = value,
@@ -76,6 +78,7 @@ fun NumberField(
         label = label?.let { { Text(it, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
         suffix = if (trailingUnit == null) { { Text(suffix) } } else null,
         trailingIcon = trailingUnit,
+        supportingText = supportingText?.let { { Text(it) } },
         isError = isError,
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = if (decimal) KeyboardType.Decimal else KeyboardType.Number),

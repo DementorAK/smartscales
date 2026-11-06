@@ -1,5 +1,6 @@
 package dev.kinash.smartscales.core.formula
 
+import dev.kinash.smartscales.core.model.ManualFields
 import java.math.BigDecimal
 import java.math.RoundingMode
 
@@ -266,7 +267,8 @@ class FormulaModel private constructor(
             for ((i, input) in file.inputs.withIndex()) {
                 val path = "inputs[$i]"
                 if (!checkId(set, "$path.id", input.id)) continue
-                if (input.id in StandardInputs.types) {
+                // `hip` is how the hip circumference is stored, and formulas get it as `hips`
+                if (input.id in StandardInputs.types || input.id == ManualFields.HIP_CM) {
                     issues += FormulaIssue(set, "$path.id", Problem(ProblemKind.STANDARD_INPUT, input.id))
                     continue
                 }
@@ -274,9 +276,14 @@ class FormulaModel private constructor(
                     issues += FormulaIssue(set, "$path.unit", Problem(ProblemKind.INPUT_UNIT))
                 }
                 checkText(set, "$path.name", input.name)
+                input.description?.let { checkText(set, "$path.description", it) }
                 inputs[input.id]?.let { (other, from) ->
-                    val kind = if (other.unit != input.unit) ProblemKind.INPUT_REPLACED_UNIT else ProblemKind.INPUT_REPLACED
-                    warnings += FormulaIssue(set, "$path.id", Problem(kind, input.id, from.set))
+                    // Values are stored by id alone: 17 typed as centimetres must not be read as kilograms
+                    if (other.unit != input.unit) {
+                        issues += FormulaIssue(set, "$path.unit", Problem(ProblemKind.INPUT_REPLACED_UNIT, input.id, from.set))
+                    } else {
+                        warnings += FormulaIssue(set, "$path.id", Problem(ProblemKind.INPUT_REPLACED, input.id, from.set))
+                    }
                 }
                 inputs[input.id] = input to Origin(set, path, layer.builtIn)
             }

@@ -31,7 +31,7 @@ enum class ProblemKind(val english: String) {
     STANDARD_INPUT("'%1\$s' is a standard input already"),
     INPUT_UNIT("An input is in cm, kg or none"),
     INPUT_REPLACED("Input '%1\$s' from '%2\$s' is replaced by this set"),
-    INPUT_REPLACED_UNIT("Input '%1\$s' from '%2\$s' is replaced by this set with another unit"),
+    INPUT_REPLACED_UNIT("Input '%1\$s' is already in '%2\$s' with another unit: values stored for it would be read wrong"),
     DEFINED_TWICE("'%1\$s' is defined twice in this set"),
     INDICATOR_REPLACED("'%1\$s' from '%2\$s' is replaced by this set"),
     PATCH_NOTHING("No indicator '%1\$s' below this set to change"),

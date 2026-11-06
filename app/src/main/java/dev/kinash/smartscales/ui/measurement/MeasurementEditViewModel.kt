@@ -9,11 +9,13 @@ import dev.kinash.smartscales.core.data.Measurement
 import dev.kinash.smartscales.core.data.Profile
 import dev.kinash.smartscales.core.data.repository.MeasurementRepository
 import dev.kinash.smartscales.core.data.repository.ProfileRepository
+import dev.kinash.smartscales.core.formula.InputDef
 import dev.kinash.smartscales.core.model.LengthUnit
 import dev.kinash.smartscales.core.model.ManualFields
 import dev.kinash.smartscales.core.model.MeasurementSource
 import dev.kinash.smartscales.core.model.PersonSnapshot
 import dev.kinash.smartscales.core.model.WeightUnit
+import dev.kinash.smartscales.indicators.Indicators
 import dev.kinash.smartscales.ui.MeasurementEditRoute
 import dev.kinash.smartscales.ui.common.Prefill
 import dev.kinash.smartscales.ui.common.WeightInput
@@ -49,6 +51,8 @@ data class MeasurementForm(
     /** Height in the snapshot; empty for inbox measurements that have no snapshot yet. */
     val height: String = "",
     val circumferences: Map<String, String> = emptyMap(),
+    /** Text of the fields the formula sets declare, by input id. */
+    val inputs: Map<String, String> = emptyMap(),
     val note: String = "",
     val tags: List<String> = emptyList(),
     val newTag: String = "",
@@ -62,6 +66,9 @@ enum class MeasurementField {
     WEIGHT,
     HEIGHT,
     CIRCUMFERENCES,
+
+    /** A field of a formula set; [MeasurementEditState.invalidInputs] says which. */
+    INPUTS,
 }
 
 data class MeasurementEditState(
@@ -71,7 +78,11 @@ data class MeasurementEditState(
     val profile: Profile? = null,
     val hasSnapshot: Boolean = true,
     val form: MeasurementForm = MeasurementForm(LocalDate.MIN, LocalTime.MIDNIGHT),
+    /** Fields the enabled formula sets declare, in their order, the lowest set first. */
+    val inputs: List<InputDef> = emptyList(),
     val errors: Set<MeasurementField> = emptySet(),
+    /** Ids of the set fields whose text is not a valid value. */
+    val invalidInputs: Set<String> = emptySet(),
     val confirmDelete: Boolean = false,
     /** Profiles to move the measurement to, while the choice is shown. */
     val transferTargets: List<Profile>? = null,
@@ -90,6 +101,7 @@ class MeasurementEditViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val measurements: MeasurementRepository,
     private val profiles: ProfileRepository,
+    private val indicators: Indicators,
     private val clock: Clock,
 ) : ViewModel() {
     private val route = savedStateHandle.toRoute<MeasurementEditRoute>()
@@ -98,6 +110,7 @@ class MeasurementEditViewModel @Inject constructor(
     private var weightPrefill: Prefill<WeightInput>? = null
     private var heightPrefill: Prefill<String>? = null
     private var circumferencePrefills: Map<String, Prefill<String>> = emptyMap()
+    private var inputPrefills: Map<String, Prefill<String>> = emptyMap()
 
     private val _state = MutableStateFlow(MeasurementEditState(isNew = route.measurementId == null))
     val state: StateFlow<MeasurementEditState> = _state.asStateFlow()
@@ -112,6 +125,9 @@ class MeasurementEditViewModel @Inject constructor(
     }
 
     private suspend fun load() {
+        // A field the sets have as a standard one (only `hip`, stored under its own id) is the form's own
+        val inputs = indicators.loadedModel().inputs.values.filter { it.id !in CircumferenceFields }
+        _state.update { it.copy(inputs = inputs) }
         val id = route.measurementId
         if (id == null) {
             val profile = route.profileId?.let { profiles.get(it) }
@@ -154,12 +170,19 @@ class MeasurementEditViewModel @Inject constructor(
         circumferencePrefills = CircumferenceFields.mapNotNull { field ->
             measurement.manualValues[field]?.let { field to Prefill(circumferences.getValue(field), it) }
         }.toMap()
+        val inputTexts = inputs.associate { input ->
+            input.id to setInputText(measurement.manualValues[input.id], input.unit, weightUnit, lengthUnit)
+        }
+        inputPrefills = inputs.mapNotNull { input ->
+            measurement.manualValues[input.id]?.let { input.id to Prefill(inputTexts.getValue(input.id), it) }
+        }.toMap()
         val form = MeasurementForm(
             date = local.toLocalDate(),
             time = local.toLocalTime().truncatedTo(ChronoUnit.MINUTES),
             weight = weight,
             height = height,
             circumferences = circumferences,
+            inputs = inputTexts,
             note = measurement.note.orEmpty(),
             tags = measurement.tags,
         )
@@ -209,6 +232,16 @@ class MeasurementEditViewModel @Inject constructor(
                 ?.takeIf { it.isNotBlank() }
                 ?.let { text -> circumferencePrefills[field].resolve(text) { parseLength(it, state.lengthUnit) } ?: INVALID }
         }
+        // The same for the sets' fields
+        val inputs = state.inputs.associate { input ->
+            input.id to form.inputs[input.id]?.takeIf { it.isNotBlank() }?.let { text ->
+                inputPrefills[input.id].resolve(text) { parseSetInput(it, input.unit, state.weightUnit, state.lengthUnit) }
+            }
+        }
+        val invalidInputs = state.inputs
+            .filter { form.inputs[it.id]?.isNotBlank() == true && inputs[it.id] == null }
+            .map { it.id }
+            .toSet()
         val takenAt = takenAt(form)
         val birthDate = if (stored == null) state.profile?.birthDate else stored?.person?.birthDate
         val errors = buildSet {
@@ -224,13 +257,16 @@ class MeasurementEditViewModel @Inject constructor(
             if (circumferences.values.any { it != null && it !in CIRCUMFERENCE_RANGE_CM }) {
                 add(MeasurementField.CIRCUMFERENCES)
             }
+            if (invalidInputs.isNotEmpty()) add(MeasurementField.INPUTS)
         }
-        _state.update { it.copy(errors = errors) }
+        _state.update { it.copy(errors = errors, invalidInputs = invalidInputs) }
         if (errors.isNotEmpty()) return null
 
         val old = stored
-        val manualValues = (old?.manualValues.orEmpty() - CircumferenceFields.toSet()) +
-            circumferences.mapNotNull { (field, cm) -> cm?.let { field to it } }
+        // Values of fields no enabled set declares now stay as they were: switching the set on brings them back
+        val manualValues = (old?.manualValues.orEmpty() - CircumferenceFields.toSet() - inputs.keys) +
+            circumferences.mapNotNull { (field, cm) -> cm?.let { field to it } } +
+            inputs.mapNotNull { (id, value) -> value?.let { id to it } }
         val note = form.note.trim().ifEmpty { null }
         return if (old == null) {
             val profile = state.profile!!

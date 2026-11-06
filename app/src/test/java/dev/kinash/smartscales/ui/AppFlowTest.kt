@@ -24,6 +24,7 @@ import dagger.hilt.android.testing.HiltAndroidTest
 import dev.kinash.smartscales.MainActivity
 import dev.kinash.smartscales.core.data.Measurement
 import dev.kinash.smartscales.core.data.Profile
+import dev.kinash.smartscales.core.data.repository.FormulaSetRepository
 import dev.kinash.smartscales.core.data.repository.MeasurementRepository
 import dev.kinash.smartscales.core.data.repository.ProfileRepository
 import dev.kinash.smartscales.core.model.LengthUnit
@@ -62,6 +63,9 @@ class AppFlowTest {
 
     @Inject
     lateinit var measurements: MeasurementRepository
+
+    @Inject
+    lateinit var sets: FormulaSetRepository
 
     @Before
     fun inject() {
@@ -198,11 +202,16 @@ class AppFlowTest {
     fun savingUnchangedFieldsKeepsExactValuesInStonesAndInches() {
         val profileId = addProfile("Dmitry", weightUnit = WeightUnit.STONE, lengthUnit = LengthUnit.INCH)
         runBlocking { profiles.setGoal(profileId, ProfileRepository.WEIGHT_GOAL, 70.123) }
-        val measurementId = addMeasurement(profileId, weightKg = 80.123, waistCm = 85.3)
+        // Fields of a set too, a length and a weight (in pounds for stones), and a value no set declares now
+        runBlocking { sets.add("Fields", FIELDS, 1) }
+        val extra = mapOf("wrist" to 17.46, "load" to 3.333, "gone" to 1.0)
+        val measurementId = addMeasurement(profileId, weightKg = 80.123, waistCm = 85.3, manualValues = extra)
 
         waitForRow("12 st 8.6 lb")
         historyRow("12 st 8.6 lb").performClick()
         waitFor(hasText("Height at that time"))
+        waitFor(hasText("6.9"))
+        waitFor(hasText("7.35"))
         compose.onNodeWithText("Note").performTextInput("only the note")
         compose.onNodeWithText("Save").performClick()
         waitFor(hasContentDescription("Settings"))
@@ -216,6 +225,7 @@ class AppFlowTest {
         assertEquals(80.123, saved.weightKg, 0.0)
         assertEquals(180.0, saved.person!!.heightCm, 0.0)
         assertEquals(85.3, saved.manualValues.getValue(ManualFields.WAIST_CM), 0.0)
+        assertEquals(extra, saved.manualValues - ManualFields.WAIST_CM)
         assertEquals(180.0, runBlocking { profiles.get(profileId) }!!.heightCm, 0.0)
         assertEquals(70.123, runBlocking { profiles.getGoal(profileId, ProfileRepository.WEIGHT_GOAL) }!!, 0.0)
     }
@@ -314,6 +324,7 @@ class AppFlowTest {
         takenAt: String = "2026-10-27T07:00:00Z",
         weightKg: Double = 80.0,
         waistCm: Double? = null,
+        manualValues: Map<String, Double> = emptyMap(),
     ): Long = runBlocking {
         val profile = profiles.get(profileId)!!
         measurements.add(
@@ -324,8 +335,18 @@ class AppFlowTest {
                 source = MeasurementSource.MANUAL,
                 weightKg = weightKg,
                 person = profile.snapshot(),
-                manualValues = waistCm?.let { mapOf(ManualFields.WAIST_CM to it) }.orEmpty(),
+                manualValues = waistCm?.let { mapOf(ManualFields.WAIST_CM to it) }.orEmpty() + manualValues,
             ),
         )
+    }
+
+    private companion object {
+        const val FIELDS = """{
+            "format": 1, "id": "fields", "name": {"en": "Fields"},
+            "inputs": [
+              {"id": "wrist", "name": {"en": "Wrist"}, "unit": "cm"},
+              {"id": "load", "name": {"en": "Load"}, "unit": "kg"}
+            ]
+        }"""
     }
 }

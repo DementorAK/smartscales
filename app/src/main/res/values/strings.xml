@@ -69,6 +69,7 @@
     <string name="measurement_waist">Waist</string>
     <string name="measurement_hip">Hips</string>
     <string name="measurement_neck">Neck</string>
+    <string name="measurement_set_inputs">Fields of formula sets (optional)</string>
     <string name="measurement_note">Note</string>
     <string name="measurement_tags">Tags</string>
     <string name="measurement_new_tag">New tag</string>
@@ -397,7 +398,7 @@
     <string name="problem_standard_input">\'%1$s\' is a standard input already</string>
     <string name="problem_input_unit">An input is in cm, kg or none</string>
     <string name="problem_input_replaced">Input \'%1$s\' from \'%2$s\' is replaced by this set</string>
-    <string name="problem_input_replaced_unit">Input \'%1$s\' from \'%2$s\' is replaced by this set with another unit</string>
+    <string name="problem_input_replaced_unit">Input \'%1$s\' is already in \'%2$s\' with another unit: values stored for it would be read wrong</string>
     <string name="problem_defined_twice">\'%1$s\' is defined twice in this set</string>
     <string name="problem_indicator_replaced">\'%1$s\' from \'%2$s\' is replaced by this set</string>
     <string name="problem_patch_nothing">No indicator \'%1$s\' below this set to change</string>

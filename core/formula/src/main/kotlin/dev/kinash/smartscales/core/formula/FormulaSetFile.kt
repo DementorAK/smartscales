@@ -78,6 +78,8 @@ data class InputDef(
     val name: LocalizedText,
     /** `cm` or `kg` for values shown in the profile's units; formulas always get centimetres and kilograms. */
     val unit: IndicatorUnit = IndicatorUnit.NONE,
+    /** What to enter and how to measure it, shown under the field: needed most by a field without a unit. */
+    val description: LocalizedText? = null,
 )
 
 /** The name of an indicator group, such as "Body fat" for `bf`; a layer above may rename it. */

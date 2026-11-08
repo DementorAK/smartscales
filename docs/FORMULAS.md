@@ -233,9 +233,10 @@ Importing a file with the id of a set already there replaces that set.
 Sets can also be made and changed on the phone: Create, or Edit on a set's card. The editor has the set's name and
 description, its indicators (formula, condition, parameters, unit and decimals, norms, source), changes of the
 built-in indicators (other parameters, norms, name or decimals; empty fields leave them as they are), hidden ones,
-fields to enter and group names. Texts are written in English, which every set needs, and in the phone's language.
-The set is checked as it is typed, each error shown at its field, and a formula is tried on the last weighing of
-the selected profile. It is saved only without errors, as the set's file, which exports like any other; parts of a
+fields to enter and group names. Texts are written in the phone's language and, if wanted, in English, which other
+languages fall back to; a set needs English, so without it the phone's language stands in its place. The set is
+checked as it is typed, each error shown at its field (a blank required field only once saving is tried), and a
+formula is tried on the last weighing of the selected profile. It is saved only without errors, as the set's file, which exports like any other; parts of a
 file the editor does not show (texts in other languages, a patch's condition or source) are kept.
 
 A set can also declare fields of its own (`inputs`), such as the wrist circumference, with the unit `cm`, `kg` or

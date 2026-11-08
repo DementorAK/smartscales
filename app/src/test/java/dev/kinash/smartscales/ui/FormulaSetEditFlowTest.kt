@@ -2,10 +2,10 @@ package dev.kinash.smartscales.ui
 
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isEnabled
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -103,7 +103,8 @@ class FormulaSetEditFlowTest {
 
         compose.onNodeWithContentDescription("Back").performClick()
         waitFor(hasText("Half weight"))
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText("No errors: the set can be saved.")).fetchSemanticsNodes().isNotEmpty() }
+        // The check of the last edit, not the one before it that the status line still shows
+        waitFor(hasText("Save") and isEnabled())
         compose.onNodeWithText("Save").performClick()
         waitFor(hasText("Import"))
         waitFor(hasText("Mine"))
@@ -120,7 +121,13 @@ class FormulaSetEditFlowTest {
         openSets()
         compose.onNodeWithText("Create").performClick()
         waitFor(hasText("New set"))
-        compose.onNodeWithText("Save").assertIsNotEnabled()
+        // A blank name is not an error until saving is tried; Save waits for the first check
+        waitFor(hasText("Save") and isEnabled())
+        compose.onNodeWithText("Errors to fix", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("Save").performClick()
+        // The refused save lists the errors
+        waitFor(hasText("Errors to fix before saving:"))
+        compose.onNodeWithText("OK").performClick()
         compose.onNodeWithTag("set_name").performTextInput("Leaner")
         compose.onNodeWithText("Change a built-in indicator").performScrollTo().performClick()
         waitFor(hasText("Search"))
@@ -135,11 +142,15 @@ class FormulaSetEditFlowTest {
         // An id the built-in set has is not one's own
         compose.onNodeWithTag("id_field").performTextClearance()
         compose.onNodeWithTag("id_field").performTextInput("builtin")
+        waitFor(hasText("Errors to fix:", substring = true))
+        compose.onNodeWithText("Save").performClick()
         waitFor(hasText("Errors to fix before saving:"))
-        compose.onNodeWithText("Save").assertIsNotEnabled()
+        compose.onNodeWithText("OK").performClick()
+        assertEquals(emptyList<Any>(), runBlocking { sets.observeAll().first() })
         compose.onNodeWithTag("id_field").performTextClearance()
         compose.onNodeWithTag("id_field").performTextInput("leaner")
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText("No errors: the set can be saved.")).fetchSemanticsNodes().isNotEmpty() }
+        // The check of the last edit, not the one before it that the status line still shows
+        waitFor(hasText("Save") and isEnabled())
         compose.onNodeWithText("Save").performClick()
         waitFor(hasText("Leaner"))
 
@@ -164,7 +175,8 @@ class FormulaSetEditFlowTest {
         compose.onNodeWithTag("indicator_formula").performTextClearance()
         compose.onNodeWithTag("indicator_formula").performTextInput("height / wrist / 2")
         compose.onNodeWithContentDescription("Back").performClick()
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText("No errors: the set can be saved.")).fetchSemanticsNodes().isNotEmpty() }
+        // The check of the last edit, not the one before it that the status line still shows
+        waitFor(hasText("Save") and isEnabled())
         compose.onNodeWithText("Save").performClick()
         waitFor(hasText("Import"))
 

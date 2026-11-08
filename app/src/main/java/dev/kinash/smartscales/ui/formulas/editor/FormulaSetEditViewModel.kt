@@ -129,6 +129,17 @@ class FormulaSetEditViewModel @Inject constructor(
     /** True once the set is saved, and the editor can close. */
     val saved: StateFlow<Boolean> = _saved.asStateFlow()
 
+    /**
+     * Whether saving was tried: until then fields left blank are not shown as errors, as the person may be about
+     * to fill them in. Kept in the saved state with the snapshot's name.
+     */
+    val tried: StateFlow<Boolean> = savedStateHandle.getStateFlow(TRIED, false)
+
+    private val _rejected = MutableStateFlow(0)
+
+    /** Counts the saves refused for errors, for the screen to show them each time. */
+    val rejected: StateFlow<Int> = _rejected.asStateFlow()
+
     init {
         viewModelScope.launch {
             val stored = sets.observeAll().first()
@@ -238,10 +249,18 @@ class FormulaSetEditViewModel @Inject constructor(
 
     fun unhide(id: String) = update { it.copy(hidden = it.hidden - id) }
 
-    /** Saves the draft when its latest check has no errors: in the edited set's place, or on top for a new one. */
+    /**
+     * Saves the draft when its latest check has no errors: in the edited set's place, or on top for a new one. With
+     * errors, they are shown instead, those of blank fields too.
+     */
     fun save() {
         val checked = check.value ?: return
-        if (checked.draft != draft.value || checked.errors.isNotEmpty()) return
+        if (checked.draft != draft.value) return
+        if (checked.errors.isNotEmpty()) {
+            savedStateHandle[TRIED] = true
+            _rejected.update { it + 1 }
+            return
+        }
         viewModelScope.launch {
             withContext(NonCancellable) {
                 val json = FormulaSetFile.encode(checked.file)
@@ -253,8 +272,13 @@ class FormulaSetEditViewModel @Inject constructor(
         }
     }
 
+    /** Set when the editor is closed for good, for a write that was already under way then. */
+    @Volatile
+    private var closed = false
+
     override fun onCleared() {
         // The editor is closed for good: the snapshot is needed no more. Unloaded in the background, it is not cleared
+        closed = true
         snapshot.delete()
     }
 
@@ -283,6 +307,8 @@ class FormulaSetEditViewModel @Inject constructor(
                         val next = File(snapshots, snapshot.name + ".tmp")
                         next.writeText(snapshotJson.encodeToString(EditorSnapshot.serializer(), state))
                         if (!next.renameTo(snapshot)) next.delete()
+                        // Cancelling does not stop a write: one that ends after the editor closed removes its file
+                        if (closed) snapshot.delete()
                     } catch (e: IOException) {
                         // Without the snapshot only an edit unloaded in the background is lost
                     }
@@ -304,6 +330,7 @@ class FormulaSetEditViewModel @Inject constructor(
     private companion object {
         const val CHECK_DELAY_MS = 250L
         const val SNAPSHOT = "editor"
+        const val TRIED = "editor_tried"
         const val SNAPSHOT_DIR = "editor"
         const val SNAPSHOT_DELAY_MS = 500L
         val SNAPSHOT_LIFE_MS = TimeUnit.DAYS.toMillis(7)

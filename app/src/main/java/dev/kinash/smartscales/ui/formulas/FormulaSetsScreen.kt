@@ -80,6 +80,10 @@ fun FormulaSetsScreen(
         mapOf(BuiltinFormulas.file.id to BuiltinFormulas.file.name.text(language)) +
             layers?.sets.orEmpty().mapNotNull { layer -> layer.file?.let { it.id to layer.title(language) } }
     }
+    // And the sets' files, for the names of the parts an issue is in
+    val files = remember(layers) {
+        mapOf(BuiltinFormulas.file.id to BuiltinFormulas.file) + layers?.sets.orEmpty().mapNotNull { layer -> layer.file?.let { it.id to it } }
+    }
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let(viewModel::import)
     }
@@ -125,7 +129,7 @@ fun FormulaSetsScreen(
             val top = sets.reversed()
             top.forEachIndexed { index, layer ->
                 SetCard(
-                    layer, language, names,
+                    layer, language, names, files,
                     canMoveUp = index > 0,
                     canMoveDown = index < top.lastIndex,
                     onEnabled = { viewModel.setEnabled(layer.stored, it) },
@@ -145,7 +149,7 @@ fun FormulaSetsScreen(
         }
     }
 
-    pending?.let { ImportDialog(it.check, language, names, viewModel::confirmImport, viewModel::dismissImport) }
+    pending?.let { ImportDialog(it.check, language, names, files, viewModel::confirmImport, viewModel::dismissImport) }
     deleting?.let { id ->
         val layer = layers?.sets?.firstOrNull { it.stored.id == id }
         if (layer == null) {
@@ -174,6 +178,7 @@ private fun SetCard(
     layer: LayerState,
     language: String,
     names: Map<String, String>,
+    files: Map<String, FormulaSetFile>,
     canMoveUp: Boolean,
     canMoveDown: Boolean,
     onEnabled: (Boolean) -> Unit,
@@ -204,10 +209,10 @@ private fun SetCard(
                 val color = if (it == R.string.formula_set_off) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error
                 Text(stringResource(it), Modifier.padding(top = 4.dp), style = MaterialTheme.typography.bodyMedium, color = color)
             }
-            Issues(layer.errors, error = true, layer.file?.id, names)
+            Issues(layer.errors, error = true, layer.file?.id, names, files)
             if (layer.stored.enabled && layer.warnings.isNotEmpty()) {
                 Text(stringResource(R.string.formula_set_warnings), Modifier.padding(top = 4.dp), style = MaterialTheme.typography.labelLarge)
-                Issues(layer.warnings, error = false, layer.file?.id, names)
+                Issues(layer.warnings, error = false, layer.file?.id, names, files)
             }
         }
         Row(Modifier.padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -258,9 +263,9 @@ private fun contents(file: FormulaSetFile): String = listOfNotNull(
 
 /** Issues of the set [owner]; one found in another set says which, by its name from [names] or its id. */
 @Composable
-private fun Issues(issues: List<FormulaIssue>, error: Boolean, owner: String?, names: Map<String, String>) {
+private fun Issues(issues: List<FormulaIssue>, error: Boolean, owner: String?, names: Map<String, String>, files: Map<String, FormulaSetFile>) {
     val color = if (error) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
-    issues.forEach { Text("• " + issueText(it, owner, names), style = MaterialTheme.typography.bodySmall, color = color) }
+    issues.forEach { Text("• " + issueText(it, owner, names, files), style = MaterialTheme.typography.bodySmall, color = color) }
 }
 
 /**
@@ -268,16 +273,17 @@ private fun Issues(issues: List<FormulaIssue>, error: Boolean, owner: String?, n
  * language, after `Set 'Other' · ` when the place is in another set than [owner].
  */
 @Composable
-internal fun issueText(issue: FormulaIssue, owner: String?, names: Map<String, String>): String {
+internal fun issueText(issue: FormulaIssue, owner: String?, names: Map<String, String>, files: Map<String, FormulaSetFile> = emptyMap()): String {
     val problem = stringResource(issue.problem.kind.text, *issue.problem.args.toTypedArray())
-    val place = listOf(issue.path, problem).filter { it.isNotEmpty() }.joinToString(": ")
+    val where = issuePlace(issue.path, files[issue.set], LocalConfiguration.current.locales[0].language, files.values)
+    val place = listOfNotNull(where, problem).filter { it.isNotEmpty() }.joinToString(": ")
     val text = issue.position?.let { stringResource(R.string.formula_issue_at, place, it + 1) } ?: place
     val other = issue.set.takeIf { it.isNotEmpty() && it != owner } ?: return text
     return stringResource(R.string.formula_issue_in_set, names[other] ?: other, text)
 }
 
 @Composable
-private fun ImportDialog(check: ImportCheck, language: String, names: Map<String, String>, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+private fun ImportDialog(check: ImportCheck, language: String, names: Map<String, String>, files: Map<String, FormulaSetFile>, onConfirm: () -> Unit, onDismiss: () -> Unit) {
     when (check) {
         is ImportCheck.Rejected -> AlertDialog(
             onDismissRequest = onDismiss,
@@ -285,7 +291,7 @@ private fun ImportDialog(check: ImportCheck, language: String, names: Map<String
             text = {
                 Column(Modifier.heightIn(max = 400.dp).verticalScroll(rememberScrollState())) {
                     Text(stringResource(R.string.formula_import_rejected_text), style = MaterialTheme.typography.bodyMedium)
-                    Issues(check.errors, error = true, check.set, names)
+                    Issues(check.errors, error = true, check.set, names, files + listOfNotNull(check.file).associateBy { it.id })
                 }
             },
             confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.ok)) } },
@@ -316,7 +322,7 @@ private fun ImportDialog(check: ImportCheck, language: String, names: Map<String
                     }
                     if (check.warnings.isNotEmpty()) {
                         Text(stringResource(R.string.formula_set_warnings), style = MaterialTheme.typography.labelLarge)
-                        Issues(check.warnings, error = false, check.file.id, names)
+                        Issues(check.warnings, error = false, check.file.id, names, files + (check.file.id to check.file))
                     }
                 }
             },

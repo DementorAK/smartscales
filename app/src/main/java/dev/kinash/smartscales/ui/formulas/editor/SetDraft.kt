@@ -31,10 +31,13 @@ import java.util.Locale
 data class TextDraft(val en: String = "", val local: String = "", val others: Map<String, String> = emptyMap()) {
     val isBlank: Boolean get() = en.isBlank() && local.isBlank() && others.isEmpty()
 
-    /** The text, with English blank when it is not written: the model reports that at the field. */
+    /**
+     * The text; English, which a file needs, is the local text when only that is written. With neither, English is
+     * blank, and the model reports that at the field.
+     */
     fun toText(language: String): LocalizedText {
         val text = LinkedHashMap<String, String>()
-        text["en"] = en.trim()
+        text["en"] = en.trim().ifEmpty { if (language != "en") local.trim() else "" }
         if (language != "en" && local.isNotBlank()) text[language] = local.trim()
         return text + others
     }
@@ -44,6 +47,8 @@ data class TextDraft(val en: String = "", val local: String = "", val others: Ma
 
     companion object {
         fun of(text: LocalizedText?, language: String) = TextDraft(
+            // As the file has it, even the same as the local text: "BMI" or "Gallagher 2000" is English too, and
+            // hiding it would let a change of the local text overwrite it unseen
             en = text?.get("en").orEmpty(),
             local = if (language == "en") "" else text?.get(language).orEmpty(),
             others = text.orEmpty() - "en" - language,
@@ -178,8 +183,10 @@ data class SetDraft(
         val errors = ArrayList<FormulaIssue>()
         // A number that does not read stands as NaN, which keeps the rest in place for the check: the model
         // reports a parameter that is not a number itself, a bound is reported here
+        fun unread(text: String) = Problem(if (text.isBlank()) ProblemKind.REQUIRED else ProblemKind.NOT_A_NUMBER)
+
         fun bound(text: String, path: String): Double =
-            parseNumber(text) ?: Double.NaN.also { errors += FormulaIssue(id, path, Problem(ProblemKind.NOT_A_NUMBER)) }
+            parseNumber(text) ?: Double.NaN.also { errors += FormulaIssue(id, path, unread(text)) }
 
         fun param(text: String): Double = parseNumber(text) ?: Double.NaN
 
@@ -198,13 +205,15 @@ data class SetDraft(
             draft.params.map { it.name.trim() }.groupingBy { it }.eachCount().filter { it.value > 1 }.keys.forEach { name ->
                 errors += FormulaIssue(id, "$path.params.$name", Problem(ProblemKind.PARAM_TWICE, name))
             }
+            // The model says "not a number" of a blank value too; this says what it is
+            draft.params.filter { it.value.isBlank() }.forEach { errors += FormulaIssue(id, "$path.params.${it.name.trim()}", Problem(ProblemKind.REQUIRED)) }
             IndicatorDef(
                 id = draft.id.trim(),
                 group = draft.group.trim().ifEmpty { null },
                 name = draft.name.toText(language),
                 unit = draft.unit,
                 precision = draft.precision.trim().toIntOrNull()
-                    ?: 1.also { errors += FormulaIssue(id, "$path.precision", Problem(ProblemKind.NOT_A_NUMBER)) },
+                    ?: 1.also { errors += FormulaIssue(id, "$path.precision", unread(draft.precision)) },
                 formula = draft.formula.trim(),
                 params = draft.params.associate { it.name.trim() to param(it.value) },
                 applies = draft.applies.trim().ifEmpty { null },

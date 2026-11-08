@@ -47,6 +47,9 @@ enum class ProblemKind(val english: String) {
     /** In the editor: two fields of one indicator name the same parameter. */
     PARAM_TWICE("Parameter '%1\$s' is given twice"),
     NOT_A_NUMBER("Not a number"),
+
+    /** In the editor: a field that must be filled is blank. */
+    REQUIRED("Fill this in"),
     ZONE_LEVELS("Needs one level more than bounds: %1\$s"),
     ZONE_BOUNDS("Bounds must go up"),
     ZONE_LABELS("Needs one label per level"),

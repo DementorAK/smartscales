@@ -106,7 +106,10 @@ class FormulaSetsViewModel @Inject constructor(
     }
 
     fun delete(set: FormulaSet) {
-        viewModelScope.launch { withContext(NonCancellable) { sets.delete(set.id) } }
+        viewModelScope.launch {
+            withContext(NonCancellable) { sets.delete(set.id) }
+            _message.value = R.string.formula_set_deleted
+        }
     }
 
     /** Saves the file of [set] as it was imported, or the built-in one for null. */

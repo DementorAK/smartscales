@@ -9,6 +9,8 @@ import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -111,7 +113,8 @@ class FormulaSetsFlowTest {
         openSets()
         pickFile(PRECISE_BMI.replace("\"precision\": 2", "\"precision\": 9"))
         waitFor(hasText("The set was not imported"))
-        compose.onNodeWithText("patches[0].precision", substring = true).assertExists()
+        // The place by its name, not by its path in the file
+        compose.onNodeWithText("• “Body mass index”, decimals: ", substring = true).assertExists()
         compose.onNodeWithText("OK").performClick()
         assertEquals(emptyList<Any>(), runBlocking { sets.observeAll().first() })
     }
@@ -159,6 +162,41 @@ class FormulaSetsFlowTest {
         assertEquals(1, runBlocking { measurements.observeHistory(profileId).first().size })
     }
 
+    @Test
+    fun aSetsVariantIsChosenInTheProfileAndFollowsTheSet() {
+        val set = runBlocking { sets.add("My fat", MY_FAT, 1) }
+        // Without impedance the built-in body fat comes from BMI
+        waitFor(hasText("19.9 %"))
+        compose.openProfile("Dmitry")
+        compose.onAllNodesWithText("Body fat").onLast().performScrollTo().performClick()
+        compose.onNodeWithText("My formula").performClick()
+        compose.onNodeWithText("Save").performClick()
+        compose.backFromSettings()
+        waitFor(hasText("30.0 %"))
+        compose.onAllNodesWithText("Body fat (my formula)").onLast().assertExists()
+        assertEquals(mapOf("bf" to "bf_mine"), runBlocking { profiles.observeMainVariants(profileId).first() })
+
+        // The set off: the built-in variants count again, and the choice is kept for when it is back on
+        runBlocking { sets.setEnabled(set, false) }
+        waitFor(hasText("19.9 %"))
+        assertEquals(mapOf("bf" to "bf_mine"), runBlocking { profiles.observeMainVariants(profileId).first() })
+        runBlocking { sets.setEnabled(set, true) }
+        waitFor(hasText("30.0 %"))
+    }
+
+    @Test
+    fun deletingASetAsksFirstAndSaysItIsDone() {
+        runBlocking { sets.add("Precise BMI", PRECISE_BMI, 1) }
+        openSets()
+        waitFor(hasText("Precise BMI"))
+        compose.onNodeWithContentDescription("Delete the set").performScrollTo().performClick()
+        waitFor(hasText("Delete “Precise BMI”?"))
+        assertEquals(1, runBlocking { sets.observeAll().first().size })
+        compose.onNodeWithText("Delete").performClick()
+        waitFor(hasText("Set deleted"))
+        assertEquals(emptyList<Any>(), runBlocking { sets.observeAll().first() })
+    }
+
     private fun openSets() {
         compose.waitUntilAtLeastOneExists(hasContentDescription("Settings"), timeoutMillis = 5_000)
         compose.onNodeWithContentDescription("Settings").performClick()
@@ -184,6 +222,10 @@ class FormulaSetsFlowTest {
         const val PRECISE_BMI = """{
             "format": 1, "id": "precise_bmi", "name": {"en": "Precise BMI"},
             "patches": [{"id": "bmi", "precision": 2}]
+        }"""
+        const val MY_FAT = """{
+            "format": 1, "id": "my_fat", "name": {"en": "My fat"},
+            "indicators": [{"id": "bf_mine", "group": "bf", "name": {"en": "Body fat (my formula)"}, "unit": "percent", "precision": 1, "formula": "30"}]
         }"""
         const val FRAME = """{
             "format": 1, "id": "frame", "name": {"en": "Frame"},

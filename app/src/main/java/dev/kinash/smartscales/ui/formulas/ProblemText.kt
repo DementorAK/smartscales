@@ -32,6 +32,7 @@ val ProblemKind.text: Int
         ProblemKind.PARAM_NAME -> R.string.problem_param_name
         ProblemKind.PARAM_TWICE -> R.string.problem_param_twice
         ProblemKind.NOT_A_NUMBER -> R.string.problem_not_a_number
+        ProblemKind.REQUIRED -> R.string.problem_required
         ProblemKind.ZONE_LEVELS -> R.string.problem_zone_levels
         ProblemKind.ZONE_BOUNDS -> R.string.problem_zone_bounds
         ProblemKind.ZONE_LABELS -> R.string.problem_zone_labels

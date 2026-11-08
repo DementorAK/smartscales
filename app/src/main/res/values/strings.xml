@@ -418,6 +418,13 @@
     <string name="formula_set_added">Set added</string>
     <string name="formula_set_replaced">Set replaced</string>
     <string name="formula_set_replaced_off">Set replaced; it is still off</string>
+    <string name="formula_set_deleted">Set deleted</string>
+    <string name="issue_place">“%1$s”, %2$s</string>
+    <string name="issue_place_part">“%1$s”</string>
+    <string name="issue_param">parameter %1$s</string>
+    <string name="issue_set_id">Id of the set</string>
+    <string name="issue_set_name">Name of the set</string>
+    <string name="issue_set_description">Description of the set</string>
     <string name="formula_set_exported">Set saved</string>
     <string name="formula_set_export_failed">Could not save the file</string>
     <string name="formula_issue_at">%1$s (character %2$d)</string>
@@ -456,6 +463,7 @@
     <string name="problem_precision">Precision must be 0 to %1$s</string>
     <string name="problem_param_name">\'%1$s\' cannot be a parameter name</string>
     <string name="problem_not_a_number">Not a number</string>
+    <string name="problem_required">Fill this in</string>
     <string name="problem_zone_levels">Needs one level more than bounds: %1$s</string>
     <string name="problem_zone_bounds">Bounds must go up</string>
     <string name="problem_zone_labels">Needs one label per level</string>
@@ -494,9 +502,13 @@
     <string name="editor_remove">Remove</string>
     <string name="editor_remove_title">Remove from the set?</string>
     <string name="editor_remove_text">It goes once the set is saved; leaving without saving keeps it.</string>
-    <string name="editor_discard_title">Discard the changes?</string>
-    <string name="editor_discard_text">The set stays as it was saved.</string>
-    <string name="editor_discard">Discard</string>
+    <string name="editor_discard_title">Leave without saving?</string>
+    <string name="editor_discard_text">The changes are lost; the set stays as it was saved.</string>
+    <string name="editor_discard">Leave</string>
+    <string name="editor_keep_editing">Keep editing</string>
+    <string name="editor_done">Done</string>
+    <string name="editor_add_english">Add in English</string>
+    <string name="editor_english_optional">Optional: shown when the phone is in a language the set has no text for</string>
     <string name="editor_new_set">New set</string>
     <string name="editor_patch_title">Change: %1$s</string>
     <string name="editor_input_title">Field to enter</string>
@@ -508,7 +520,6 @@
     <string name="editor_name">Name</string>
     <string name="editor_description">Description</string>
     <string name="editor_in_english">%1$s in English</string>
-    <string name="editor_in_language">%1$s in your language</string>
     <string name="editor_indicators">Indicators</string>
     <string name="editor_indicators_hint">New indicators, or a built-in one replaced whole under its id.</string>
     <string name="editor_add_indicator">Add an indicator</string>
@@ -530,8 +541,11 @@
     <string name="editor_patch_name">name</string>
     <string name="editor_patch_precision">precision</string>
     <string name="editor_patch_nothing">Nothing changed yet</string>
-    <string name="editor_check">Check</string>
     <string name="editor_checking">Checking…</string>
+    <string name="editor_check">Check</string>
+    <string name="editor_status_errors">Errors to fix: %1$d. Tap to see them.</string>
+    <string name="editor_status_incomplete">The set saves once its required fields are filled in.</string>
+    <string name="editor_status_warnings">No errors; warnings: %1$d. Tap to see them.</string>
     <string name="editor_no_errors">No errors: the set can be saved.</string>
     <string name="editor_errors">Errors to fix before saving:</string>
     <string name="editor_has_errors">Has errors</string>
@@ -576,6 +590,7 @@
     <string name="editor_group_page_hint">The name shows wherever the group\'s value does, whichever variant gave it.</string>
     <string name="editor_groups_known">Groups: %1$s</string>
     <string name="editor_trial_none">No weighings to try the formula on.</string>
+    <string name="editor_trial_incomplete">The value shows once the required fields of the set are filled in.</string>
     <string name="editor_trial_errors">Fix the errors to see the value.</string>
     <string name="editor_trial_no_value">Weighing of %1$s (%2$s): no value; data missing or the condition not met.</string>
     <string name="editor_trial_value">Weighing of %1$s (%2$s): %3$s</string>

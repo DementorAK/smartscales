@@ -77,7 +77,9 @@ sealed interface ImportCheck {
      * The file is not taken: it does not read, or brings errors over the sets now enabled. [set] is the file's
      * id when it reads; an error of another [FormulaIssue.set] points into that set, where the clash was found.
      */
-    data class Rejected(val errors: List<FormulaIssue>, val set: String? = null) : ImportCheck
+    data class Rejected(val errors: List<FormulaIssue>, val file: FormulaSetFile? = null) : ImportCheck {
+        val set: String? get() = file?.id
+    }
 
     /**
      * The file can be added on top, or replace [replaces], the stored set with the same id. [breaks] are the
@@ -104,11 +106,11 @@ fun checkImport(text: String, stored: List<FormulaSet>): ImportCheck {
     val read = readSet(text)
     val file = read.file ?: return ImportCheck.Rejected(listOfNotNull(read.error))
     if (file.id == BuiltinFormulas.file.id) {
-        return ImportCheck.Rejected(listOf(FormulaIssue(file.id, "id", Problem(ProblemKind.BUILTIN_ID))), file.id)
+        return ImportCheck.Rejected(listOf(FormulaIssue(file.id, "id", Problem(ProblemKind.BUILTIN_ID))), file)
     }
     val replaces = stored.firstOrNull { readSet(it.json).file?.id == file.id }
     val placed = place(file, replaces, stored)
-    placed.errors.takeIf { it.isNotEmpty() }?.let { return ImportCheck.Rejected(it, file.id) }
+    placed.errors.takeIf { it.isNotEmpty() }?.let { return ImportCheck.Rejected(it, file) }
     return ImportCheck.Accepted(file, replaces, placed.warnings, placed.breaks)
 }
 

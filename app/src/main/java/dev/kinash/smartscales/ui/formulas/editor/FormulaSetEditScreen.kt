@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -17,6 +18,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -32,6 +34,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -39,6 +46,7 @@ import dev.kinash.smartscales.R
 import dev.kinash.smartscales.core.formula.BuiltinFormulas
 import dev.kinash.smartscales.core.formula.FormulaIssue
 import dev.kinash.smartscales.core.formula.FormulaModel
+import dev.kinash.smartscales.core.formula.ProblemKind
 import dev.kinash.smartscales.core.formula.text
 import dev.kinash.smartscales.indicators.BuiltinModel
 import dev.kinash.smartscales.ui.common.BackButton
@@ -58,6 +66,8 @@ fun FormulaSetEditScreen(onDone: () -> Unit, viewModel: FormulaSetEditViewModel 
     val check by viewModel.check.collectAsStateWithLifecycle()
     val trial by viewModel.trial.collectAsStateWithLifecycle()
     val saved by viewModel.saved.collectAsStateWithLifecycle()
+    val tried by viewModel.tried.collectAsStateWithLifecycle()
+    val rejected by viewModel.rejected.collectAsStateWithLifecycle()
     var discarding by rememberSaveable { mutableStateOf(false) }
     var removing by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(saved) { if (saved) onDone() }
@@ -72,25 +82,34 @@ fun FormulaSetEditScreen(onDone: () -> Unit, viewModel: FormulaSetEditViewModel 
     // The check of what is on the screen, not of the text before the last key
     val fresh = check?.takeIf { it.draft == current?.draft }
     val language = viewModel.language
+    val issues = EditorIssues(check, all = tried)
+    var showingIssues by rememberSaveable { mutableStateOf(false) }
+    // A refused save lists what to fix
+    LaunchedEffect(rejected) { if (rejected > 0) showingIssues = true }
 
     Scaffold(
         topBar = {
+            Column {
             TopAppBar(
                 title = { current?.let { Text(pageTitle(it, language, fresh ?: check)) } },
                 navigationIcon = { BackButton(goBack) },
                 actions = {
                     if (current?.page == EditorPage.Set) {
+                        // Not off for errors: tapping it shows them, those of blank fields too
                         TextButton(
                             onClick = viewModel::save,
-                            enabled = fresh != null && fresh.errors.isEmpty() && (current.changed || current.isNew),
+                            enabled = fresh != null && (current.changed || current.isNew),
                         ) { Text(stringResource(R.string.action_save)) }
                     } else if (current != null) {
                         IconButton(onClick = { removing = true }) {
                             Icon(painterResource(R.drawable.ic_delete), stringResource(R.string.editor_remove))
                         }
+                        TextButton(onClick = { viewModel.back() }) { Text(stringResource(R.string.editor_done)) }
                     }
                 },
             )
+            current?.let { StatusStrip(it, check, issues, trial, language) { showingIssues = true } }
+            }
         },
     ) { padding ->
         val shown = current ?: return@Scaffold
@@ -98,11 +117,11 @@ fun FormulaSetEditScreen(onDone: () -> Unit, viewModel: FormulaSetEditViewModel 
             Column(
                 Modifier
                     .padding(padding)
+                    .imePadding()
                     .verticalScroll(rememberScrollState())
                     .padding(ScreenPadding),
                 verticalArrangement = Arrangement.spacedBy(FieldSpacing),
             ) {
-                val issues = EditorIssues(check)
                 when (val page = shown.page) {
                     EditorPage.Set -> SetPage(shown, fresh, issues, language, viewModel)
                     is EditorPage.Indicator -> IndicatorPage(page.index, shown.draft, check, issues, trial, language, viewModel)
@@ -114,6 +133,7 @@ fun FormulaSetEditScreen(onDone: () -> Unit, viewModel: FormulaSetEditViewModel 
         }
     }
 
+    check?.let { found -> if (showingIssues) IssuesDialog(found, issues, language) { showingIssues = false } }
     if (discarding) {
         ConfirmDialog(
             title = stringResource(R.string.editor_discard_title),
@@ -124,6 +144,7 @@ fun FormulaSetEditScreen(onDone: () -> Unit, viewModel: FormulaSetEditViewModel 
                 onDone()
             },
             onDismiss = { discarding = false },
+            dismissLabel = stringResource(R.string.editor_keep_editing),
         )
     }
     if (removing) {
@@ -160,10 +181,25 @@ private fun pageTitle(state: EditorState, language: String, check: EditorCheck?)
     is EditorPage.Group -> stringResource(R.string.editor_group_title)
 }
 
-/** The issues of the last check by path: those of the fields that do not read and those of the model together. */
-class EditorIssues(check: EditorCheck?) {
-    private val errors = check?.errors.orEmpty().groupBy { it.path }
+/**
+ * The issues of the last check by path: those of the fields that do not read and those of the model together.
+ * Blank fields count only once saving was tried ([all]); before, a person filling the form in is not told off.
+ */
+class EditorIssues(check: EditorCheck?, all: Boolean) {
+    /** Errors to show, in the order of the check. */
+    val shown: List<FormulaIssue>
+
+    private val errors: Map<String, List<FormulaIssue>>
     private val warnings = check?.warnings.orEmpty().groupBy { it.path }
+
+    init {
+        val found = check?.errors.orEmpty()
+        val required = found.filter { it.problem.kind == ProblemKind.REQUIRED }.map { it.path }.toSet()
+        // A blank number is "fill this in", not also "not a number"
+        val distinct = found.filter { it.problem.kind == ProblemKind.REQUIRED || it.path !in required }
+        shown = if (all) distinct else distinct.filterNot { it.isBlank() }
+        errors = shown.groupBy { it.path }
+    }
 
     /** Errors first, then warnings, at exactly [path]. */
     fun at(path: String): List<Pair<FormulaIssue, Boolean>> =
@@ -173,6 +209,15 @@ class EditorIssues(check: EditorCheck?) {
 
     /** Whether there is an error at [prefix] or inside it (`indicators[2]`, `indicators[2].zones[0]`). */
     fun hasErrorsUnder(prefix: String): Boolean = errors.keys.any { it == prefix || it.startsWith("$prefix.") || it.startsWith("$prefix[") }
+
+    private companion object {
+        /** An error of a field left blank, rather than of something written wrong. */
+        fun FormulaIssue.isBlank(): Boolean = when (problem.kind) {
+            ProblemKind.REQUIRED, ProblemKind.ENGLISH_REQUIRED, ProblemKind.EMPTY -> true
+            ProblemKind.ID_INVALID, ProblemKind.PARAM_NAME -> problem.args.firstOrNull().isNullOrBlank()
+            else -> false
+        }
+    }
 }
 
 @Composable
@@ -252,8 +297,6 @@ private fun SetPage(state: EditorState, check: EditorCheck?, issues: EditorIssue
     }
     AddButton(R.string.editor_add_group, viewModel::addGroup)
 
-    CheckSection(check, language)
-
     when (picking) {
         PICK_PATCH -> {
             // Changes of the built-in indicators: those of the person's other sets are theirs to change. Not those
@@ -297,32 +340,74 @@ private fun patchSummary(patch: PatchDraft): String = listOfNotNull(
     stringResource(R.string.editor_patch_precision).takeIf { patch.precision.isNotBlank() },
 ).joinToString(" · ").ifEmpty { stringResource(R.string.editor_patch_nothing) }
 
-/** What the check found in the whole set, and whether it can be saved. */
+/**
+ * A line of fixed height under the title, out of the scrolling page, so that what it says changes nothing below:
+ * on an indicator's page or a change's, the value on the last weighing; elsewhere, what the check of the set found,
+ * which a tap lists in full.
+ */
 @Composable
-private fun CheckSection(check: EditorCheck?, language: String) {
-    Section(R.string.editor_check, null)
-    val names = mapOf(BuiltinFormulas.file.id to BuiltinFormulas.file.name.text(language))
-    when {
-        check == null -> Hint(stringResource(R.string.editor_checking))
-        check.errors.isEmpty() -> Text(stringResource(R.string.editor_no_errors), style = MaterialTheme.typography.bodyMedium)
-        else -> {
-            Text(stringResource(R.string.editor_errors), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
-            check.errors.forEach {
-                Text("• " + issueText(it, check.file.id, names), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-            }
-        }
+private fun StatusStrip(state: EditorState, check: EditorCheck?, issues: EditorIssues, trial: TrialWeighing?, language: String, onShowIssues: () -> Unit) {
+    val trialOf = when (val page = state.page) {
+        is EditorPage.Indicator -> state.draft.indicators.getOrNull(page.index)?.id?.trim()
+        is EditorPage.Patch -> state.draft.patches.getOrNull(page.index)?.id
+        else -> null
     }
-    if (check != null && check.warnings.isNotEmpty()) {
-        Text(stringResource(R.string.formula_set_warnings), style = MaterialTheme.typography.labelLarge)
-        check.warnings.forEach { Hint("• " + issueText(it, check.file.id, names)) }
+    val hasList = check != null && (issues.shown.isNotEmpty() || check.warnings.isNotEmpty() || check.result.breaks.isNotEmpty())
+    val text = when {
+        trialOf != null -> trialText(trialOf, check, issues, trial, language)
+        check == null -> stringResource(R.string.editor_checking)
+        issues.shown.isNotEmpty() -> stringResource(R.string.editor_status_errors, issues.shown.size)
+        check.errors.isNotEmpty() -> stringResource(R.string.editor_status_incomplete)
+        check.warnings.isNotEmpty() -> stringResource(R.string.editor_status_warnings, check.warnings.size)
+        else -> stringResource(R.string.editor_no_errors)
     }
-    if (check != null && check.result.breaks.isNotEmpty()) {
+    val error = trialOf == null && issues.shown.isNotEmpty()
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = Modifier.fillMaxWidth().let { if (trialOf == null && hasList) it.clickable(onClick = onShowIssues) else it },
+    ) {
         Text(
-            stringResource(R.string.formula_import_breaks, check.result.breaks.joinToString { it.name }),
+            text,
+            Modifier.padding(horizontal = ScreenPadding, vertical = 8.dp).testTag("status"),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.error,
+            color = if (error) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+            minLines = 2,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
         )
     }
+}
+
+/** What the check of the set found: the errors to fix, the warnings, the sets it would break. */
+@Composable
+private fun IssuesDialog(check: EditorCheck, issues: EditorIssues, language: String, onDismiss: () -> Unit) {
+    val names = mapOf(BuiltinFormulas.file.id to BuiltinFormulas.file.name.text(language))
+    val files = mapOf(BuiltinFormulas.file.id to BuiltinFormulas.file, check.file.id to check.file)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(if (issues.shown.isEmpty()) R.string.editor_check else R.string.editor_errors)) },
+        text = {
+            Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (issues.shown.isEmpty() && check.errors.isEmpty()) Text(stringResource(R.string.editor_no_errors), style = MaterialTheme.typography.bodyMedium)
+                issues.shown.forEach {
+                    Text("• " + issueText(it, check.file.id, names, files), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+                }
+                if (check.warnings.isNotEmpty()) {
+                    Text(stringResource(R.string.formula_set_warnings), Modifier.padding(top = FieldSpacing), style = MaterialTheme.typography.labelLarge)
+                    check.warnings.forEach { Hint("• " + issueText(it, check.file.id, names, files)) }
+                }
+                if (check.result.breaks.isNotEmpty()) {
+                    Text(
+                        stringResource(R.string.formula_import_breaks, check.result.breaks.joinToString { it.name }),
+                        Modifier.padding(top = FieldSpacing),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.ok)) } },
+    )
 }
 
 @Composable
@@ -338,7 +423,9 @@ private fun PickDialog(title: String, options: List<Pair<String, String>>, onPic
                     label = { Text(stringResource(R.string.editor_search)) },
                 )
                 Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())) {
-                    options.filter { (id, name) -> filter.isBlank() || filter.trim().lowercase().let { it in id || it in name.lowercase() } }
+                    val wanted = filter.trim().lowercase()
+                    val mark = SpanStyle(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                    options.filter { (id, name) -> wanted.isEmpty() || wanted in id.lowercase() || wanted in name.lowercase() }
                         .forEach { (id, name) ->
                             Column(
                                 Modifier
@@ -346,8 +433,12 @@ private fun PickDialog(title: String, options: List<Pair<String, String>>, onPic
                                     .clickable { onPick(id) }
                                     .padding(vertical = 8.dp),
                             ) {
-                                Text(name, style = MaterialTheme.typography.bodyLarge)
-                                Hint(id)
+                                Text(marked(name, wanted, mark), style = MaterialTheme.typography.bodyLarge)
+                                Text(
+                                    marked(id, wanted, mark),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
                         }
                 }
@@ -356,6 +447,19 @@ private fun PickDialog(title: String, options: List<Pair<String, String>>, onPic
         confirmButton = {},
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.cancel)) } },
     )
+}
+
+/** [text] with each place it has [wanted] (lower case) in [style], so that a search shows what it found. */
+internal fun marked(text: String, wanted: String, style: SpanStyle): AnnotatedString = buildAnnotatedString {
+    append(text)
+    if (wanted.isEmpty()) return@buildAnnotatedString
+    val lower = text.lowercase()
+    var from = lower.indexOf(wanted)
+    while (from >= 0) {
+        // A lower case that changes the length (a rare letter) only shifts the mark, never past the end
+        if (from + wanted.length <= text.length) addStyle(style, from, from + wanted.length)
+        from = lower.indexOf(wanted, from + wanted.length)
+    }
 }
 
 @Composable

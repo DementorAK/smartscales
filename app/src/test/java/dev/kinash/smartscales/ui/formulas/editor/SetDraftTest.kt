@@ -34,6 +34,14 @@ class SetDraftTest {
     }
 
     @Test
+    fun withoutEnglishTheTextInThePhonesLanguageStandsForIt() {
+        val file = SetDraft(id = "mine", name = TextDraft(local = "Мой")).toFile("ru").file
+        assertEquals(mapOf("en" to "Мой", "ru" to "Мой"), file.name)
+        // Read back, English is what the file has: it may be English that only looks the same ("BMI")
+        assertEquals(TextDraft(en = "Мой", local = "Мой"), SetDraft.of(file, "ru").name)
+    }
+
+    @Test
     fun fieldsThatDoNotReadAreReportedWhereTheyAre() {
         val draft = SetDraft(
             id = "mine",

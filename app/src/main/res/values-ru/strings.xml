@@ -438,6 +438,13 @@
     <string name="formula_set_added">Набор добавлен</string>
     <string name="formula_set_replaced">Набор заменён</string>
     <string name="formula_set_replaced_off">Набор заменён; он по-прежнему выключен</string>
+    <string name="formula_set_deleted">Набор удалён</string>
+    <string name="issue_place">«%1$s», %2$s</string>
+    <string name="issue_place_part">«%1$s»</string>
+    <string name="issue_param">параметр %1$s</string>
+    <string name="issue_set_id">Id набора</string>
+    <string name="issue_set_name">Название набора</string>
+    <string name="issue_set_description">Описание набора</string>
     <string name="formula_set_exported">Набор сохранён</string>
     <string name="formula_set_export_failed">Не удалось сохранить файл</string>
     <string name="formula_issue_at">%1$s (символ %2$d)</string>
@@ -476,6 +483,7 @@
     <string name="problem_precision">Точность — от 0 до %1$s</string>
     <string name="problem_param_name">«%1$s» не может быть именем параметра</string>
     <string name="problem_not_a_number">Не число</string>
+    <string name="problem_required">Нужно заполнить</string>
     <string name="problem_zone_levels">Уровней должно быть на один больше, чем границ: %1$s</string>
     <string name="problem_zone_bounds">Границы должны возрастать</string>
     <string name="problem_zone_labels">Нужно по одной метке на уровень</string>
@@ -514,9 +522,13 @@
     <string name="editor_remove">Удалить</string>
     <string name="editor_remove_title">Удалить из набора?</string>
     <string name="editor_remove_text">Удаление вступит в силу, когда набор будет сохранён; выход без сохранения его отменит.</string>
-    <string name="editor_discard_title">Отменить изменения?</string>
-    <string name="editor_discard_text">Набор останется таким, каким был сохранён.</string>
-    <string name="editor_discard">Отменить</string>
+    <string name="editor_discard_title">Выйти без сохранения?</string>
+    <string name="editor_discard_text">Изменения пропадут; набор останется таким, каким был сохранён.</string>
+    <string name="editor_discard">Выйти</string>
+    <string name="editor_keep_editing">Продолжить правку</string>
+    <string name="editor_done">Готово</string>
+    <string name="editor_add_english">Добавить по-английски</string>
+    <string name="editor_english_optional">Необязательно: показывается, когда язык телефона другой и текста на нём в наборе нет</string>
     <string name="editor_new_set">Новый набор</string>
     <string name="editor_patch_title">Изменение: %1$s</string>
     <string name="editor_input_title">Поле ввода</string>
@@ -528,7 +540,6 @@
     <string name="editor_name">Название</string>
     <string name="editor_description">Описание</string>
     <string name="editor_in_english">%1$s по-английски</string>
-    <string name="editor_in_language">%1$s по-русски</string>
     <string name="editor_indicators">Показатели</string>
     <string name="editor_indicators_hint">Новые показатели или встроенный, заменённый целиком под своим id.</string>
     <string name="editor_add_indicator">Добавить показатель</string>
@@ -550,8 +561,11 @@
     <string name="editor_patch_name">название</string>
     <string name="editor_patch_precision">точность</string>
     <string name="editor_patch_nothing">Пока ничего не изменено</string>
-    <string name="editor_check">Проверка</string>
     <string name="editor_checking">Проверка…</string>
+    <string name="editor_check">Проверка</string>
+    <string name="editor_status_errors">Ошибок: %1$d. Нажмите, чтобы посмотреть.</string>
+    <string name="editor_status_incomplete">Набор сохранится, когда будут заполнены обязательные поля.</string>
+    <string name="editor_status_warnings">Ошибок нет; предупреждений: %1$d. Нажмите, чтобы посмотреть.</string>
     <string name="editor_no_errors">Ошибок нет: набор можно сохранить.</string>
     <string name="editor_errors">Ошибки, которые нужно исправить перед сохранением:</string>
     <string name="editor_has_errors">Есть ошибки</string>
@@ -596,6 +610,7 @@
     <string name="editor_group_page_hint">Название показывается везде, где значение группы, по какому бы варианту оно ни было посчитано.</string>
     <string name="editor_groups_known">Группы: %1$s</string>
     <string name="editor_trial_none">Нет взвешиваний, на которых проверить формулу.</string>
+    <string name="editor_trial_incomplete">Значение появится, когда в наборе будут заполнены обязательные поля.</string>
     <string name="editor_trial_errors">Исправьте ошибки, чтобы увидеть значение.</string>
     <string name="editor_trial_no_value">Взвешивание %1$s (%2$s): нет значения — не хватает данных или не выполнено условие.</string>
     <string name="editor_trial_value">Взвешивание %1$s (%2$s): %3$s</string>

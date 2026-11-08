@@ -4,10 +4,12 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -69,7 +71,6 @@ internal fun IndicatorPage(
     val change = { transform: (IndicatorDraft) -> IndicatorDraft -> viewModel.updateIndicator(index, transform) }
     var names by rememberSaveable { mutableStateOf(false) }
 
-    TrialLine(draft.id.trim(), check, trial, set, language)
     TextFields(R.string.editor_name, draft.name, { name -> change { it.copy(name = name) } }, language, issues, "$path.name", tag = "indicator_name")
     IdField(draft.id, { id -> change { it.copy(id = id) } }, stringResource(R.string.editor_indicator_id_hint), issues.at("$path.id"))
     Row(horizontalArrangement = Arrangement.spacedBy(FieldSpacing), verticalAlignment = Alignment.Top) {
@@ -164,7 +165,6 @@ internal fun PatchPage(
         Text(target.formula, style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace))
     }
     Hint(stringResource(R.string.editor_patch_hint))
-    TrialLine(draft.id, check, trial, set, language)
 
     Section(R.string.editor_params, null)
     val names = target?.params?.keys.orEmpty() + draft.params.keys
@@ -249,12 +249,17 @@ internal fun GroupPage(index: Int, set: SetDraft, check: EditorCheck?, issues: E
     TextFields(R.string.editor_name, draft.name, { name -> change { it.copy(name = name) } }, language, issues, "$path.name")
 }
 
-/** The value the formula gives on the last weighing, or why there is none. */
+/**
+ * The value indicator [id] gives on the last weighing, or why there is none. From the last check, even while the
+ * next one waits for the typing to stop, so that the text does not blink at each key.
+ */
 @Composable
-private fun TrialLine(id: String, check: EditorCheck?, trial: TrialWeighing?, set: SetDraft, language: String) {
-    val text = when {
+internal fun trialText(id: String, check: EditorCheck?, issues: EditorIssues, trial: TrialWeighing?, language: String): String =
+    when {
         trial == null -> stringResource(R.string.editor_trial_none)
-        check == null || check.draft != set -> stringResource(R.string.editor_checking)
+        check == null -> stringResource(R.string.editor_checking)
+        // Only blank fields left, not shown as errors yet
+        check.result.model == null && issues.shown.isEmpty() -> stringResource(R.string.editor_trial_incomplete)
         check.result.model == null -> stringResource(R.string.editor_trial_errors)
         else -> {
             val model = check.result.model
@@ -272,10 +277,6 @@ private fun TrialLine(id: String, check: EditorCheck?, trial: TrialWeighing?, se
             }
         }
     }
-    Card(Modifier.fillMaxWidth()) {
-        Text(text, Modifier.padding(ScreenPadding).testTag("trial"), style = MaterialTheme.typography.bodyMedium)
-    }
-}
 
 /** Rules of norms: for whom (a condition), the zones from the lowest and the bounds between them. */
 @Composable
@@ -295,6 +296,7 @@ private fun RulesEditor(rules: List<RuleDraft>, onChange: (List<RuleDraft>) -> U
                     R.string.editor_rule_condition, rule.applies, { text -> changeRule(j) { it.copy(applies = text) } }, issues.at("$rulePath.when"),
                     hint = stringResource(R.string.editor_rule_condition_hint),
                 )
+                CheckboxRow(stringResource(R.string.editor_zone_labels), null, rule.labeled) { on -> changeRule(j) { it.copy(labeled = on) } }
                 rule.zones.forEachIndexed { k, zone ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         ChoiceField(
@@ -334,7 +336,6 @@ private fun RulesEditor(rules: List<RuleDraft>, onChange: (List<RuleDraft>) -> U
                     onSelect = { side -> changeRule(j) { it.copy(atBound = side) } },
                     label = { stringResource(if (it == BoundSide.ABOVE) R.string.editor_bound_above else R.string.editor_bound_below) },
                 )
-                CheckboxRow(stringResource(R.string.editor_zone_labels), null, rule.labeled) { on -> changeRule(j) { it.copy(labeled = on) } }
                 FieldIssues(issues.at("$rulePath.bounds") + issues.at("$rulePath.levels") + issues.at("$rulePath.labels"))
             }
         }
@@ -379,7 +380,10 @@ private fun NameList(@StringRes title: Int, names: List<Pair<String, String>>, o
     }
 }
 
-/** A text in English and, on a phone in another language, in that language; [hint] goes under the English one. */
+/**
+ * A text in the phone's language and, below it on request, in English, which may stay blank: the phone's language
+ * stands for it. On a phone in English, one field. [hint] goes under the first.
+ */
 @Composable
 internal fun TextFields(
     @StringRes label: Int,
@@ -394,21 +398,33 @@ internal fun TextFields(
 ) {
     val local = language != "en"
     OutlinedTextField(
-        value.en, { onChange(value.copy(en = it)) },
+        if (local) value.local else value.en,
+        { onChange(if (local) value.copy(local = it) else value.copy(en = it)) },
         Modifier.fillMaxWidth().let { if (tag != null) it.testTag(tag) else it },
         singleLine = singleLine,
-        label = { Text(if (local) stringResource(R.string.editor_in_english, stringResource(label)) else stringResource(label)) },
+        label = { Text(stringResource(label)) },
         supportingText = hint?.let { { Text(it) } },
         isError = issues.hasErrorAt(path),
     )
-    if (local) {
+    FieldIssues(issues.at(path))
+    // English matters only for a file given to people with phones in other languages: out of the way until asked for
+    var english by rememberSaveable { mutableStateOf(false) }
+    if (local && !english && value.en.isBlank()) {
+        // A small action at the field's end, not to be taken for the title of what follows
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            TextButton(onClick = { english = true }, contentPadding = PaddingValues(horizontal = 8.dp)) {
+                Icon(painterResource(R.drawable.ic_add), contentDescription = null, Modifier.size(18.dp))
+                Text(stringResource(R.string.editor_add_english), Modifier.padding(start = 4.dp), style = MaterialTheme.typography.labelMedium)
+            }
+        }
+    } else if (local) {
         OutlinedTextField(
-            value.local, { onChange(value.copy(local = it)) }, Modifier.fillMaxWidth(),
+            value.en, { onChange(value.copy(en = it)) }, Modifier.fillMaxWidth(),
             singleLine = singleLine,
-            label = { Text(stringResource(R.string.editor_in_language, stringResource(label))) },
+            label = { Text(stringResource(R.string.editor_in_english, stringResource(label))) },
+            supportingText = { Text(stringResource(R.string.editor_english_optional)) },
         )
     }
-    FieldIssues(issues.at(path))
 }
 
 @Composable

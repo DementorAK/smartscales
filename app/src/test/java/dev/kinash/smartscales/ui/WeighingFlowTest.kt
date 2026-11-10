@@ -40,6 +40,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -365,7 +366,8 @@ class WeighingFlowTest {
         measurements.add(
             Measurement(
                 profileId = id,
-                takenAt = Instant.parse("2026-10-27T07:00:00Z"),
+                // Days ago, not on a fixed date: older than two weeks, the note names its date instead
+                takenAt = Instant.now().minus(Duration.ofDays(2)),
                 zone = ZoneId.systemDefault(),
                 source = MeasurementSource.MANUAL,
                 weightKg = lastWeightKg,

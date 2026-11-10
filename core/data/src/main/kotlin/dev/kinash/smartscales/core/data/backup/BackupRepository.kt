@@ -98,7 +98,9 @@ class BackupRepository @Inject constructor(
 
     /**
      * Replaces everything stored with [backup], in one transaction: a backup that does not hold together leaves
-     * the data as it was and throws [BrokenBackupException]. The settings follow once the data is in.
+     * the data as it was and throws [BrokenBackupException]. The settings follow once the data is in, outside the
+     * transaction (they are in DataStore): should the app stop between the two, the data is the backup's and the
+     * settings the earlier ones, which is harmless. Readers of the database get the new rows through their flows.
      */
     suspend fun restore(backup: Backup) {
         val rows = try {

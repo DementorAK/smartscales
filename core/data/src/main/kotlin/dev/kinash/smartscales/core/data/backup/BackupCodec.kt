@@ -88,7 +88,12 @@ object BackupCodec {
         if (version > Backup.VERSION) return BackupRead.TooNew(version)
         val plain = if ("data" in root) {
             if (password == null || password.isEmpty()) return BackupRead.NeedsPassword
-            unlock(root, password) ?: return BackupRead.WrongPassword
+            val inner = unlock(root, password) ?: return BackupRead.WrongPassword
+            // The locked backup has its own format and version, which must agree with the wrapper
+            if (inner["format"]?.jsonPrimitive?.contentOrNull != Backup.FORMAT) return BackupRead.NotABackup
+            val innerVersion = inner["version"]?.jsonPrimitive?.intOrNull ?: return BackupRead.NotABackup
+            if (innerVersion > Backup.VERSION) return BackupRead.TooNew(innerVersion)
+            inner
         } else {
             root
         }

@@ -86,6 +86,12 @@ class BackupRepositoryTest : DatabaseTestBase() {
     }
 
     @Test
+    fun everySettingIsInTheBackup() {
+        // A key added to the settings and forgotten in SettingsBackup would be lost on restoring
+        assertEquals(SettingsRepository.BACKED_UP.size, SettingsBackup.serializer().descriptor.elementsCount)
+    }
+
+    @Test
     fun theFileReadsBackWithAndWithoutAPassword() {
         assertEquals(BackupRead.Ok(FULL), BackupCodec.decode(BackupCodec.encode(FULL)))
         val password = "correct horse".toCharArray()

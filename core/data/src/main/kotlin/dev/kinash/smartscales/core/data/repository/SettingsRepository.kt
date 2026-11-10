@@ -70,10 +70,14 @@ class SettingsRepository @Inject constructor(
         )
     }
 
-    /** Replaces the settings with those of a backup; one it does not have goes back to its default. */
+    /**
+     * Replaces the settings a backup keeps with its values; one it does not have goes back to its default. Only
+     * those keys: a setting added later and not yet in [SettingsBackup] stays as it is rather than being wiped,
+     * and [BACKED_UP] is checked against [SettingsBackup] by a test, so that one is not forgotten.
+     */
     suspend fun restore(settings: SettingsBackup) {
         dataStore.edit { prefs ->
-            prefs.clear()
+            BACKED_UP.forEach { prefs.remove(it) }
             settings.selectedProfileId?.let { prefs[SELECTED_PROFILE] = it }
             settings.matchThresholdKg?.takeIf { it > 0 }?.let { prefs[MATCH_THRESHOLD] = it }
             settings.childNorms?.takeIf { name -> ChildNorms.entries.any { it.name == name } }?.let { prefs[CHILD_NORMS] = it }
@@ -87,5 +91,8 @@ class SettingsRepository @Inject constructor(
         private val SELECTED_PROFILE = longPreferencesKey("selected_profile")
         private val MATCH_THRESHOLD = doublePreferencesKey("match_threshold_kg")
         private val COMPARE_HINT_SEEN = booleanPreferencesKey("compare_hint_seen")
+
+        /** Every key of the settings, each kept by a backup (see [restore]). */
+        internal val BACKED_UP: List<Preferences.Key<*>> = listOf(CHILD_NORMS, SELECTED_PROFILE, MATCH_THRESHOLD, COMPARE_HINT_SEEN)
     }
 }

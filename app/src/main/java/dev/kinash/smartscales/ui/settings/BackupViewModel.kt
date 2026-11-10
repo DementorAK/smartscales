@@ -14,6 +14,7 @@ import dev.kinash.smartscales.core.data.backup.BackupRead
 import dev.kinash.smartscales.core.data.backup.BackupRepository
 import dev.kinash.smartscales.core.data.backup.BrokenBackupException
 import dev.kinash.smartscales.indicators.GrowthTables
+import dev.kinash.smartscales.ui.common.readAtMost
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -72,7 +73,10 @@ class BackupViewModel @Inject constructor(
             val backup = backups.backup(clock.instant(), BuildConfig.VERSION_NAME, files)
             val bytes = withContext(Dispatchers.Default) { BackupCodec.encode(backup, password.takeIf { it.isNotEmpty() }?.toCharArray()) }
             withContext(Dispatchers.IO) {
-                context.contentResolver.openOutputStream(uri, "wt")?.use { it.write(bytes) } ?: throw IOException("No stream for $uri")
+                // The file was just created and is empty; some document providers refuse "wt", which only adds truncation
+                val stream = runCatching { context.contentResolver.openOutputStream(uri, "wt") }.getOrNull()
+                    ?: context.contentResolver.openOutputStream(uri, "w")
+                stream?.use { it.write(bytes) } ?: throw IOException("No stream for $uri")
             }
         }
         _message.value = if (result.isSuccess) R.string.backup_written else R.string.backup_write_failed
@@ -84,8 +88,7 @@ class BackupViewModel @Inject constructor(
             runCatching {
                 context.contentResolver.openInputStream(uri)?.use { input ->
                     // Far larger than a family's years of weighings; a bigger file is not a backup
-                    val read = input.readNBytesCompat(MAX_BYTES + 1)
-                    read.takeIf { it.size <= MAX_BYTES }
+                    readAtMost(input, MAX_BYTES + 1).takeIf { it.size <= MAX_BYTES }
                 }
             }.getOrNull()
         }
@@ -97,7 +100,7 @@ class BackupViewModel @Inject constructor(
         read(null)
     }
 
-    /** Tries [password] on the opened file. */
+    /** Tries [password] on the opened file; a String from the field, which cannot be wiped from memory, accepted here. */
     fun unlock(password: String) = work { read(password.toCharArray()) }
 
     fun cancel() {
@@ -127,7 +130,13 @@ class BackupViewModel @Inject constructor(
 
     private suspend fun read(password: CharArray?) {
         val bytes = opened ?: return
-        when (val read = withContext(Dispatchers.Default) { BackupCodec.decode(bytes, password) }) {
+        val read = try {
+            withContext(Dispatchers.Default) { BackupCodec.decode(bytes, password) }
+        } catch (e: OutOfMemoryError) {
+            // The JSON tree of a large file takes several times its size: a phone short of memory says so instead of failing
+            BackupRead.NotABackup
+        }
+        when (read) {
             is BackupRead.Ok -> _pending.value = PendingRestore.Confirm(read.backup)
             BackupRead.NeedsPassword -> _pending.value = PendingRestore.Password()
             BackupRead.WrongPassword -> _pending.value = PendingRestore.Password(wrong = true)
@@ -155,18 +164,7 @@ class BackupViewModel @Inject constructor(
     }
 
     private companion object {
-        const val MAX_BYTES = 64 * 1024 * 1024
-
-        /** `InputStream.readNBytes` is Android 13+. */
-        fun java.io.InputStream.readNBytesCompat(limit: Int): ByteArray {
-            val out = java.io.ByteArrayOutputStream()
-            val buffer = ByteArray(64 * 1024)
-            while (out.size() < limit) {
-                val n = read(buffer, 0, minOf(buffer.size, limit - out.size()))
-                if (n < 0) break
-                out.write(buffer, 0, n)
-            }
-            return out.toByteArray()
-        }
+        /** A family's years of weighings take a megabyte or two; the limit keeps reading within a phone's memory. */
+        const val MAX_BYTES = 16 * 1024 * 1024
     }
 }

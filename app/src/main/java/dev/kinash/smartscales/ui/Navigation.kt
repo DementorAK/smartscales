@@ -7,6 +7,7 @@ import androidx.navigation.compose.rememberNavController
 import dev.kinash.smartscales.ui.chart.ChartScreen
 import dev.kinash.smartscales.ui.compare.CompareScreen
 import dev.kinash.smartscales.ui.formulas.ChildNormsScreen
+import dev.kinash.smartscales.ui.settings.BackupScreen
 import dev.kinash.smartscales.ui.formulas.FormulaSetsScreen
 import dev.kinash.smartscales.ui.formulas.editor.FormulaSetEditScreen
 import dev.kinash.smartscales.ui.history.HistoryScreen
@@ -72,6 +73,9 @@ data object FormulaSetsRoute
 @Serializable
 data object ChildNormsRoute
 
+@Serializable
+data object BackupRoute
+
 /** The editor of the person's formula set [setId], or of a new one. */
 @Serializable
 data class FormulaSetEditRoute(val setId: Long? = null)
@@ -128,6 +132,7 @@ fun SmartScalesNavHost() {
                 onOpenLog = { navController.navigate(BluetoothLogRoute) },
                 onOpenFormulaSets = { navController.navigate(FormulaSetsRoute) },
                 onOpenChildNorms = { navController.navigate(ChildNormsRoute) },
+                onOpenBackup = { navController.navigate(BackupRoute) },
             )
         }
         composable<FormulaSetsRoute> {
@@ -139,6 +144,7 @@ fun SmartScalesNavHost() {
         }
         composable<FormulaSetEditRoute> { FormulaSetEditScreen(onDone = back) }
         composable<ChildNormsRoute> { ChildNormsScreen(onBack = back) }
+        composable<BackupRoute> { BackupScreen(onBack = back) }
         composable<ScaleEditRoute> { ScaleEditScreen(onDone = back) }
         composable<InboxRoute> {
             InboxScreen(

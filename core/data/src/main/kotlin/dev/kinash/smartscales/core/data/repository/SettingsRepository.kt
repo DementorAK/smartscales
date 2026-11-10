@@ -7,7 +7,9 @@ import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import dev.kinash.smartscales.core.data.backup.SettingsBackup
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -56,6 +58,27 @@ class SettingsRepository @Inject constructor(
 
     suspend fun setChildNorms(norms: ChildNorms) {
         dataStore.edit { it[CHILD_NORMS] = norms.name }
+    }
+
+    /** The settings as a backup keeps them. */
+    suspend fun backup(): SettingsBackup = dataStore.data.first().let { prefs ->
+        SettingsBackup(
+            selectedProfileId = prefs[SELECTED_PROFILE],
+            matchThresholdKg = prefs[MATCH_THRESHOLD],
+            childNorms = prefs[CHILD_NORMS],
+            compareHintSeen = prefs[COMPARE_HINT_SEEN] ?: false,
+        )
+    }
+
+    /** Replaces the settings with those of a backup; one it does not have goes back to its default. */
+    suspend fun restore(settings: SettingsBackup) {
+        dataStore.edit { prefs ->
+            prefs.clear()
+            settings.selectedProfileId?.let { prefs[SELECTED_PROFILE] = it }
+            settings.matchThresholdKg?.takeIf { it > 0 }?.let { prefs[MATCH_THRESHOLD] = it }
+            settings.childNorms?.takeIf { name -> ChildNorms.entries.any { it.name == name } }?.let { prefs[CHILD_NORMS] = it }
+            if (settings.compareHintSeen) prefs[COMPARE_HINT_SEEN] = true
+        }
     }
 
     companion object {

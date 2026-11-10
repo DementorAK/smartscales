@@ -102,6 +102,7 @@ fun SettingsScreen(
     onOpenLog: () -> Unit,
     onOpenFormulaSets: () -> Unit,
     onOpenChildNorms: () -> Unit,
+    onOpenBackup: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val stored by viewModel.matchThresholdKg.collectAsStateWithLifecycle()
@@ -166,6 +167,14 @@ fun SettingsScreen(
                 SectionTitle(stringResource(R.string.settings_weighing))
                 stored?.let { ThresholdSetting(it, unit, viewModel::setMatchThreshold) }
             }
+            Column(Modifier.padding(horizontal = ScreenPadding).padding(top = ScreenPadding)) {
+                SectionTitle(stringResource(R.string.settings_data))
+            }
+            SettingsItem(
+                title = stringResource(R.string.backup_title),
+                hint = stringResource(R.string.settings_backup_hint),
+                onClick = onOpenBackup,
+            )
             Column(Modifier.padding(horizontal = ScreenPadding).padding(top = ScreenPadding)) {
                 SectionTitle(stringResource(R.string.settings_debug))
             }

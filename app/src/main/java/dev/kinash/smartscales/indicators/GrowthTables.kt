@@ -57,6 +57,12 @@ class GrowthTables @Inject constructor(
 
     suspend fun clear() = update { WhoGrowthCharts.EMPTY }
 
+    /** The tables' file as kept, for a backup; null without tables. */
+    suspend fun csv(): String? = withContext(Dispatchers.IO) { lock.withLock { file.takeIf { it.exists() }?.readText() } }
+
+    /** Replaces the tables with those of a backup's [csv]; null, or a file that does not read, leaves none. */
+    suspend fun restore(csv: String?) = update { csv?.let { runCatching { WhoGrowthCharts.parseCsv(it) }.getOrNull() } ?: WhoGrowthCharts.EMPTY }
+
     private suspend fun update(change: (WhoGrowthCharts) -> WhoGrowthCharts) = withContext(Dispatchers.IO) {
         lock.withLock {
             val next = change(_who.value ?: read())
@@ -78,7 +84,8 @@ class GrowthTables @Inject constructor(
     private fun read(): WhoGrowthCharts =
         runCatching { file.takeIf { it.exists() }?.readText()?.let(WhoGrowthCharts::parseCsv) }.getOrNull() ?: WhoGrowthCharts.EMPTY
 
-    private companion object {
+    companion object {
+        /** Also its name in a backup. */
         const val FILE_NAME = "who_growth.csv"
     }
 }

@@ -3,6 +3,7 @@ package dev.kinash.smartscales.core.data.db
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import dev.kinash.smartscales.core.data.db.dao.BackupDao
 import dev.kinash.smartscales.core.data.db.dao.FormulaSetDao
 import dev.kinash.smartscales.core.data.db.dao.MeasurementDao
 import dev.kinash.smartscales.core.data.db.dao.ProfileDao
@@ -53,6 +54,8 @@ abstract class SmartScalesDatabase : RoomDatabase() {
     abstract fun scaleBindingDao(): ScaleBindingDao
 
     abstract fun formulaSetDao(): FormulaSetDao
+
+    abstract fun backupDao(): BackupDao
 
     companion object {
         const val NAME = "smartscales.db"

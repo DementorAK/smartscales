@@ -616,4 +616,49 @@
     <string name="formula_set_edit">Edit</string>
     <string name="problem_set_id_used">Another set has the id \'%1$s\'</string>
     <string name="problem_param_twice">Parameter \'%1$s\' is given twice</string>
+    <string name="settings_data">Data</string>
+    <string name="backup_title">Backup</string>
+    <string name="settings_backup_hint">Everything on this phone in one file: create one or restore it</string>
+    <string name="backup_hint">One file holds everything: profiles, weighings, scales with their keys, formula sets, settings and the imported WHO tables. Keep it off the phone, for example in the cloud or on a computer, to move to a new phone or to go back after a mistake.</string>
+    <string name="backup_create_title">Create a backup</string>
+    <string name="backup_password_hint">The file holds the family\'s health data and the scales\' keys. A password locks it; without the password it cannot be restored, and a forgotten password cannot be recovered.</string>
+    <string name="backup_password">Password (optional)</string>
+    <string name="backup_password_repeat">Password again</string>
+    <string name="backup_password_mismatch">The passwords differ</string>
+    <string name="backup_create">Create a backup</string>
+    <string name="backup_restore_title">Restore</string>
+    <string name="backup_restore_hint">Everything on this phone is replaced by the backup\'s data.</string>
+    <string name="backup_restore">Restore from a backup</string>
+    <string name="backup_written">Backup saved</string>
+    <string name="backup_write_failed">The backup could not be saved</string>
+    <string name="backup_read_failed">The file could not be read</string>
+    <string name="backup_not_a_backup">This is not a SmartScales backup, or it is damaged</string>
+    <string name="backup_too_new">The backup was made by a newer version of the app; update the app to restore it</string>
+    <string name="backup_broken">The backup is damaged; nothing was changed</string>
+    <string name="backup_restore_failed">The backup could not be restored; nothing was changed</string>
+    <string name="backup_restored">Data restored</string>
+    <string name="backup_locked_title">Backup with a password</string>
+    <string name="backup_locked_text">Enter the password it was created with.</string>
+    <string name="backup_wrong_password">The password does not open it</string>
+    <string name="backup_unlock">Open</string>
+    <string name="backup_confirm_title">Replace all data?</string>
+    <string name="backup_confirm_made">Backup of %1$s</string>
+    <string name="backup_confirm_text">Everything on this phone now is deleted and replaced by the backup.</string>
+    <string name="backup_confirm">Replace</string>
+    <plurals name="backup_profiles">
+        <item quantity="one">%1$d profile</item>
+        <item quantity="other">%1$d profiles</item>
+    </plurals>
+    <plurals name="backup_weighings">
+        <item quantity="one">%1$d weighing</item>
+        <item quantity="other">%1$d weighings</item>
+    </plurals>
+    <plurals name="backup_scales">
+        <item quantity="one">%1$d scale</item>
+        <item quantity="other">%1$d scales</item>
+    </plurals>
+    <plurals name="backup_sets">
+        <item quantity="one">%1$d formula set</item>
+        <item quantity="other">%1$d formula sets</item>
+    </plurals>
 </resources>

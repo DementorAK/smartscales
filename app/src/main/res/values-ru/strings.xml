@@ -636,4 +636,57 @@
     <string name="formula_set_edit">Изменить</string>
     <string name="problem_set_id_used">Другой набор уже имеет id «%1$s»</string>
     <string name="problem_param_twice">Параметр «%1$s» задан дважды</string>
+    <string name="settings_data">Данные</string>
+    <string name="backup_title">Резервная копия</string>
+    <string name="settings_backup_hint">Все данные телефона в одном файле: создать или восстановить</string>
+    <string name="backup_hint">В одном файле всё: профили, взвешивания, весы с ключами, наборы формул, настройки и импортированные таблицы ВОЗ. Храните его не на телефоне — в облаке или на компьютере, — чтобы перенести данные на новый телефон или вернуться после ошибки.</string>
+    <string name="backup_create_title">Создать копию</string>
+    <string name="backup_password_hint">В файле данные о здоровье семьи и ключи весов. Пароль закрывает его; без пароля копию не восстановить, а забытый пароль не восстанавливается.</string>
+    <string name="backup_password">Пароль (необязательно)</string>
+    <string name="backup_password_repeat">Пароль ещё раз</string>
+    <string name="backup_password_mismatch">Пароли не совпадают</string>
+    <string name="backup_create">Создать копию</string>
+    <string name="backup_restore_title">Восстановление</string>
+    <string name="backup_restore_hint">Все данные на этом телефоне заменяются данными копии.</string>
+    <string name="backup_restore">Восстановить из копии</string>
+    <string name="backup_written">Копия сохранена</string>
+    <string name="backup_write_failed">Не удалось сохранить копию</string>
+    <string name="backup_read_failed">Не удалось прочитать файл</string>
+    <string name="backup_not_a_backup">Это не резервная копия SmartScales, или она повреждена</string>
+    <string name="backup_too_new">Копия сделана более новой версией приложения; обновите приложение, чтобы восстановить её</string>
+    <string name="backup_broken">Копия повреждена; ничего не изменено</string>
+    <string name="backup_restore_failed">Не удалось восстановить копию; ничего не изменено</string>
+    <string name="backup_restored">Данные восстановлены</string>
+    <string name="backup_locked_title">Копия с паролем</string>
+    <string name="backup_locked_text">Введите пароль, с которым она создана.</string>
+    <string name="backup_wrong_password">Пароль не подходит</string>
+    <string name="backup_unlock">Открыть</string>
+    <string name="backup_confirm_title">Заменить все данные?</string>
+    <string name="backup_confirm_made">Копия от %1$s</string>
+    <string name="backup_confirm_text">Всё, что сейчас есть на телефоне, будет удалено и заменено данными копии.</string>
+    <string name="backup_confirm">Заменить</string>
+    <plurals name="backup_profiles">
+        <item quantity="one">%1$d профиль</item>
+        <item quantity="few">%1$d профиля</item>
+        <item quantity="many">%1$d профилей</item>
+        <item quantity="other">%1$d профиля</item>
+    </plurals>
+    <plurals name="backup_weighings">
+        <item quantity="one">%1$d взвешивание</item>
+        <item quantity="few">%1$d взвешивания</item>
+        <item quantity="many">%1$d взвешиваний</item>
+        <item quantity="other">%1$d взвешивания</item>
+    </plurals>
+    <plurals name="backup_scales">
+        <item quantity="one">%1$d весы</item>
+        <item quantity="few">%1$d весов</item>
+        <item quantity="many">%1$d весов</item>
+        <item quantity="other">%1$d весов</item>
+    </plurals>
+    <plurals name="backup_sets">
+        <item quantity="one">%1$d набор формул</item>
+        <item quantity="few">%1$d набора формул</item>
+        <item quantity="many">%1$d наборов формул</item>
+        <item quantity="other">%1$d набора формул</item>
+    </plurals>
 </resources>

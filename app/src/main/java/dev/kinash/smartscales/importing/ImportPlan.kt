@@ -6,6 +6,7 @@ import dev.kinash.smartscales.core.model.Impedance
 import dev.kinash.smartscales.core.model.MeasurementSource
 import java.time.Duration
 import java.time.ZoneId
+import java.util.TreeMap
 import kotlin.math.abs
 
 /**
@@ -27,7 +28,10 @@ class ImportPlan(val add: List<Measurement>, val duplicates: Int, val beforeBirt
             val kept = ArrayList<Measurement>()
             var duplicates = 0
             var beforeBirth = 0
-            val sorted = existing.sortedBy { it.takenAt }
+            // Weights by the second they were taken, the profile's and those kept so far, for a lookup by time
+            val known = TreeMap<Long, MutableList<Double>>()
+            fun remember(m: Measurement) = known.getOrPut(m.takenAt.epochSecond) { ArrayList() }.add(m.weightKg)
+            existing.forEach(::remember)
             for (row in rows.rows) {
                 val measurement = Measurement(
                     profileId = profile.id,
@@ -47,14 +51,14 @@ class ImportPlan(val add: List<Measurement>, val duplicates: Int, val beforeBirt
                     beforeBirth++
                     continue
                 }
-                fun same(other: Measurement) =
-                    abs(Duration.between(other.takenAt, measurement.takenAt).seconds) < SAME_TIME.seconds &&
-                        abs(other.weightKg - measurement.weightKg) <= SAME_KG + 1e-9
-                if (sorted.any(::same) || kept.any(::same)) {
+                val second = measurement.takenAt.epochSecond
+                val near = known.subMap(second - SAME_TIME.seconds, false, second + SAME_TIME.seconds, false).values
+                if (near.any { weights -> weights.any { abs(it - measurement.weightKg) <= SAME_KG + 1e-9 } }) {
                     duplicates++
                     continue
                 }
                 kept += measurement
+                remember(measurement)
             }
             return ImportPlan(kept.sortedBy { it.takenAt }, duplicates, beforeBirth, rows.unreadable)
         }

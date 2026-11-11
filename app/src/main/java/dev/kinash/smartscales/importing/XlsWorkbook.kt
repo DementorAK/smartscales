@@ -192,7 +192,8 @@ object XlsWorkbook {
                 i++
             }
             if (sheets == 0) throw IOException("The workbook has no sheets")
-            val byRow = cells.entries.groupBy({ it.key.first }, { it.key.second to it.value })
+            // BIFF8 has 256 columns; a damaged file's larger numbers would only make the rows huge
+            val byRow = cells.entries.filter { it.key.second < MAX_COLUMNS }.groupBy({ it.key.first }, { it.key.second to it.value })
             val rows = byRow.keys.maxOrNull() ?: return emptyList()
             return (0..rows).map { row ->
                 val line = byRow[row].orEmpty().toMap()
@@ -300,6 +301,7 @@ object XlsWorkbook {
             const val FORMULA = 0x0006
             const val STRING = 0x0207
             const val WORKSHEET = 0x0010
+            const val MAX_COLUMNS = 256
         }
     }
 }

@@ -44,12 +44,12 @@ data class ImportDraft(val name: String, val table: Table, val layout: ImportLay
 @HiltViewModel
 class ImportViewModel @Inject constructor(
     @param:ApplicationContext private val context: Context,
-    profiles: ProfileRepository,
+    private val profileRepository: ProfileRepository,
     settings: SettingsRepository,
     private val measurements: MeasurementRepository,
 ) : ViewModel() {
     val profiles: StateFlow<List<Profile>> =
-        profiles.observeProfiles().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+        profileRepository.observeProfiles().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private val selected: StateFlow<Long?> = settings.selectedProfileId.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
@@ -96,7 +96,8 @@ class ImportViewModel @Inject constructor(
             _message.value = context.getString(R.string.import_no_weighings)
             return@work
         }
-        val all = profiles.value.ifEmpty { profiles.first { it.isNotEmpty() } }
+        // Read now rather than waited for: with no profile yet the draft has none to go to, and says so
+        val all = profileRepository.observeProfiles().first()
         val profile = all.firstOrNull { it.id == selected.value } ?: all.firstOrNull()
         _draft.value = ImportDraft(displayName(context, uri), read, layout, profile?.id)
     }

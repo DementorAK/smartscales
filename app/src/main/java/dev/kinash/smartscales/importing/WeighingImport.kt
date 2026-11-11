@@ -7,8 +7,12 @@ import dev.kinash.smartscales.core.model.ScaleValues
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.text.ParsePosition
+import java.time.DateTimeException
 import java.time.format.DateTimeFormatter
-import java.time.format.DateTimeParseException
+import java.time.format.DateTimeFormatterBuilder
+import java.time.temporal.TemporalAccessor
+import java.util.concurrent.ConcurrentHashMap
 import java.time.temporal.ChronoUnit
 import java.util.Locale
 
@@ -30,6 +34,9 @@ enum class ImportField(val kind: Kind, val key: String? = null) {
     // The other app's own values, kept as they are (shown "by the scale's data", requirements §4.3)
     FAT_PERCENT(Kind.NUMBER, ScaleValues.FAT_PERCENT),
     WATER_PERCENT(Kind.NUMBER, ScaleValues.WATER_PERCENT),
+
+    /** Water in litres, as this app's table writes the scale's water: kept as the percentage of the weight. */
+    WATER_LITERS(Kind.NUMBER, ScaleValues.WATER_PERCENT),
     MUSCLE_PERCENT(Kind.NUMBER, ScaleValues.MUSCLE_PERCENT),
     MUSCLE_KG(Kind.WEIGHT, ScaleValues.MUSCLE_KG),
     SKELETAL_MUSCLE_PERCENT(Kind.NUMBER, ScaleValues.SKELETAL_MUSCLE_PERCENT),
@@ -122,11 +129,14 @@ data class ImportLayout(
             val openScale = header.any { it.trim() == "WEIGHT" } && header.any { it.trim() == "DATE" || it.trim() == "dateTime" }
             // A column is used once: the first that names a field takes it
             val seen = HashSet<ImportField>()
-            val columns = fields.map { field ->
+            val columns = fields.mapIndexed { column, named ->
+                val text = header[column].lowercase()
+                val field = if (named == ImportField.WATER_PERCENT && LITRES.containsMatchIn(text)) ImportField.WATER_LITERS else named
                 when {
                     field == ImportField.IGNORE -> field
-                    // Our own table's indicators are worked out again from its raw data
-                    ours && field.key?.startsWith("scale_") == true -> ImportField.IGNORE
+                    // Our own table's indicators are worked out again from its raw data, all but the scale's own
+                    // values, which are raw data too (shown "by the scale")
+                    ours && field.key?.startsWith("scale_") == true && SCALE_MARKS.none { it in text } -> ImportField.IGNORE
                     !seen.add(field) -> ImportField.IGNORE
                     else -> field
                 }
@@ -191,6 +201,10 @@ data class ImportLayout(
         )
 
         private val OUR_DATE = setOf("Date and time", "Дата и время")
+
+        /** How this app's table names the scale's own values: "Body fat (by the scale), %". */
+        private val SCALE_MARKS = listOf("by the scale", "по данным весов")
+        private val LITRES = Regex("[(\\[,]\\s*(l|л|liters|litres|литры)\\s*[)\\]]?$")
         private val OUR_SOURCE = setOf("Source", "Источник")
 
         /** Header words in English and Russian, openScale's column keys and the usual words of other tables. */
@@ -211,6 +225,7 @@ data class ImportLayout(
             put(ImportField.WATER_PERCENT, "water", "body water", "вода", "вода тела")
             put(ImportField.MUSCLE_PERCENT, "muscle", "мышцы")
             put(ImportField.MUSCLE_KG, "muscle mass", "масса мышц", "мышечная масса")
+            put(ImportField.SKELETAL_MUSCLE_PERCENT, "skeletal muscle", "скелетные мышцы")
             put(ImportField.LEAN_MASS_KG, "lbm", "lean body mass", "lean mass", "fat-free mass", "безжировая масса", "тощая масса")
             put(ImportField.BONE_KG, "bone", "bone mass", "кости", "костная масса")
             put(ImportField.PROTEIN_PERCENT, "protein", "белок")
@@ -250,12 +265,8 @@ data class ImportLayout(
             DateFormat.EXCEL -> trimmed.replace(',', '.').toDoubleOrNull()?.takeIf { it in 1.0..200_000.0 }?.let(::excelDate)
             DateFormat.MONTH_DAY -> null
             else -> dateFormat.patterns.firstNotNullOfOrNull { pattern ->
-                try {
-                    val formatter = DateTimeFormatter.ofPattern(pattern, Locale.US)
-                    if ('H' in pattern || 'h' in pattern) LocalDateTime.parse(trimmed, formatter) else LocalDate.parse(trimmed, formatter).atStartOfDay()
-                } catch (e: DateTimeParseException) {
-                    null
-                }
+                val parsed = parse(trimmed, pattern) ?: return@firstNotNullOfOrNull null
+                if ('H' in pattern || 'h' in pattern) LocalDateTime.from(parsed) else LocalDate.from(parsed).atStartOfDay()
             }
         }
     }
@@ -265,12 +276,25 @@ data class ImportLayout(
         val trimmed = text.trim()
         if (trimmed.isEmpty()) return null
         trimmed.replace(',', '.').toDoubleOrNull()?.takeIf { it in 0.0..1.0 }?.let { return LocalTime.ofSecondOfDay((it * 86_400).toLong().coerceAtMost(86_399)) }
-        return listOf("H:mm:ss", "H:mm", "h:mm a", "h:mm:ss a").firstNotNullOfOrNull { pattern ->
-            try {
-                LocalTime.parse(trimmed.uppercase(), DateTimeFormatter.ofPattern(pattern, Locale.US))
-            } catch (e: DateTimeParseException) {
-                null
-            }
+        return TIME_PATTERNS.firstNotNullOfOrNull { pattern -> parse(trimmed, pattern)?.let(LocalTime::from) }
+    }
+
+    /**
+     * [text] by [pattern], or null when it does not read: tried without an exception for every pattern that does
+     * not fit, which thousands of rows times several patterns would make slow. AM and PM in either case.
+     */
+    private fun parse(text: String, pattern: String): TemporalAccessor? {
+        val formatter = FORMATTERS.getOrPut(pattern) {
+            DateTimeFormatterBuilder().parseCaseInsensitive().appendPattern(pattern).toFormatter(Locale.US)
+        }
+        val position = ParsePosition(0)
+        formatter.parseUnresolved(text, position) ?: return null
+        if (position.errorIndex >= 0 || position.index != text.length) return null
+        return try {
+            formatter.parse(text)
+        } catch (e: DateTimeException) {
+            // A day that is not in the month and the like
+            null
         }
     }
 
@@ -332,13 +356,18 @@ data class ImportLayout(
                         when (field) {
                             ImportField.IMPEDANCE -> impedance = number.takeIf { it > 0 }
                             ImportField.HEART_RATE -> heartRate = number.toInt().takeIf { it in 20..250 }
+                            ImportField.WATER_LITERS -> if (number > 0) values[field.key!!] = number / weight * 100
                             // OKOK writes 0 where it had nothing worked out
                             else -> if (number > 0) values[field.key!!] = number
                         }
                     }
-                    ImportField.Kind.TEXT -> when (field) {
-                        ImportField.NOTE -> note = text.trim().ifEmpty { null }
-                        else -> tags = text.split(',', ';').map { it.trim() }.filter { it.isNotEmpty() }
+                    ImportField.Kind.TEXT -> {
+                        // This app's table put an apostrophe before text a spreadsheet would run as a formula
+                        val written = if (source == TableSource.SMARTSCALES && text.length > 1 && text[0] == '\'' && text[1] in FORMULA_STARTS) text.substring(1) else text
+                        when (field) {
+                            ImportField.NOTE -> note = written.trim().ifEmpty { null }
+                            else -> tags = written.split(',', ';').map { it.trim() }.filter { it.isNotEmpty() }
+                        }
                     }
                     else -> Unit
                 }
@@ -402,6 +431,10 @@ data class ImportLayout(
     }
 
 }
+
+private val TIME_PATTERNS = listOf("H:mm:ss", "H:mm", "h:mm a", "h:mm:ss a")
+private val FORMATTERS = ConcurrentHashMap<String, DateTimeFormatter>()
+private val FORMULA_STARTS = setOf('=', '+', '-', '@', '\t', '\r')
 
 /** One weighing read from a table; [row] is its row in the file, counted from 0. */
 data class ImportRow(

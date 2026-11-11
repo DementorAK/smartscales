@@ -94,6 +94,7 @@ fun ImportScreen(onBack: () -> Unit, viewModel: ImportViewModel = hiltViewModel(
 private fun Preview(draft: ImportDraft, plan: ImportPlan?, profiles: List<Pair<Long, String>>, busy: Boolean, viewModel: ImportViewModel) {
     val layout = draft.layout
     Text(stringResource(R.string.import_file, draft.name, stringResource(layout.source.title())), style = MaterialTheme.typography.bodyMedium)
+    if (layout.source == TableSource.SMARTSCALES) Hint(stringResource(R.string.import_own_table))
 
     Title(R.string.import_profile)
     Column(Modifier.selectableGroup()) {
@@ -245,6 +246,7 @@ private fun ImportField.title(): Int = when (this) {
     ImportField.TAGS -> R.string.import_field_tags
     ImportField.FAT_PERCENT -> R.string.import_field_fat
     ImportField.WATER_PERCENT -> R.string.import_field_water
+    ImportField.WATER_LITERS -> R.string.import_field_water_liters
     ImportField.MUSCLE_PERCENT -> R.string.import_field_muscle
     ImportField.MUSCLE_KG -> R.string.import_field_muscle_kg
     ImportField.SKELETAL_MUSCLE_PERCENT -> R.string.import_field_skeletal

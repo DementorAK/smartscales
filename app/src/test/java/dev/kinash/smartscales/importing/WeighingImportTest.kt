@@ -126,4 +126,30 @@ class WeighingImportTest {
     fun aTableWithoutDateOrWeightIsNotWeighings() {
         assertNull(ImportLayout.detect(csv("name,age\nDmitry,35\n")))
     }
+
+    @Test
+    fun ourOwnTableKeepsTheScalesOwnValuesAndItsText() {
+        val table = csv(
+            "Date and time,\"Weight, kg\",\"Body fat, %\",\"Body fat (by the scale), %\",\"Body water, l\"," +
+                "\"Body water (by the scale), l\",\"Muscle mass (by the scale), kg\",Note,Source\r\n" +
+                "2026-11-01 07:30:00,80.0,19.9,21.3,44.0,44.0,36.0,'-5 kg by summer,Scale\r\n",
+        )
+        val layout = ImportLayout.detect(table)!!
+        assertEquals(TableSource.SMARTSCALES, layout.source)
+        val row = layout.rows(table).rows.single()
+        // The scale's numbers are raw data: kept; the app's own body fat is worked out again
+        assertEquals(
+            mapOf(ScaleValues.FAT_PERCENT to 21.3, ScaleValues.WATER_PERCENT to 55.0, ScaleValues.MUSCLE_KG to 36.0),
+            row.values,
+        )
+        // The apostrophe the export put before a minus is not part of the note
+        assertEquals("-5 kg by summer", row.note)
+    }
+
+    @Test
+    fun anAfternoonInLowerCase() {
+        val table = csv("date,weight\n1/2/2026 7:15 pm,80\n")
+        val layout = ImportLayout.detect(table, Locale.US)!!
+        assertEquals(LocalDateTime.parse("2026-01-02T19:15"), layout.rows(table).rows.single().takenAt)
+    }
 }

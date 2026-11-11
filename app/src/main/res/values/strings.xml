@@ -762,4 +762,6 @@
         <item quantity="one">%1$d weighing added</item>
         <item quantity="other">%1$d weighings added</item>
     </plurals>
+    <string name="import_field_water_liters">Body water, litres (as given)</string>
+    <string name="import_own_table">From this app\'s table come the weighings\' raw data and the scale\'s own values; the indicators are worked out again. The impedances of segments and the fields of your own formula sets other than the circumferences are not in it: a backup moves everything. Times are read in this phone\'s time zone.</string>
 </resources>

@@ -689,4 +689,26 @@
         <item quantity="many">%1$d наборов формул</item>
         <item quantity="other">%1$d набора формул</item>
     </plurals>
+    <string name="csv_title">Взвешивания таблицей</string>
+    <string name="settings_csv_hint">Взвешивания профиля с показателями — для Excel или Google Таблиц</string>
+    <string name="csv_hint">Файл CSV, строка на каждое взвешивание: дата, вес, импедансы и поля, затем все показатели так, как их считают текущие формулы с выбором формул профиля. Вес и длины — в единицах профиля.</string>
+    <string name="csv_profile">Профиль</string>
+    <string name="csv_save">Сохранить в CSV</string>
+    <string name="csv_written">Таблица сохранена</string>
+    <string name="csv_write_failed">Не удалось сохранить таблицу</string>
+    <string name="csv_date">Дата и время</string>
+    <string name="csv_weight">Вес</string>
+    <string name="csv_heart_rate">Пульс</string>
+    <string name="csv_bpm">уд/мин</string>
+    <string name="csv_impedance">Импеданс</string>
+    <string name="csv_impedance_of">Импеданс: %1$s</string>
+    <string name="csv_tags">Метки</string>
+    <string name="csv_note">Заметка</string>
+    <string name="csv_source">Источник</string>
+    <string name="csv_source_scale">Весы</string>
+    <string name="csv_source_manual">Вручную</string>
+    <string name="csv_source_import">Импорт</string>
+    <string name="csv_column_unit">%1$s, %2$s</string>
+    <string name="csv_lb">фунты</string>
+    <string name="csv_in">дюймы</string>
 </resources>

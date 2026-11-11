@@ -661,4 +661,26 @@
         <item quantity="one">%1$d formula set</item>
         <item quantity="other">%1$d formula sets</item>
     </plurals>
+    <string name="csv_title">Weighings as a table</string>
+    <string name="settings_csv_hint">A profile\'s weighings with their indicators, for Excel or Google Sheets</string>
+    <string name="csv_hint">A CSV file with one row per weighing: the date, the weight, the impedances and fields, then every indicator as the current formulas give it with the profile\'s choice of formulas. Weights and lengths are in the profile\'s units.</string>
+    <string name="csv_profile">Profile</string>
+    <string name="csv_save">Save as CSV</string>
+    <string name="csv_written">Table saved</string>
+    <string name="csv_write_failed">The table could not be saved</string>
+    <string name="csv_date">Date and time</string>
+    <string name="csv_weight">Weight</string>
+    <string name="csv_heart_rate">Heart rate</string>
+    <string name="csv_bpm">bpm</string>
+    <string name="csv_impedance">Impedance</string>
+    <string name="csv_impedance_of">Impedance: %1$s</string>
+    <string name="csv_tags">Tags</string>
+    <string name="csv_note">Note</string>
+    <string name="csv_source">Source</string>
+    <string name="csv_source_scale">Scale</string>
+    <string name="csv_source_manual">By hand</string>
+    <string name="csv_source_import">Import</string>
+    <string name="csv_column_unit">%1$s, %2$s</string>
+    <string name="csv_lb">lb</string>
+    <string name="csv_in">in</string>
 </resources>

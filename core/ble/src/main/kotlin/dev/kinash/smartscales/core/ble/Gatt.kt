@@ -73,6 +73,8 @@ data class GattContext(
     val user: ScaleUser?,
     val users: List<ScaleUser> = listOfNotNull(user),
     val syncTime: Boolean = true,
+    /** The scale works out its numbers for the opposite sex of the one it is told (OKOK v1.0 "deviceType 2"). */
+    val invertsSex: Boolean = false,
 )
 
 /** What a GATT scale reports. */

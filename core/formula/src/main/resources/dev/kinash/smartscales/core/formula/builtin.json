@@ -130,6 +130,15 @@
       "when": "age >= 18",
       "source": {"text": "Hume R. J Clin Pathol 1966;19:389–391. doi:10.1136/jcp.19.4.389", "url": "https://doi.org/10.1136/jcp.19.4.389"}
     },
+    {
+      "id": "lbm_scale",
+      "group": "lbm",
+      "name": {"en": "Lean body mass (by the scale)", "ru": "Тощая масса (по данным весов)"},
+      "unit": "kg",
+      "precision": 1,
+      "formula": "scale_lean_mass_kg",
+      "source": {"text": "The value the scale, or the app a table was imported from, worked out itself; not a formula"}
+    },
 
     {
       "id": "bf_bia",
@@ -223,6 +232,16 @@
       }
     },
     {
+      "id": "bf_scale",
+      "group": "bf",
+      "name": {"en": "Body fat (by the scale)", "ru": "Жир (по данным весов)"},
+      "unit": "percent",
+      "precision": 1,
+      "formula": "scale_fat_percent",
+      "zones": [{"when": "male and age < 40", "bounds": [8, 20, 25], "levels": ["low", "normal", "elevated", "high"]}, {"when": "male and age < 60", "bounds": [11, 22, 28], "levels": ["low", "normal", "elevated", "high"]}, {"when": "male", "bounds": [13, 25, 30], "levels": ["low", "normal", "elevated", "high"]}, {"when": "female and age < 40", "bounds": [21, 33, 39], "levels": ["low", "normal", "elevated", "high"]}, {"when": "female and age < 60", "bounds": [23, 34, 40], "levels": ["low", "normal", "elevated", "high"]}, {"bounds": [24, 36, 42], "levels": ["low", "normal", "elevated", "high"]}],
+      "source": {"text": "The value the scale, or the app a table was imported from, worked out itself; not a formula"}
+    },
+    {
       "id": "fat_mass",
       "name": {"en": "Fat mass", "ru": "Жировая масса"},
       "unit": "kg",
@@ -289,6 +308,15 @@
       }
     },
     {
+      "id": "tbw_scale",
+      "group": "tbw",
+      "name": {"en": "Body water (by the scale)", "ru": "Вода тела (по данным весов)"},
+      "unit": "liter",
+      "precision": 1,
+      "formula": "scale_water_percent * weight / 100",
+      "source": {"text": "The value the scale, or the app a table was imported from, worked out itself; not a formula"}
+    },
+    {
       "id": "tbw_percent",
       "name": {"en": "Body water", "ru": "Вода тела"},
       "unit": "percent",
@@ -311,6 +339,62 @@
         "en": "Derived for hand-to-foot analysers against MRI, ages 18–86; on a floor scale values are shifted.",
         "ru": "Выведена для анализаторов «рука–нога» по МРТ, 18–86 лет; на напольных весах значения смещены."
       }
+    },
+    {
+      "id": "muscle_scale",
+      "name": {"en": "Muscle (by the scale)", "ru": "Мышцы (по данным весов)"},
+      "unit": "percent",
+      "precision": 1,
+      "formula": "if(has(scale_muscle_percent), scale_muscle_percent, scale_muscle_kg / weight * 100)",
+      "source": {"text": "The value the scale, or the app a table was imported from, worked out itself; not a formula"}
+    },
+    {
+      "id": "muscle_mass_scale",
+      "name": {"en": "Muscle mass (by the scale)", "ru": "Масса мышц (по данным весов)"},
+      "unit": "kg",
+      "precision": 1,
+      "formula": "if(has(scale_muscle_kg), scale_muscle_kg, scale_muscle_percent * weight / 100)",
+      "source": {"text": "The value the scale, or the app a table was imported from, worked out itself; not a formula"}
+    },
+    {
+      "id": "skeletal_muscle_scale",
+      "name": {"en": "Skeletal muscle (by the scale)", "ru": "Скелетные мышцы (по данным весов)"},
+      "unit": "percent",
+      "precision": 1,
+      "formula": "scale_skeletal_muscle_percent",
+      "source": {"text": "The value the scale, or the app a table was imported from, worked out itself; not a formula"}
+    },
+    {
+      "id": "bone_scale",
+      "name": {"en": "Bone mass (by the scale)", "ru": "Костная масса (по данным весов)"},
+      "unit": "kg",
+      "precision": 1,
+      "formula": "scale_bone_kg",
+      "source": {"text": "The value the scale, or the app a table was imported from, worked out itself; not a formula"}
+    },
+    {
+      "id": "visceral_fat_scale",
+      "name": {"en": "Visceral fat (by the scale)", "ru": "Висцеральный жир (по данным весов)"},
+      "unit": "none",
+      "precision": 0,
+      "formula": "scale_visceral_fat",
+      "source": {"text": "The value the scale, or the app a table was imported from, worked out itself; not a formula"}
+    },
+    {
+      "id": "protein_scale",
+      "name": {"en": "Protein (by the scale)", "ru": "Белок (по данным весов)"},
+      "unit": "percent",
+      "precision": 1,
+      "formula": "scale_protein_percent",
+      "source": {"text": "The value the scale, or the app a table was imported from, worked out itself; not a formula"}
+    },
+    {
+      "id": "body_age_scale",
+      "name": {"en": "Body age (by the scale)", "ru": "Возраст тела (по данным весов)"},
+      "unit": "none",
+      "precision": 0,
+      "formula": "scale_body_age",
+      "source": {"text": "The value the scale, or the app a table was imported from, worked out itself; not a formula"}
     },
     {
       "id": "smi",
@@ -373,6 +457,15 @@
       "params": {"c0": 500, "c_ffm": 22},
       "when": "has(impedance) and age >= 18",
       "source": {"text": "Cunningham J.J. Am J Clin Nutr 1980;33:2372–2374. doi:10.1093/ajcn/33.11.2372", "url": "https://doi.org/10.1093/ajcn/33.11.2372"}
+    },
+    {
+      "id": "bmr_scale",
+      "group": "bmr",
+      "name": {"en": "Basal metabolic rate (by the scale)", "ru": "Основной обмен (по данным весов)"},
+      "unit": "kcal",
+      "precision": 0,
+      "formula": "scale_bmr_kcal",
+      "source": {"text": "The value the scale, or the app a table was imported from, worked out itself; not a formula"}
     },
 
     {

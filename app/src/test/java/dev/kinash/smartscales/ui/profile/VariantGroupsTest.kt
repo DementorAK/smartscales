@@ -25,7 +25,8 @@ class VariantGroupsTest {
         assertEquals(mapOf("ffm_bell" to Sex.FEMALE), group("ffm").sexOnly)
         assertEquals(listOf("ffm_wu", "ffm_sun"), group("ffm").options(Sex.MALE))
         assertEquals(listOf("ffm_wu", "ffm_sun", "ffm_bell"), group("ffm").options(Sex.FEMALE))
-        assertEquals(listOf("tbw_sun", "tbw_watson"), group("tbw").options(Sex.MALE))
+        // The scale's own value is for either sex
+        assertEquals(listOf("tbw_sun", "tbw_watson", "tbw_scale"), group("tbw").options(Sex.MALE))
         assertFalse(group("tbw").allows("tbw_bell", Sex.MALE))
         assertTrue(group("tbw").allows("tbw_bell", Sex.FEMALE))
         // Nothing else depends on sex this way

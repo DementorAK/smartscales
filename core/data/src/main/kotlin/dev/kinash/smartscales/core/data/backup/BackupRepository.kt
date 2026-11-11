@@ -68,7 +68,7 @@ class BackupRepository @Inject constructor(
                         protocolVersion = s.protocolVersion, productId = s.productId, v2Key = s.v2Key,
                         v2KeyConfirmed = s.v2KeyConfirmed, impedanceFactor = s.impedanceFactor, unbound = s.unbound,
                         boundAt = s.boundAt.toString(), historyAcceptedUntil = s.historyAcceptedUntil?.toString(),
-                        displayUnit = s.displayUnit, syncTime = s.syncTime,
+                        displayUnit = s.displayUnit, syncTime = s.syncTime, invertsSex = s.invertsSex,
                         excludedProfiles = excluded[s.id].orEmpty().map { it.profileId },
                     )
                 },
@@ -179,6 +179,7 @@ class BackupRepository @Inject constructor(
                         protocolVersion = s.protocolVersion, productId = s.productId, v2Key = s.v2Key, v2KeyConfirmed = s.v2KeyConfirmed,
                         impedanceFactor = s.impedanceFactor, unbound = s.unbound, boundAt = Instant.parse(s.boundAt),
                         historyAcceptedUntil = s.historyAcceptedUntil?.let(Instant::parse), displayUnit = s.displayUnit, syncTime = s.syncTime,
+                        invertsSex = s.invertsSex,
                     )
                 },
                 excluded = b.scales.flatMap { s -> s.excludedProfiles.map { ScaleExcludedProfileEntity(s.id, it) } },

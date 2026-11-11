@@ -2,7 +2,7 @@ package dev.kinash.smartscales.core.ble
 
 import dev.kinash.smartscales.core.protocol.ChipseaGatt
 import dev.kinash.smartscales.core.protocol.ScaleUnit
-import dev.kinash.smartscales.core.protocol.ScaleValues
+import dev.kinash.smartscales.core.model.ScaleValues
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
@@ -46,8 +46,8 @@ class OkokGattDriverTest {
 
     private fun rx(frame: ByteArray) = GattNotification(ChipseaGatt.CHIPSEA_RX, frame)
 
-    private fun v10(locked: Boolean, weight: Int) = byteArrayOf(0xCA.toByte(), 0x10, 0x10, 0x00, (if (locked) 0x01 else 0x00).toByte()) +
-        be(weight) + be(225) + be(552) + be(380) + be(1650) + be(85) + byteArrayOf(31)
+    private fun v10(locked: Boolean, weight: Int, visceral: Int = 85) = byteArrayOf(0xCA.toByte(), 0x10, 0x10, 0x00, (if (locked) 0x01 else 0x00).toByte()) +
+        be(weight) + be(225) + be(552) + be(380) + be(1650) + be(visceral) + byteArrayOf(31)
 
     /** One packet of a v1.1 `12`/`13` message: the whole payload, 23 bytes, fits in two; this sends it as one of one. */
     private fun v11(type: Int, time: Long, userId: Int, weight: Int): ByteArray {
@@ -79,6 +79,29 @@ class OkokGattDriverTest {
             assertEquals(listOf<Byte>(26, 11, 3, 8, 30, 15), it.copyOfRange(4, 10).toList())
             assertEquals(3, it[13].toInt())
         }
+    }
+
+    @Test
+    fun aScaleThatWantsTheOppositeSexIsToldIt() = runTest {
+        val usual = RecordingSession()
+        driver.gattProtocol("OKOK", mac, "0x10")!!.start(usual, GattContext(now, ScaleUnit.KILOGRAM, dmitry))
+        assertEquals(1, usual.writes.first()[14].toInt())
+        val inverted = RecordingSession()
+        driver.gattProtocol("OKOK", mac, "0x10")!!.start(inverted, GattContext(now, ScaleUnit.KILOGRAM, dmitry, invertsSex = true))
+        assertTrue(inverted.writes.all { it[14].toInt() == 0 })
+        // The result that shows it is passed on, for the app to remember
+        val protocol = driver.gattProtocol("OKOK", mac, "0x10")!!
+        protocol.start(RecordingSession(), GattContext(now, ScaleUnit.KILOGRAM, dmitry))
+        val result = protocol.onNotification(rx(v10(locked = true, weight = 803, visceral = 25600))).single() as GattEvent.Result
+        assertTrue(result.reading.invertsSex)
+        // Its numbers were worked out for the other sex: only the weight is kept
+        assertEquals(80.3, result.reading.weight!!.kilograms, 1e-9)
+        assertTrue(result.reading.scaleValues.isEmpty())
+        // Once the scale is told the opposite sex, its numbers are kept
+        val told = driver.gattProtocol("OKOK", mac, "0x10")!!
+        told.start(RecordingSession(), GattContext(now, ScaleUnit.KILOGRAM, dmitry, invertsSex = true))
+        val next = told.onNotification(rx(v10(locked = true, weight = 803, visceral = 25600))).single() as GattEvent.Result
+        assertEquals(22.5, next.reading.scaleValues[ScaleValues.FAT_PERCENT]!!, 1e-9)
     }
 
     @Test

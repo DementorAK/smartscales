@@ -1,5 +1,7 @@
 package dev.kinash.smartscales.core.protocol
 
+import dev.kinash.smartscales.core.model.ScaleValues
+
 import java.time.Instant
 import java.time.LocalDateTime
 
@@ -19,6 +21,11 @@ data class ScaleComposition(
     val bmrKcal: Double? = null,
     val visceralFat: Double? = null,
     val boneKg: Double? = null,
+    /**
+     * Sent with a fat and a visceral of 25600, by which OKOK knows a v1.0 scale that works its numbers out for
+     * the opposite sex of the one it is told ("deviceType 2"); its visceral is then not a value.
+     */
+    val invertsSex: Boolean = false,
 ) {
     /** The values by the identifiers the measurement keeps them under; see [ScaleValues]. */
     fun toValues(): Map<String, Double> = buildMap {
@@ -32,22 +39,6 @@ data class ScaleComposition(
     }
 }
 
-/** Identifiers of values a scale works out itself, kept with the measurement next to the raw data. */
-object ScaleValues {
-    const val FAT_PERCENT = "scale_fat_percent"
-    const val WATER_PERCENT = "scale_water_percent"
-    const val MUSCLE_PERCENT = "scale_muscle_percent"
-    const val MUSCLE_KG = "scale_muscle_kg"
-    const val BMR_KCAL = "scale_bmr_kcal"
-    const val VISCERAL_FAT = "scale_visceral_fat"
-    const val BONE_KG = "scale_bone_kg"
-
-    // Brought only by an import of another app's table (requirements §4.3)
-    const val PROTEIN_PERCENT = "scale_protein_percent"
-    const val BODY_AGE = "scale_body_age"
-    const val SKELETAL_MUSCLE_PERCENT = "scale_skeletal_muscle_percent"
-    const val LEAN_MASS_KG = "scale_lean_mass_kg"
-}
 
 /** A frame of the OKOK GATT protocol (`CA 10`, `CA 11`) from `FFF1`. */
 sealed interface OkokFrame {
@@ -113,13 +104,16 @@ class OkokParser {
         if (d.size < 7) return null
         val property = ScaleProperty(d[4].toUByteInt())
         val composition = if (property.locked && d.size >= 18) {
+            // A fat with a visceral of 25600 (0x6400) is OKOK's "deviceType 2": the scale wants the opposite sex
+            val invertsSex = (raw(d, 7) ?: 0) > 0 && d.uIntBe(15, 2) == INVERTS_SEX_VISCERAL
             ScaleComposition(
                 fatPercent = tenths(d, 7),
                 waterPercent = tenths(d, 9),
                 musclePercent = tenths(d, 11),
                 bmrKcal = bmr(d, 13),
-                visceralFat = tenths(d, 15),
+                visceralFat = if (invertsSex) null else tenths(d, 15),
                 boneKg = d[17].toUByteInt().takeIf { it != 0 && it != 0xFF }?.let { it / 10.0 },
+                invertsSex = invertsSex,
             )
         } else {
             null
@@ -205,6 +199,9 @@ class OkokParser {
         const val TYPE_USER_QUESTION = 0x14
         const val MISSING = 0xFFFF
         const val BMR_IN_TENTHS = 5000
+
+        /** The visceral fat by which OKOK tells a scale that wants the opposite sex. */
+        const val INVERTS_SEX_VISCERAL = 0x6400
     }
 }
 

@@ -257,8 +257,30 @@ class BuiltinFormulasTest {
     @Test
     fun everyBodyFatVariantHasTheSameZones() {
         val variants = BuiltinFormulas.file.indicators.filter { it.group == "bf" }
-        assertEquals(listOf("bf_bia", "bf_gallagher", "bf_deurenberg", "bf_navy"), variants.map { it.id })
+        // The scale's own value is judged by the same norms as the formulas
+        assertEquals(listOf("bf_bia", "bf_gallagher", "bf_deurenberg", "bf_navy", "bf_scale"), variants.map { it.id })
         variants.forEach { assertEquals(it.id, variants.first().zones, it.zones) }
         assertTrue(variants.none { it.approximateZones })
+    }
+
+    @Test
+    fun theScalesOwnValuesAreVariantsAfterTheFormulas() {
+        val model = FormulaModel.build(listOf(BuiltinFormulas.layer))
+        val man = mapOf<String, Any?>("weight" to 80.0, "height" to 180.0, "age" to 35.0, "sex" to 1.0, "male" to true, "female" to false)
+        val scale = man + mapOf("scale_fat_percent" to 21.3, "scale_water_percent" to 55.0, "scale_muscle_kg" to 36.0, "scale_bmr_kcal" to 1702.0)
+        val results = model.evaluate(scale)
+        assertEquals(21.3, results.value("bf_scale")!!, 1e-9)
+        assertEquals(44.0, results.value("tbw_scale")!!, 1e-9)
+        // Version 1.1 sends the muscle in kilograms, 1.0 as a percentage: either gives both
+        assertEquals(45.0, results.value("muscle_scale")!!, 1e-9)
+        assertEquals(36.0, results.value("muscle_mass_scale")!!, 1e-9)
+        assertEquals(1702.0, results.value("bmr_scale")!!, 1e-9)
+        assertEquals(null, results.value("bone_scale"))
+        // Last in their groups: a formula stays the primary variant, and the group falls back to it first
+        assertEquals("bf_scale", model.groups.getValue("bf").last())
+        assertEquals("bf_gallagher", results.group("bf")!!.first)
+        assertEquals("bf_scale", model.evaluate(scale, primary = mapOf("bf" to "bf_scale")).group("bf")!!.first)
+        // Without the scale's data they give nothing
+        assertEquals(null, model.evaluate(man).value("bf_scale"))
     }
 }

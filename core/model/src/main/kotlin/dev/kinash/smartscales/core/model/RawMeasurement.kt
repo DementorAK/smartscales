@@ -33,6 +33,8 @@ object ManualFields {
  * @property zone time zone where the measurement was taken; it fixes the local date, and with it the age,
  *   so a weighing near midnight or on a trip keeps the same age after the phone's zone changes.
  * @property manualValues manual input fields by identifier (see [ManualFields]); lengths in centimetres.
+ * @property scaleValues what the scale or another app worked out itself, by [ScaleValues] identifiers: not
+ *   recalculated, shown as "by the scale's data".
  */
 data class RawMeasurement(
     val takenAt: Instant,
@@ -43,6 +45,7 @@ data class RawMeasurement(
     val impedances: List<Impedance> = emptyList(),
     val heartRateBpm: Int? = null,
     val manualValues: Map<String, Double> = emptyMap(),
+    val scaleValues: Map<String, Double> = emptyMap(),
 ) {
     init {
         require(weightKg > 0) { "Weight must be positive: $weightKg" }

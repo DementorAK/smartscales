@@ -39,6 +39,11 @@ data class ScaleBinding(
     val historyAcceptedUntil: Instant? = null,
     val displayUnit: ScaleDisplayUnit = ScaleDisplayUnit.PROFILE,
     val syncTime: Boolean = true,
+    /**
+     * An OKOK v1.0 scale that works out its numbers for the opposite sex of the one it is told: told the
+     * other, as OKOK does once it has seen it ("deviceType 2", requirements §2.2).
+     */
+    val invertsSex: Boolean = false,
 ) {
     init {
         require(impedanceFactor > 0) { "Calibration factor must be positive: $impedanceFactor" }
@@ -51,10 +56,10 @@ enum class ScaleDisplayUnit { PROFILE, KILOGRAM, POUND, STONE, KEEP }
 internal fun ScaleBindingEntity.toScaleBinding() = ScaleBinding(
     id, mac, bleAddress, name, protocol, protocolVersion, productId, v2Key, v2KeyConfirmed, impedanceFactor, unbound,
     boundAt, historyAcceptedUntil, ScaleDisplayUnit.entries.firstOrNull { it.name == displayUnit } ?: ScaleDisplayUnit.PROFILE,
-    syncTime,
+    syncTime, invertsSex,
 )
 
 internal fun ScaleBinding.toEntity() = ScaleBindingEntity(
     id, mac, bleAddress, name, protocol, protocolVersion, productId, v2Key, v2KeyConfirmed, impedanceFactor, unbound,
-    boundAt, historyAcceptedUntil, displayUnit.name, syncTime,
+    boundAt, historyAcceptedUntil, displayUnit.name, syncTime, invertsSex,
 )

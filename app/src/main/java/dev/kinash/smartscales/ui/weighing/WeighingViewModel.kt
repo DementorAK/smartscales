@@ -280,6 +280,10 @@ class WeighingViewModel @Inject constructor(
     }
 
     private suspend fun CoroutineScope.onUpdate(binding: ScaleBinding, update: ConnectionUpdate, history: HistoryWindow) {
+        // The scale showed it wants the opposite sex: told so from the next connection on, as OKOK does
+        if (update is ConnectionUpdate.Event && update.event.reading.invertsSex && !binding.invertsSex) {
+            withContext(NonCancellable) { bindings.setInvertsSex(binding.id) }
+        }
         when (update) {
             is ConnectionUpdate.Connecting -> link(binding) { it.copy(connection = ConnectionStatus.CONNECTING) }
             ConnectionUpdate.Connected -> link(binding) { it.copy(connection = ConnectionStatus.CONNECTED) }
@@ -356,7 +360,7 @@ class WeighingViewModel @Inject constructor(
         )
         // Scales that keep several people (OKOK v1.1) get everyone, the profile on the main screen first
         val everyone = listOfNotNull(profile) + known.filter { it.id != profile?.id }
-        return GattContext(now, unit, profile?.let(::userOf), everyone.map(::userOf), syncTime = binding.syncTime)
+        return GattContext(now, unit, profile?.let(::userOf), everyone.map(::userOf), syncTime = binding.syncTime, invertsSex = binding.invertsSex)
     }
 
     /**

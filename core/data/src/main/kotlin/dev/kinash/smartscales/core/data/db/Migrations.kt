@@ -60,8 +60,15 @@ val MIGRATION_5_6 = object : Migration(5, 6) {
     }
 }
 
+/** OKOK v1.0 scales that want the opposite sex, which no scale is known to be yet. */
+val MIGRATION_6_7 = object : Migration(6, 7) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("ALTER TABLE `scale_binding` ADD COLUMN `invertsSex` INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
 /** All migrations, for the database builder and the migration tests. */
-val MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+val MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
 
 private fun SQLiteConnection.hasColumn(table: String, column: String): Boolean =
     prepare("PRAGMA table_info(`$table`)").use { statement ->

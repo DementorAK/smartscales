@@ -98,7 +98,7 @@ class MeasurementsCsv(private val resources: Resources, private val locale: Loca
         }
         model.indicators.values.filter { it.id !in model.hidden && it.def.group !in model.hidden }.forEach { indicator ->
             val def = indicator.def
-            val value = { row: MeasuredIndicators -> row.results?.value(indicator.id) ?: row.measurement.importedValues[indicator.id] }
+            val value = { row: MeasuredIndicators -> row.results?.value(indicator.id) }
             if (rows.none { value(it) != null }) return@forEach
             columns += Column(withUnit(def.name.text(language), unitLabel(def.unit, profile))) { row ->
                 value(row)?.let { indicatorNumber(it, def.unit, def.precision, profile) }.orEmpty()

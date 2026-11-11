@@ -1,5 +1,7 @@
 package dev.kinash.smartscales.core.protocol
 
+import dev.kinash.smartscales.core.model.ScaleValues
+
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -19,8 +21,9 @@ class OkokTest {
 
     private fun xor(d: ByteArray, from: Int, until: Int) = (from until until).fold(0) { x, i -> x xor d[i].toInt() }.toByte()
 
-    private fun v10(locked: Boolean, weight: Int, bmr: Int = 1650) = byteArrayOf(0xCA.toByte(), 0x10, 0x10, 0x00, kg1(locked).toByte()) +
-        be(weight) + be(225) + be(552) + be(380) + be(bmr) + be(85) + byteArrayOf(31)
+    private fun v10(locked: Boolean, weight: Int, bmr: Int = 1650, visceral: Int = 85, fat: Int = 225) =
+        byteArrayOf(0xCA.toByte(), 0x10, 0x10, 0x00, kg1(locked).toByte()) +
+            be(weight) + be(fat) + be(552) + be(380) + be(bmr) + be(visceral) + byteArrayOf(31)
 
     @Test
     fun v10WeightInProgressHasNoComposition() {
@@ -38,6 +41,19 @@ class OkokTest {
             ScaleComposition(fatPercent = 22.5, waterPercent = 55.2, musclePercent = 38.0, bmrKcal = 1650.0, visceralFat = 8.5, boneKg = 3.1),
             frame.composition,
         )
+    }
+
+    @Test
+    fun aVisceralOf25600WithAFatIsTheScaleThatWantsTheOppositeSex() {
+        val composition = (OkokParser().parse(v10(locked = true, weight = 803, visceral = 25600)) as OkokFrame.Weight).composition!!
+        assertTrue(composition.invertsSex)
+        // Not a visceral fat of 2560
+        assertNull(composition.visceralFat)
+        assertNull(composition.toValues()[ScaleValues.VISCERAL_FAT])
+        // Without a fat it is only a scale that measures no fat
+        val noFat = (OkokParser().parse(v10(locked = true, weight = 803, visceral = 25600, fat = 0)) as OkokFrame.Weight).composition!!
+        assertTrue(!noFat.invertsSex)
+        assertTrue(!(OkokParser().parse(v10(locked = true, weight = 803)) as OkokFrame.Weight).composition!!.invertsSex)
     }
 
     @Test

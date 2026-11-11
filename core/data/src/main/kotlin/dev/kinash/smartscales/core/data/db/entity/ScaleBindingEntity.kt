@@ -28,6 +28,7 @@ data class ScaleBindingEntity(
     val historyAcceptedUntil: Instant? = null,
     @ColumnInfo(defaultValue = "PROFILE") val displayUnit: String = "PROFILE",
     @ColumnInfo(defaultValue = "1") val syncTime: Boolean = true,
+    @ColumnInfo(defaultValue = "0") val invertsSex: Boolean = false,
 )
 
 /**

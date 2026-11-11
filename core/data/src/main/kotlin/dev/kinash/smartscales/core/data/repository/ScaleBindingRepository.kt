@@ -107,5 +107,8 @@ class ScaleBindingRepository @Inject constructor(
     /** The weight decrypted with [key] matched the display; ignored when the key was changed meanwhile. */
     suspend fun confirmKey(id: Long, key: String) = dao.confirmKey(id, key)
 
+    /** Remembers that the scale wants the opposite sex; it is not forgotten, as in OKOK. */
+    suspend fun setInvertsSex(id: Long) = dao.setInvertsSex(id)
+
     private fun normalizeMac(mac: String) = mac.uppercase()
 }

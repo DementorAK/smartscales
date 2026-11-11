@@ -75,6 +75,7 @@ data class ScaleBackup(
     val historyAcceptedUntil: String? = null,
     val displayUnit: String = "PROFILE",
     val syncTime: Boolean = true,
+    val invertsSex: Boolean = false,
     /** Profiles the scale is not told about. */
     val excludedProfiles: List<Long> = emptyList(),
 )

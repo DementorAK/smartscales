@@ -3,7 +3,7 @@ package dev.kinash.smartscales.importing
 import dev.kinash.smartscales.core.model.LengthUnit
 import dev.kinash.smartscales.core.model.ManualFields
 import dev.kinash.smartscales.core.model.WeightUnit
-import dev.kinash.smartscales.core.protocol.ScaleValues
+import dev.kinash.smartscales.core.model.ScaleValues
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime

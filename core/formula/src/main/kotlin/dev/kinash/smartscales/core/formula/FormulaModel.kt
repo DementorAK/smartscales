@@ -1,6 +1,7 @@
 package dev.kinash.smartscales.core.formula
 
 import dev.kinash.smartscales.core.model.ManualFields
+import dev.kinash.smartscales.core.model.ScaleValues
 import java.math.BigDecimal
 import java.math.RoundingMode
 
@@ -21,7 +22,9 @@ object StandardInputs {
         "waist" to ValueType.NUMBER,
         "hips" to ValueType.NUMBER,
         "neck" to ValueType.NUMBER,
-    ) + SegmentInputs.names.associateWith { ValueType.NUMBER }
+    ) + SegmentInputs.names.associateWith { ValueType.NUMBER } +
+        // What the scale or another app worked out itself, missing where it gave nothing (requirements §4.3)
+        ScaleValues.all.associateWith { ValueType.NUMBER }
 }
 
 /**

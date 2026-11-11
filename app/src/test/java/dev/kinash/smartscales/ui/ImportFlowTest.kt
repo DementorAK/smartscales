@@ -23,7 +23,7 @@ import dev.kinash.smartscales.core.data.repository.MeasurementRepository
 import dev.kinash.smartscales.core.data.repository.ProfileRepository
 import dev.kinash.smartscales.core.model.MeasurementSource
 import dev.kinash.smartscales.core.model.Sex
-import dev.kinash.smartscales.core.protocol.ScaleValues
+import dev.kinash.smartscales.core.model.ScaleValues
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals

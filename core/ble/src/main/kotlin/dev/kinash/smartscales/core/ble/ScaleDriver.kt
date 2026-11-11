@@ -84,6 +84,8 @@ data class ScaleReading(
     val userId: Int? = null,
     /** What the scale worked out itself, by `ScaleValues` identifiers; kept as the scale's data. */
     val scaleValues: Map<String, Double> = emptyMap(),
+    /** The scale showed it wants the opposite sex: the app remembers that for this scale. */
+    val invertsSex: Boolean = false,
 )
 
 /** Keys that unlock encrypted advertisements, looked up by the scale's own MAC. */

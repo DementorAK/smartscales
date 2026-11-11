@@ -67,8 +67,12 @@ internal class OkokProtocol(
     @Volatile
     private var answered = false
 
+    /** Whether the app already tells this scale the opposite sex; until then its numbers are for the wrong one. */
+    private var invertsSexKnown = false
+
     override suspend fun start(session: GattSession, context: GattContext) {
         this.session = session
+        invertsSexKnown = context.invertsSex
         session.subscribe(ChipseaGatt.CHIPSEA_SERVICE, ChipseaGatt.CHIPSEA_RX)
         if (multiUser) {
             val users = context.users.map(::okokUser)
@@ -85,7 +89,9 @@ internal class OkokProtocol(
             val clock = LocalDateTime.ofInstant(context.now, zone())
             repeat(USER_V10_REPEATS) {
                 delay(USER_V10_GAP_MS)
-                write(session, OkokCommands.userV10(clock, okokUser(user)))
+                // As OKOK does for a scale it has seen working for the opposite sex
+                val told = if (context.invertsSex) user.copy(male = !user.male) else user
+                write(session, OkokCommands.userV10(clock, okokUser(told)))
             }
         }
     }
@@ -161,7 +167,9 @@ internal class OkokProtocol(
             locked = locked,
             propertyBits = frame.property.bits,
             userId = userId,
-            scaleValues = if (weight != null) composition?.toValues().orEmpty() else emptyMap(),
+            // The result that shows a scale wants the opposite sex was worked out for the other one: only its weight
+            scaleValues = if (weight != null && !(composition?.invertsSex == true && !invertsSexKnown)) composition?.toValues().orEmpty() else emptyMap(),
+            invertsSex = composition?.invertsSex == true,
         )
     }
 

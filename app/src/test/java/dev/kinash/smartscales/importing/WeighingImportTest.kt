@@ -2,7 +2,7 @@ package dev.kinash.smartscales.importing
 
 import dev.kinash.smartscales.core.model.LengthUnit
 import dev.kinash.smartscales.core.model.ManualFields
-import dev.kinash.smartscales.core.protocol.ScaleValues
+import dev.kinash.smartscales.core.model.ScaleValues
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

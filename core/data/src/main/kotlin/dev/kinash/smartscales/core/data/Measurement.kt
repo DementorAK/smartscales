@@ -50,7 +50,7 @@ data class Measurement(
 
     /** Input for formulas, or null in the inbox where the person is not known yet. */
     fun toRawMeasurement(): RawMeasurement? = person?.let {
-        RawMeasurement(takenAt, zone, source, weightKg, it, impedances, heartRateBpm, manualValues)
+        RawMeasurement(takenAt, zone, source, weightKg, it, impedances, heartRateBpm, manualValues, importedValues)
     }
 }
 

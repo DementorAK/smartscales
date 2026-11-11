@@ -30,8 +30,26 @@ class SchemaTest {
 
     @Test
     fun latestVersionMatchesEntities() {
-        helper.createDatabase(6).close()
-        helper.runMigrationsAndValidate(6).close()
+        helper.createDatabase(7).close()
+        helper.runMigrationsAndValidate(7).close()
+    }
+
+    @Test
+    fun migration6To7KnowsNoScaleThatInvertsSex() {
+        helper.createDatabase(6).use {
+            it.execSQL(
+                """
+                INSERT INTO scale_binding (mac, protocol, v2KeyConfirmed, impedanceFactor, unbound, boundAt, displayUnit, syncTime)
+                VALUES ('AA:BB:CC:DD:EE:FF', 'OKOK', 0, 1.0, 0, 0, 'PROFILE', 1)
+                """,
+            )
+        }
+        helper.runMigrationsAndValidate(7, MIGRATIONS.toList()).use { db ->
+            db.prepare("SELECT invertsSex FROM scale_binding").use {
+                it.step()
+                assertEquals(0L, it.getLong(0))
+            }
+        }
     }
 
     @Test
@@ -44,7 +62,7 @@ class SchemaTest {
                 """,
             )
         }
-        helper.runMigrationsAndValidate(6, MIGRATIONS.toList()).use { db ->
+        helper.runMigrationsAndValidate(6, MIGRATIONS.take(5)).use { db ->
             db.prepare("SELECT name, cards FROM profile").use {
                 it.step()
                 assertEquals("Dmitry", it.getText(0))

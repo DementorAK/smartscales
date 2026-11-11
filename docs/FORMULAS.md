@@ -136,6 +136,23 @@ Lean body mass is a separate estimate; it is not used as fat-free mass.
 | `whtr` | `WC / H` | Browning 2010 [18], Ashwell 2011 [19] |
 | `whr` | `WC / HC` | WHO 2008 [17] |
 
+### The scale's own values
+
+Some scales (OKOK v1.0/v1.1) send no impedance but numbers they work out themselves, and a table imported from
+another app (OKOK International, openScale) brings that app's numbers. They are kept with the weighing as they
+came and shown as variants "by the scale" — passed through, not equations, so this set has no source for them.
+They come last in their groups: a formula stays the default, and the profile may choose the scale's value
+instead. Body fat by the scale is judged by the same ranges as the other body fat equations.
+
+| ID | Value | From |
+|---|---|---|
+| `bf_scale` | body fat, % | the scale or the imported table |
+| `lbm_scale` | lean body mass, kg | imported table |
+| `tbw_scale` | body water, litres: `water % · W / 100` (a kilogram of water taken as a litre) | the scale or the table |
+| `bmr_scale` | basal metabolic rate, kcal | the scale or the table |
+| `muscle_scale`, `muscle_mass_scale` | muscle, % and kg: either from the other (v1.0 sends %, v1.1 kg) | the scale or the table |
+| `skeletal_muscle_scale`, `bone_scale`, `visceral_fat_scale`, `protein_scale`, `body_age_scale` | as named | the scale or the table |
+
 ## Reference ranges
 
 Ranges colour the values: low, normal, elevated, high. A value exactly at a bound belongs to the range above it,

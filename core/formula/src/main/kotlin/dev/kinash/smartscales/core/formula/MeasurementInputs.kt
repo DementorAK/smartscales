@@ -3,6 +3,7 @@ package dev.kinash.smartscales.core.formula
 import dev.kinash.smartscales.core.model.Impedance
 import dev.kinash.smartscales.core.model.ManualFields
 import dev.kinash.smartscales.core.model.RawMeasurement
+import dev.kinash.smartscales.core.model.ScaleValues
 import dev.kinash.smartscales.core.model.Sex
 
 /** The values formulas see for one measurement, by input name ([StandardInputs] and inputs that sets declare). */
@@ -28,6 +29,7 @@ object MeasurementInputs {
         values["female"] = !male
         values["impedance"] = if (placeholder) null else footToFoot(raw)?.let { it * impedanceFactor }
         values["heart_rate"] = raw.heartRateBpm?.toDouble()
+        for ((id, value) in raw.scaleValues) if (id in ScaleValues.all && value.isFinite()) values[id] = value
         // Segments with the same calibration as foot to foot: the factor is of the scale's measuring circuit
         for (impedance in raw.impedances) {
             val segment = impedance.channel - 1

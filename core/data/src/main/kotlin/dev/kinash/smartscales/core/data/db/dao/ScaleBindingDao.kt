@@ -47,6 +47,9 @@ interface ScaleBindingDao {
     @Query("UPDATE scale_binding SET v2KeyConfirmed = 1 WHERE id = :id AND v2Key = :key")
     suspend fun confirmKey(id: Long, key: String)
 
+    @Query("UPDATE scale_binding SET invertsSex = 1 WHERE id = :id")
+    suspend fun setInvertsSex(id: Long)
+
     @Query("SELECT profileId FROM scale_excluded_profile WHERE bindingId = :id")
     suspend fun excludedProfiles(id: Long): List<Long>
 

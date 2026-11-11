@@ -85,6 +85,11 @@ class MeasurementRepository @Inject constructor(
         id
     }
 
+    /** Saves [measurements] of an import together: all of them or, on a failure, none. */
+    suspend fun addAll(measurements: List<Measurement>) = database.withTransaction {
+        measurements.forEach { add(it) }
+    }
+
     /** Replaces the stored measurement and everything attached to it. */
     suspend fun update(measurement: Measurement) {
         require(measurement.id != 0L) { "Measurement is not saved yet" }

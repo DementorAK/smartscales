@@ -683,4 +683,83 @@
     <string name="csv_column_unit">%1$s, %2$s</string>
     <string name="csv_lb">lb</string>
     <string name="csv_in">in</string>
+    <string name="import_title">Import weighings</string>
+    <string name="settings_import_hint">From OKOK International, openScale or any table</string>
+    <string name="import_hint">Choose a file with weighings: OKOK International\'s Excel export (.xls), openScale\'s CSV, this app\'s table, or any CSV or Excel table with a date and a weight. The columns are recognised and can be changed before importing. Weighings already in the profile are not added twice. Another app\'s values without an impedance are kept as they are.</string>
+    <string name="import_pick">Choose a file</string>
+    <string name="import_unreadable">The file could not be read</string>
+    <string name="import_no_weighings">No date and weight columns were found in the file</string>
+    <string name="import_failed">The weighings could not be imported; nothing was added</string>
+    <string name="import_file">%1$s · %2$s</string>
+    <string name="import_source_okok">OKOK International</string>
+    <string name="import_source_openscale">openScale</string>
+    <string name="import_source_smartscales">SmartScales</string>
+    <string name="import_source_table">a table</string>
+    <string name="import_profile">Into the profile</string>
+    <string name="import_reading">How to read it</string>
+    <string name="import_weight_unit">Weight in</string>
+    <string name="import_length_unit">Lengths in</string>
+    <string name="import_unit_kg">kilograms</string>
+    <string name="import_unit_lb">pounds</string>
+    <string name="import_unit_st">stones and pounds</string>
+    <string name="import_unit_jin">jin (0.5 kg)</string>
+    <string name="import_unit_cm">centimetres</string>
+    <string name="import_unit_in">inches</string>
+    <string name="import_date_format">Dates written as</string>
+    <string name="import_date_iso">2026-01-31 07:30</string>
+    <string name="import_date_dot">31.01.2026 07:30</string>
+    <string name="import_date_day_slash">31/01/2026 07:30</string>
+    <string name="import_date_month_slash">01/31/2026 07:30</string>
+    <string name="import_date_year_slash">2026/01/31 07:30</string>
+    <string name="import_date_excel">Excel date number</string>
+    <string name="import_date_okok">MM-DD within the export\'s period</string>
+    <string name="import_columns">Columns</string>
+    <string name="import_columns_hint">What each column holds; a column marked "Do not import" is left out.</string>
+    <string name="import_column">Column %1$d</string>
+    <string name="import_column_example">%1$s: %2$s</string>
+    <string name="import_field_ignore">Do not import</string>
+    <string name="import_field_date_time">Date and time</string>
+    <string name="import_field_date">Date</string>
+    <string name="import_field_time">Time</string>
+    <string name="import_field_weight">Weight</string>
+    <string name="import_field_impedance">Impedance, Ω</string>
+    <string name="import_field_heart_rate">Heart rate</string>
+    <string name="import_field_note">Note</string>
+    <string name="import_field_tags">Tags</string>
+    <string name="import_field_fat" formatted="false">Body fat, % (as given)</string>
+    <string name="import_field_water" formatted="false">Body water, % (as given)</string>
+    <string name="import_field_muscle" formatted="false">Muscle, % (as given)</string>
+    <string name="import_field_muscle_kg">Muscle mass (as given)</string>
+    <string name="import_field_skeletal" formatted="false">Skeletal muscle, % (as given)</string>
+    <string name="import_field_lean">Lean body mass (as given)</string>
+    <string name="import_field_bone">Bone mass (as given)</string>
+    <string name="import_field_protein" formatted="false">Protein, % (as given)</string>
+    <string name="import_field_visceral">Visceral fat (as given)</string>
+    <string name="import_field_bmr">Basal metabolic rate, kcal (as given)</string>
+    <string name="import_field_body_age">Body age (as given)</string>
+    <string name="import_result">Result</string>
+    <string name="import_no_profile">Choose a profile</string>
+    <string name="import_checking">Checking…</string>
+    <string name="import_period">from %1$s to %2$s</string>
+    <string name="import_do">Import</string>
+    <plurals name="import_will_add">
+        <item quantity="one">%1$d weighing will be added</item>
+        <item quantity="other">%1$d weighings will be added</item>
+    </plurals>
+    <plurals name="import_duplicates">
+        <item quantity="one">%1$d is in the profile already and is left out</item>
+        <item quantity="other">%1$d are in the profile already and are left out</item>
+    </plurals>
+    <plurals name="import_before_birth">
+        <item quantity="one">%1$d is dated before the birth date and is left out</item>
+        <item quantity="other">%1$d are dated before the birth date and are left out</item>
+    </plurals>
+    <plurals name="import_unreadable_rows">
+        <item quantity="one">%1$d row has no date or weight that reads: %2$s</item>
+        <item quantity="other">%1$d rows have no date or weight that reads: %2$s</item>
+    </plurals>
+    <plurals name="import_added">
+        <item quantity="one">%1$d weighing added</item>
+        <item quantity="other">%1$d weighings added</item>
+    </plurals>
 </resources>

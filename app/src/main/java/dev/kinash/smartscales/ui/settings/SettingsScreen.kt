@@ -104,6 +104,7 @@ fun SettingsScreen(
     onOpenChildNorms: () -> Unit,
     onOpenBackup: () -> Unit,
     onOpenCsv: () -> Unit,
+    onOpenImport: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val stored by viewModel.matchThresholdKg.collectAsStateWithLifecycle()
@@ -180,6 +181,11 @@ fun SettingsScreen(
                 title = stringResource(R.string.csv_title),
                 hint = stringResource(R.string.settings_csv_hint),
                 onClick = onOpenCsv,
+            )
+            SettingsItem(
+                title = stringResource(R.string.import_title),
+                hint = stringResource(R.string.settings_import_hint),
+                onClick = onOpenImport,
             )
             Column(Modifier.padding(horizontal = ScreenPadding).padding(top = ScreenPadding)) {
                 SectionTitle(stringResource(R.string.settings_debug))

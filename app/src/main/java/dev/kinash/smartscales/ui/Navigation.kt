@@ -9,6 +9,7 @@ import dev.kinash.smartscales.ui.compare.CompareScreen
 import dev.kinash.smartscales.ui.formulas.ChildNormsScreen
 import dev.kinash.smartscales.ui.settings.BackupScreen
 import dev.kinash.smartscales.ui.settings.CsvExportScreen
+import dev.kinash.smartscales.ui.settings.ImportScreen
 import dev.kinash.smartscales.ui.formulas.FormulaSetsScreen
 import dev.kinash.smartscales.ui.formulas.editor.FormulaSetEditScreen
 import dev.kinash.smartscales.ui.history.HistoryScreen
@@ -80,6 +81,9 @@ data object BackupRoute
 @Serializable
 data object CsvExportRoute
 
+@Serializable
+data object ImportRoute
+
 /** The editor of the person's formula set [setId], or of a new one. */
 @Serializable
 data class FormulaSetEditRoute(val setId: Long? = null)
@@ -138,6 +142,7 @@ fun SmartScalesNavHost() {
                 onOpenChildNorms = { navController.navigate(ChildNormsRoute) },
                 onOpenBackup = { navController.navigate(BackupRoute) },
                 onOpenCsv = { navController.navigate(CsvExportRoute) },
+                onOpenImport = { navController.navigate(ImportRoute) },
             )
         }
         composable<FormulaSetsRoute> {
@@ -151,6 +156,7 @@ fun SmartScalesNavHost() {
         composable<ChildNormsRoute> { ChildNormsScreen(onBack = back) }
         composable<BackupRoute> { BackupScreen(onBack = back) }
         composable<CsvExportRoute> { CsvExportScreen(onBack = back) }
+        composable<ImportRoute> { ImportScreen(onBack = back) }
         composable<ScaleEditRoute> { ScaleEditScreen(onDone = back) }
         composable<InboxRoute> {
             InboxScreen(

@@ -711,4 +711,93 @@
     <string name="csv_column_unit">%1$s, %2$s</string>
     <string name="csv_lb">фунты</string>
     <string name="csv_in">дюймы</string>
+    <string name="import_title">Импорт взвешиваний</string>
+    <string name="settings_import_hint">Из OKOK International, openScale или любой таблицы</string>
+    <string name="import_hint">Выберите файл со взвешиваниями: выгрузку OKOK International в Excel (.xls), CSV из openScale, таблицу этого приложения или любую таблицу CSV или Excel с датой и весом. Колонки распознаются, и их можно поправить перед импортом. Взвешивания, которые уже есть в профиле, второй раз не добавляются. Значения другого приложения без импеданса сохраняются как есть.</string>
+    <string name="import_pick">Выбрать файл</string>
+    <string name="import_unreadable">Не удалось прочитать файл</string>
+    <string name="import_no_weighings">В файле не нашлось колонок с датой и весом</string>
+    <string name="import_failed">Не удалось импортировать взвешивания; ничего не добавлено</string>
+    <string name="import_file">%1$s · %2$s</string>
+    <string name="import_source_okok">OKOK International</string>
+    <string name="import_source_openscale">openScale</string>
+    <string name="import_source_smartscales">SmartScales</string>
+    <string name="import_source_table">таблица</string>
+    <string name="import_profile">В профиль</string>
+    <string name="import_reading">Как читать</string>
+    <string name="import_weight_unit">Вес в</string>
+    <string name="import_length_unit">Длины в</string>
+    <string name="import_unit_kg">килограммах</string>
+    <string name="import_unit_lb">фунтах</string>
+    <string name="import_unit_st">стоунах и фунтах</string>
+    <string name="import_unit_jin">цзинях (0,5 кг)</string>
+    <string name="import_unit_cm">сантиметрах</string>
+    <string name="import_unit_in">дюймах</string>
+    <string name="import_date_format">Даты записаны как</string>
+    <string name="import_date_iso">2026-01-31 07:30</string>
+    <string name="import_date_dot">31.01.2026 07:30</string>
+    <string name="import_date_day_slash">31/01/2026 07:30</string>
+    <string name="import_date_month_slash">01/31/2026 07:30</string>
+    <string name="import_date_year_slash">2026/01/31 07:30</string>
+    <string name="import_date_excel">Число даты Excel</string>
+    <string name="import_date_okok">ММ-ДД в периоде выгрузки</string>
+    <string name="import_columns">Колонки</string>
+    <string name="import_columns_hint">Что в каждой колонке; колонка «Не импортировать» пропускается.</string>
+    <string name="import_column">Колонка %1$d</string>
+    <string name="import_column_example">%1$s: %2$s</string>
+    <string name="import_field_ignore">Не импортировать</string>
+    <string name="import_field_date_time">Дата и время</string>
+    <string name="import_field_date">Дата</string>
+    <string name="import_field_time">Время</string>
+    <string name="import_field_weight">Вес</string>
+    <string name="import_field_impedance">Импеданс, Ом</string>
+    <string name="import_field_heart_rate">Пульс</string>
+    <string name="import_field_note">Заметка</string>
+    <string name="import_field_tags">Метки</string>
+    <string name="import_field_fat" formatted="false">Жир, % (как в файле)</string>
+    <string name="import_field_water" formatted="false">Вода, % (как в файле)</string>
+    <string name="import_field_muscle" formatted="false">Мышцы, % (как в файле)</string>
+    <string name="import_field_muscle_kg">Масса мышц (как в файле)</string>
+    <string name="import_field_skeletal" formatted="false">Скелетные мышцы, % (как в файле)</string>
+    <string name="import_field_lean">Безжировая масса (как в файле)</string>
+    <string name="import_field_bone">Костная масса (как в файле)</string>
+    <string name="import_field_protein" formatted="false">Белок, % (как в файле)</string>
+    <string name="import_field_visceral">Висцеральный жир (как в файле)</string>
+    <string name="import_field_bmr">Основной обмен, ккал (как в файле)</string>
+    <string name="import_field_body_age">Возраст тела (как в файле)</string>
+    <string name="import_result">Итог</string>
+    <string name="import_no_profile">Выберите профиль</string>
+    <string name="import_checking">Проверка…</string>
+    <string name="import_period">с %1$s по %2$s</string>
+    <string name="import_do">Импортировать</string>
+    <plurals name="import_will_add">
+        <item quantity="one">Будет добавлено %1$d взвешивание</item>
+        <item quantity="few">Будет добавлено %1$d взвешивания</item>
+        <item quantity="many">Будет добавлено %1$d взвешиваний</item>
+        <item quantity="other">Будет добавлено %1$d взвешивания</item>
+    </plurals>
+    <plurals name="import_duplicates">
+        <item quantity="one">%1$d уже есть в профиле и пропускается</item>
+        <item quantity="few">%1$d уже есть в профиле и пропускаются</item>
+        <item quantity="many">%1$d уже есть в профиле и пропускаются</item>
+        <item quantity="other">%1$d уже есть в профиле и пропускаются</item>
+    </plurals>
+    <plurals name="import_before_birth">
+        <item quantity="one">%1$d с датой раньше рождения пропускается</item>
+        <item quantity="few">%1$d с датой раньше рождения пропускаются</item>
+        <item quantity="many">%1$d с датой раньше рождения пропускаются</item>
+        <item quantity="other">%1$d с датой раньше рождения пропускаются</item>
+    </plurals>
+    <plurals name="import_unreadable_rows">
+        <item quantity="one">В %1$d строке не читается дата или вес: %2$s</item>
+        <item quantity="few">В %1$d строках не читается дата или вес: %2$s</item>
+        <item quantity="many">В %1$d строках не читается дата или вес: %2$s</item>
+        <item quantity="other">В %1$d строки не читается дата или вес: %2$s</item>
+    </plurals>
+    <plurals name="import_added">
+        <item quantity="one">Добавлено %1$d взвешивание</item>
+        <item quantity="few">Добавлено %1$d взвешивания</item>
+        <item quantity="many">Добавлено %1$d взвешиваний</item>
+        <item quantity="other">Добавлено %1$d взвешивания</item>
+    </plurals>
 </resources>

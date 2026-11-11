@@ -41,6 +41,12 @@ object ScaleValues {
     const val BMR_KCAL = "scale_bmr_kcal"
     const val VISCERAL_FAT = "scale_visceral_fat"
     const val BONE_KG = "scale_bone_kg"
+
+    // Brought only by an import of another app's table (requirements §4.3)
+    const val PROTEIN_PERCENT = "scale_protein_percent"
+    const val BODY_AGE = "scale_body_age"
+    const val SKELETAL_MUSCLE_PERCENT = "scale_skeletal_muscle_percent"
+    const val LEAN_MASS_KG = "scale_lean_mass_kg"
 }
 
 /** A frame of the OKOK GATT protocol (`CA 10`, `CA 11`) from `FFF1`. */

@@ -52,6 +52,17 @@ data class ProfileBackup(
     val manualValues: Map<String, Double> = emptyMap(),
     /** The variant chosen for each indicator group. */
     val mainVariants: Map<String, String> = emptyMap(),
+    val reminder: ReminderBackup? = null,
+)
+
+/** A profile's reminder to weigh: days as their English names, the time as `07:30`. */
+@Serializable
+data class ReminderBackup(
+    val time: String,
+    val onSchedule: Boolean,
+    val days: List<String>,
+    val onGap: Boolean,
+    val gapDays: Int,
 )
 
 @Serializable

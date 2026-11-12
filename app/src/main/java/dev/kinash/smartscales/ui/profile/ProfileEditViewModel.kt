@@ -38,7 +38,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import dev.kinash.smartscales.core.data.Reminder
 import java.time.Clock
+import java.time.DayOfWeek
+import java.time.LocalTime
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
@@ -59,6 +62,12 @@ data class ProfileForm(
     val circumferences: Map<String, String> = emptyMap(),
     /** Cards on the main screen after the weight card, in order; see [Profile.cards]. */
     val cards: List<String> = DEFAULT_CARDS,
+    /** The reminder to weigh, off unless turned on (requirements §6.5); [reminderGapDays] as typed. */
+    val reminderTime: LocalTime = Reminder.DEFAULT_TIME,
+    val reminderOnSchedule: Boolean = false,
+    val reminderDays: Set<DayOfWeek> = DayOfWeek.entries.toSet(),
+    val reminderOnGap: Boolean = false,
+    val reminderGapDays: String = Reminder.DEFAULT_GAP_DAYS.toString(),
 )
 
 /**
@@ -105,7 +114,7 @@ fun variantMethod(full: String, group: String): String {
     return rest.removeSurrounding("(", ")").trim().replaceFirstChar { it.uppercase() }
 }
 
-enum class ProfileField { NAME, SEX, BIRTH_DATE, HEIGHT, GOAL, CIRCUMFERENCES }
+enum class ProfileField { NAME, SEX, BIRTH_DATE, HEIGHT, GOAL, CIRCUMFERENCES, REMINDER }
 
 /** Sex or birth date changed: whether past measurements get them too. */
 data class ApplyToPastQuestion(
@@ -184,6 +193,7 @@ class ProfileEditViewModel @Inject constructor(
                 val circumferences = CircumferenceFields.associateWith { lengthInput(kept[it], profile.lengthUnit) }
                 circumferencePrefills = kept.mapValues { (field, cm) -> Prefill(circumferences.getValue(field), cm) }
                 val cards = cardsOf(profile)
+                val reminder = profiles.getReminder(profile.id)
                 val storedVariants = profiles.observeMainVariants(profile.id).first()
                 _state.update { it.copy(variantGroups = offeredGroups(cards, storedVariants.keys)) }
                 val form = ProfileForm(
@@ -198,6 +208,11 @@ class ProfileEditViewModel @Inject constructor(
                     color = profile.color,
                     avatar = profile.avatar.orEmpty(),
                     goal = goal,
+                    reminderTime = reminder.time,
+                    reminderOnSchedule = reminder.onSchedule,
+                    reminderDays = reminder.days,
+                    reminderOnGap = reminder.onGap,
+                    reminderGapDays = reminder.gapDays.toString(),
                     // A stored choice the formula sets no longer offer (a variant renamed, a set switched off)
                     // is dropped here, and saving clears it
                     variants = storedVariants.filter { (group, variant) ->
@@ -323,6 +338,7 @@ class ProfileEditViewModel @Inject constructor(
             if (circumferencesCm(form).values.any { it != null && it !in MeasurementEditViewModel.CIRCUMFERENCE_RANGE_CM }) {
                 add(ProfileField.CIRCUMFERENCES)
             }
+            if (form.reminderOnGap && form.reminderGapDays.trim().toIntOrNull()?.let { it in Reminder.GAP_DAYS } != true) add(ProfileField.REMINDER)
         }
         _state.update { it.copy(errors = errors) }
         if (errors.isNotEmpty()) return
@@ -429,10 +445,18 @@ class ProfileEditViewModel @Inject constructor(
         val choices = _state.value.form.variants.filter { (group, variant) ->
             groups.any { it.id == group && it.allows(variant, profile.sex) }
         }
+        val form = _state.value.form
         suspend fun saveDetails(id: Long) {
             if (!child) profiles.setGoal(id, ProfileRepository.WEIGHT_GOAL, goalKg)
             profiles.setManualValues(id, circumferences)
             profiles.setMainVariants(id, groups.map { it.id }, choices)
+            profiles.setReminder(
+                Reminder(
+                    profileId = id, time = form.reminderTime, onSchedule = form.reminderOnSchedule, days = form.reminderDays,
+                    onGap = form.reminderOnGap,
+                    gapDays = form.reminderGapDays.trim().toIntOrNull()?.coerceIn(Reminder.GAP_DAYS) ?: Reminder.DEFAULT_GAP_DAYS,
+                ),
+            )
         }
         viewModelScope.launch {
             val assignId = route.assignMeasurementId

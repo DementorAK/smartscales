@@ -55,6 +55,10 @@ class MeasurementRepository @Inject constructor(
     /** Weight of each profile's latest measurement, by profile id; profiles without measurements are absent. */
     suspend fun latestWeights(): Map<Long, Double> = dao.latestWeights().associate { it.profileId to it.weightKg }
 
+    /** When each profile last weighed; a profile with no weighings is absent. */
+    fun observeLastWeighings(): Flow<Map<Long, Instant>> =
+        dao.observeLastWeighings().map { list -> list.associate { it.profileId to it.takenAt } }
+
     /** The newest weighing from this scale, in any profile or the inbox. */
     suspend fun latestFromScale(bindingId: Long): Measurement? = dao.latestFromScale(bindingId)?.toMeasurement()
 

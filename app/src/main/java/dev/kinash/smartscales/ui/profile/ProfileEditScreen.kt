@@ -271,6 +271,8 @@ fun ProfileEditScreen(onDone: () -> Unit, viewModel: ProfileEditViewModel = hilt
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            SectionLabel(stringResource(R.string.reminder_section), isError = ProfileField.REMINDER in state.errors)
+            ReminderSection(form, ProfileField.REMINDER in state.errors, viewModel::edit)
         }
     }
 

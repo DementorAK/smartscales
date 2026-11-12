@@ -13,6 +13,12 @@ import dev.kinash.smartscales.core.data.db.entity.ProfileEntity
 import dev.kinash.smartscales.core.data.db.entity.ProfileGoalEntity
 import dev.kinash.smartscales.core.data.db.entity.ProfileMainVariantEntity
 import dev.kinash.smartscales.core.data.db.entity.ProfileManualValueEntity
+import dev.kinash.smartscales.core.data.db.entity.ProfileReminderEntity
+import dev.kinash.smartscales.core.data.Reminder
+import dev.kinash.smartscales.core.data.toEntity
+import dev.kinash.smartscales.core.data.toReminder
+import java.time.DayOfWeek
+import java.time.LocalTime
 import dev.kinash.smartscales.core.data.db.entity.ScaleBindingEntity
 import dev.kinash.smartscales.core.data.db.entity.ScaleExcludedProfileEntity
 import dev.kinash.smartscales.core.data.db.entity.TagEntity
@@ -44,6 +50,7 @@ class BackupRepository @Inject constructor(
             val goals = dao.goals().groupBy { it.profileId }
             val variants = dao.mainVariants().groupBy { it.profileId }
             val kept = dao.profileManualValues().groupBy { it.profileId }
+            val reminders = dao.reminders().associateBy { it.profileId }
             val excluded = dao.excludedProfiles().groupBy { it.bindingId }
             val impedances = dao.impedances().groupBy { it.measurementId }
             val manual = dao.manualValues().groupBy { it.measurementId }
@@ -60,6 +67,9 @@ class BackupRepository @Inject constructor(
                         goals = goals[p.id].orEmpty().map { GoalBackup(it.indicatorId, it.targetValue, it.setAt.toString()) },
                         manualValues = kept[p.id].orEmpty().associate { it.fieldId to it.value },
                         mainVariants = variants[p.id].orEmpty().associate { it.groupId to it.indicatorId },
+                        reminder = reminders[p.id]?.toReminder()?.let { r ->
+                            ReminderBackup(r.time.toString(), r.onSchedule, r.days.sortedBy { it.ordinal }.map { it.name }, r.onGap, r.gapDays)
+                        },
                     )
                 },
                 scales = dao.scales().map { s ->
@@ -121,6 +131,7 @@ class BackupRepository @Inject constructor(
                 dao.clearGoals()
                 dao.clearMainVariants()
                 dao.clearProfileManualValues()
+                dao.clearReminders()
                 dao.clearProfiles()
                 dao.clearFormulaSets()
 
@@ -128,6 +139,7 @@ class BackupRepository @Inject constructor(
                 dao.insertGoals(rows.goals)
                 dao.insertMainVariants(rows.mainVariants)
                 dao.insertProfileManualValues(rows.profileManualValues)
+                dao.insertReminders(rows.reminders)
                 dao.insertScales(rows.scales)
                 dao.insertExcludedProfiles(rows.excluded)
                 dao.insertTags(rows.tags)
@@ -151,6 +163,7 @@ class BackupRepository @Inject constructor(
         val goals: List<ProfileGoalEntity>,
         val mainVariants: List<ProfileMainVariantEntity>,
         val profileManualValues: List<ProfileManualValueEntity>,
+        val reminders: List<ProfileReminderEntity>,
         val scales: List<ScaleBindingEntity>,
         val excluded: List<ScaleExcludedProfileEntity>,
         val tags: List<TagEntity>,
@@ -173,6 +186,14 @@ class BackupRepository @Inject constructor(
                 goals = b.profiles.flatMap { p -> p.goals.map { ProfileGoalEntity(p.id, it.indicatorId, it.targetValue, Instant.parse(it.setAt)) } },
                 mainVariants = b.profiles.flatMap { p -> p.mainVariants.map { (group, variant) -> ProfileMainVariantEntity(p.id, group, variant) } },
                 profileManualValues = b.profiles.flatMap { p -> p.manualValues.map { (field, value) -> ProfileManualValueEntity(p.id, field, value) } },
+                reminders = b.profiles.mapNotNull { p ->
+                    p.reminder?.let { r ->
+                        Reminder(
+                            profileId = p.id, time = LocalTime.parse(r.time), onSchedule = r.onSchedule,
+                            days = r.days.map(DayOfWeek::valueOf).toSet(), onGap = r.onGap, gapDays = r.gapDays,
+                        ).toEntity()
+                    }
+                },
                 scales = b.scales.map { s ->
                     ScaleBindingEntity(
                         id = s.id, mac = s.mac, bleAddress = s.bleAddress, name = s.name, protocol = s.protocol,

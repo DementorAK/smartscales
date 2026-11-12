@@ -1,6 +1,8 @@
 package dev.kinash.smartscales.core.data.db.dao
 
 import androidx.room.Dao
+import dev.kinash.smartscales.core.data.db.entity.ProfileReminderEntity
+import androidx.room.OnConflictStrategy
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
@@ -13,6 +15,21 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ProfileDao {
+    @Query("SELECT * FROM profile_reminder")
+    fun observeReminders(): Flow<List<ProfileReminderEntity>>
+
+    @Query("SELECT * FROM profile_reminder")
+    suspend fun reminders(): List<ProfileReminderEntity>
+
+    @Query("SELECT * FROM profile_reminder WHERE profileId = :profileId")
+    suspend fun reminder(profileId: Long): ProfileReminderEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun setReminder(reminder: ProfileReminderEntity)
+
+    @Query("DELETE FROM profile_reminder WHERE profileId = :profileId")
+    suspend fun deleteReminder(profileId: Long)
+
     @Query("SELECT * FROM profile ORDER BY name COLLATE NOCASE, id")
     fun observeAll(): Flow<List<ProfileEntity>>
 

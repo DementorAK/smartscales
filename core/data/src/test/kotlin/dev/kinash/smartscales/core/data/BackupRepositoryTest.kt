@@ -13,6 +13,7 @@ import dev.kinash.smartscales.core.data.backup.GoalBackup
 import dev.kinash.smartscales.core.data.backup.ImpedanceBackup
 import dev.kinash.smartscales.core.data.backup.MeasurementBackup
 import dev.kinash.smartscales.core.data.backup.ProfileBackup
+import dev.kinash.smartscales.core.data.backup.ReminderBackup
 import dev.kinash.smartscales.core.data.backup.ScaleBackup
 import dev.kinash.smartscales.core.data.backup.SettingsBackup
 import dev.kinash.smartscales.core.data.backup.TagBackup
@@ -126,6 +127,7 @@ class BackupRepositoryTest : DatabaseTestBase() {
                     lengthUnit = "CENTIMETRE", color = -12627531, avatar = "🙂", createdAt = "2026-01-01T00:00:00Z", cards = "bmi,bf_mine",
                     goals = listOf(GoalBackup("weight", 78.0, "2026-10-01T00:00:00Z")),
                     manualValues = mapOf("waist" to 84.5), mainVariants = mapOf("bf" to "bf_mine"),
+                    reminder = ReminderBackup("07:45", onSchedule = true, days = listOf("MONDAY", "FRIDAY"), onGap = true, gapDays = 5),
                 ),
                 ProfileBackup(
                     id = 5, name = "Nadia", sex = "FEMALE", birthDate = "2015-03-15", heightCm = 140.0, weightUnit = "POUND",

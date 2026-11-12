@@ -3,6 +3,9 @@ package dev.kinash.smartscales.core.data.repository
 import androidx.room.withTransaction
 import dev.kinash.smartscales.core.data.Goal
 import dev.kinash.smartscales.core.data.Profile
+import dev.kinash.smartscales.core.data.Reminder
+import dev.kinash.smartscales.core.data.toEntity
+import dev.kinash.smartscales.core.data.toReminder
 import dev.kinash.smartscales.core.data.db.SmartScalesDatabase
 import dev.kinash.smartscales.core.data.db.entity.ProfileGoalEntity
 import dev.kinash.smartscales.core.data.db.entity.ProfileMainVariantEntity
@@ -36,6 +39,16 @@ class ProfileRepository @Inject constructor(
     suspend fun <T> inTransaction(block: suspend () -> T): T = database.withTransaction { block() }
 
     suspend fun add(profile: Profile): Long = dao.insert(profile.copy(id = 0).toEntity())
+
+    /** Every profile's reminder to weigh that has been set, on or off. */
+    fun observeReminders(): Flow<List<Reminder>> = dao.observeReminders().map { list -> list.map { it.toReminder() } }
+
+    suspend fun reminders(): List<Reminder> = dao.reminders().map { it.toReminder() }
+
+    /** The profile's reminder, off when none was set. */
+    suspend fun getReminder(profileId: Long): Reminder = dao.reminder(profileId)?.toReminder() ?: Reminder(profileId)
+
+    suspend fun setReminder(reminder: Reminder) = dao.setReminder(reminder.toEntity())
 
     /** The manual fields the profile keeps for its weighings (circumferences), by field id, in centimetres. */
     suspend fun getManualValues(profileId: Long): Map<String, Double> =

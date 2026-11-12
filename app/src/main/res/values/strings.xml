@@ -764,4 +764,23 @@
     </plurals>
     <string name="import_field_water_liters">Body water, litres (as given)</string>
     <string name="import_own_table">From this app\'s table come the weighings\' raw data and the scale\'s own values; the indicators are worked out again. The impedances of segments and the fields of your own formula sets other than the circumferences are not in it: a backup moves everything. Times are read in this phone\'s time zone.</string>
+    <string name="reminder_section">Reminder to weigh</string>
+    <string name="reminder_schedule">On days of the week</string>
+    <string name="reminder_schedule_hint">For a diary of weighings. Not on a day there is a weighing already.</string>
+    <string name="reminder_no_days">Choose at least one day</string>
+    <string name="reminder_gap">After days without weighing</string>
+    <string name="reminder_gap_hint">For keeping an eye on swings: once that many days have gone by since the last weighing.</string>
+    <string name="reminder_gap_days">Days without weighing</string>
+    <string name="reminder_gap_days_error">From 1 to 90 days</string>
+    <string name="reminder_time">At</string>
+    <string name="reminder_not_allowed">Notifications are off for the app; allow them in the phone\'s settings for the reminder to show.</string>
+    <string name="reminder_channel">Reminders to weigh</string>
+    <string name="reminder_title">Time to weigh</string>
+    <string name="reminder_autostart">On this phone reminders may not come after a restart until autostart is allowed for the app.</string>
+    <string name="reminder_autostart_open">Allow autostart</string>
+    <string name="reminder_text">%1$s, step on the scale</string>
+    <plurals name="reminder_gap_text">
+        <item quantity="one">%1$s, no weighing for %2$d day</item>
+        <item quantity="other">%1$s, no weighing for %2$d days</item>
+    </plurals>
 </resources>

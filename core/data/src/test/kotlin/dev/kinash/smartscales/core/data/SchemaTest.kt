@@ -30,8 +30,19 @@ class SchemaTest {
 
     @Test
     fun latestVersionMatchesEntities() {
+        helper.createDatabase(8).close()
+        helper.runMigrationsAndValidate(8).close()
+    }
+
+    @Test
+    fun migration7To8AddsRemindersNoneSet() {
         helper.createDatabase(7).close()
-        helper.runMigrationsAndValidate(7).close()
+        helper.runMigrationsAndValidate(8, MIGRATIONS.toList()).use { db ->
+            db.prepare("SELECT COUNT(*) FROM profile_reminder").use {
+                it.step()
+                assertEquals(0L, it.getLong(0))
+            }
+        }
     }
 
     @Test
@@ -44,7 +55,7 @@ class SchemaTest {
                 """,
             )
         }
-        helper.runMigrationsAndValidate(7, MIGRATIONS.toList()).use { db ->
+        helper.runMigrationsAndValidate(7, MIGRATIONS.take(6)).use { db ->
             db.prepare("SELECT invertsSex FROM scale_binding").use {
                 it.step()
                 assertEquals(0L, it.getLong(0))

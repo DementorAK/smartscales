@@ -13,6 +13,7 @@ import dev.kinash.smartscales.core.data.db.entity.ProfileEntity
 import dev.kinash.smartscales.core.data.db.entity.ProfileGoalEntity
 import dev.kinash.smartscales.core.data.db.entity.ProfileMainVariantEntity
 import dev.kinash.smartscales.core.data.db.entity.ProfileManualValueEntity
+import dev.kinash.smartscales.core.data.db.entity.ProfileReminderEntity
 import dev.kinash.smartscales.core.data.db.entity.ScaleBindingEntity
 import dev.kinash.smartscales.core.data.db.entity.ScaleExcludedProfileEntity
 import dev.kinash.smartscales.core.data.db.entity.TagEntity
@@ -31,6 +32,9 @@ interface BackupDao {
 
     @Query("SELECT * FROM profile_manual_value")
     suspend fun profileManualValues(): List<ProfileManualValueEntity>
+
+    @Query("SELECT * FROM profile_reminder")
+    suspend fun reminders(): List<ProfileReminderEntity>
 
     @Query("SELECT * FROM scale_binding ORDER BY id")
     suspend fun scales(): List<ScaleBindingEntity>
@@ -70,6 +74,9 @@ interface BackupDao {
 
     @Insert
     suspend fun insertProfileManualValues(rows: List<ProfileManualValueEntity>)
+
+    @Insert
+    suspend fun insertReminders(rows: List<ProfileReminderEntity>)
 
     @Insert
     suspend fun insertScales(rows: List<ScaleBindingEntity>)
@@ -131,6 +138,9 @@ interface BackupDao {
 
     @Query("DELETE FROM profile_manual_value")
     suspend fun clearProfileManualValues()
+
+    @Query("DELETE FROM profile_reminder")
+    suspend fun clearReminders()
 
     @Query("DELETE FROM profile")
     suspend fun clearProfiles()

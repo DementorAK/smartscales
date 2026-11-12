@@ -74,3 +74,22 @@ data class ProfileMainVariantEntity(
     val groupId: String,
     val indicatorId: String,
 )
+
+/**
+ * The profile's reminder to weigh (requirements §6.5): on [days] of the week (bit 0 for Monday) at [minuteOfDay],
+ * and, apart from that, at the same time once [gapDays] days have gone by without a weighing. Both off by default.
+ */
+@Entity(
+    tableName = "profile_reminder",
+    foreignKeys = [
+        ForeignKey(ProfileEntity::class, ["id"], ["profileId"], onDelete = ForeignKey.CASCADE),
+    ],
+)
+data class ProfileReminderEntity(
+    @PrimaryKey val profileId: Long,
+    val minuteOfDay: Int,
+    val onSchedule: Boolean,
+    val days: Int,
+    val onGap: Boolean,
+    val gapDays: Int,
+)

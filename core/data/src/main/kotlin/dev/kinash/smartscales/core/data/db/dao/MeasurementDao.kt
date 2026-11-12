@@ -22,6 +22,9 @@ import java.time.ZoneId
 /** Weight of a profile's latest measurement. */
 data class ProfileWeight(val profileId: Long, val weightKg: Double)
 
+/** When a profile last weighed. */
+data class ProfileLastWeighing(val profileId: Long, val takenAt: Instant)
+
 /** A foot-to-foot impedance value that a scale sent in several weighings. */
 data class RepeatedImpedance(val scaleBindingId: Long, val ohms: Double)
 
@@ -63,6 +66,9 @@ interface MeasurementDao {
         """,
     )
     suspend fun latestWeights(): List<ProfileWeight>
+
+    @Query("SELECT profileId, MAX(takenAt) AS takenAt FROM measurement WHERE profileId IS NOT NULL GROUP BY profileId")
+    fun observeLastWeighings(): Flow<List<ProfileLastWeighing>>
 
     @Query("UPDATE measurement SET profileId = NULL, heightCm = NULL, sex = NULL, birthDate = NULL WHERE id = :id")
     suspend fun moveToInbox(id: Long)

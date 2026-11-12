@@ -67,8 +67,19 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
     }
 }
 
+/** Reminders to weigh, none set yet. */
+val MIGRATION_7_8 = object : Migration(7, 8) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL(
+            "CREATE TABLE IF NOT EXISTS `profile_reminder` (`profileId` INTEGER NOT NULL, `minuteOfDay` INTEGER NOT NULL, " +
+                "`onSchedule` INTEGER NOT NULL, `days` INTEGER NOT NULL, `onGap` INTEGER NOT NULL, `gapDays` INTEGER NOT NULL, " +
+                "PRIMARY KEY(`profileId`), FOREIGN KEY(`profileId`) REFERENCES `profile`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        )
+    }
+}
+
 /** All migrations, for the database builder and the migration tests. */
-val MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+val MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
 
 private fun SQLiteConnection.hasColumn(table: String, column: String): Boolean =
     prepare("PRAGMA table_info(`$table`)").use { statement ->

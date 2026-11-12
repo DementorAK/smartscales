@@ -802,4 +802,25 @@
     </plurals>
     <string name="import_field_water_liters">Вода тела, л (как в файле)</string>
     <string name="import_own_table">Из таблицы этого приложения берутся сырые данные взвешиваний и данные весов; показатели посчитаются заново. Импедансов сегментов и полей своих наборов формул, кроме обхватов, в ней нет: всё целиком переносит резервная копия. Время читается в часовом поясе этого телефона.</string>
+    <string name="reminder_section">Напоминание взвеситься</string>
+    <string name="reminder_schedule">По дням недели</string>
+    <string name="reminder_schedule_hint">Для дневника взвешиваний. Не напоминает в день, когда взвешивание уже было.</string>
+    <string name="reminder_no_days">Выберите хотя бы один день</string>
+    <string name="reminder_gap">Если давно не взвешивались</string>
+    <string name="reminder_gap_hint">Чтобы следить за перепадами: когда с последнего взвешивания прошло столько дней.</string>
+    <string name="reminder_gap_days">Дней без взвешивания</string>
+    <string name="reminder_gap_days_error">От 1 до 90 дней</string>
+    <string name="reminder_time">Время</string>
+    <string name="reminder_not_allowed">Уведомления приложения выключены; разрешите их в настройках телефона, чтобы напоминание показывалось.</string>
+    <string name="reminder_channel">Напоминания взвеситься</string>
+    <string name="reminder_title">Пора взвеситься</string>
+    <string name="reminder_autostart">На этом телефоне напоминания могут не приходить после перезагрузки, пока для приложения не разрешён автозапуск.</string>
+    <string name="reminder_autostart_open">Разрешить автозапуск</string>
+    <string name="reminder_text">%1$s, встаньте на весы</string>
+    <plurals name="reminder_gap_text">
+        <item quantity="one">%1$s, вы не взвешивались %2$d день</item>
+        <item quantity="few">%1$s, вы не взвешивались %2$d дня</item>
+        <item quantity="many">%1$s, вы не взвешивались %2$d дней</item>
+        <item quantity="other">%1$s, вы не взвешивались %2$d дня</item>
+    </plurals>
 </resources>

@@ -9,7 +9,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -26,6 +25,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
@@ -41,6 +42,10 @@ import javax.inject.Singleton
  * each reminder whose time it is looks at the weighings and says what is due, if anything, and the alarm goes on to
  * the next time. It follows the reminders as they change (a profile saved or deleted, a backup restored), and a
  * reminder already shown goes away once the profile weighs.
+ *
+ * The time the alarm goes to is kept until it has reminded: an alarm held back past it (by Doze, or longer for an
+ * app rarely opened) and set again meanwhile (the clock synced, the app updated or started, a reminder changed)
+ * would otherwise go on to the next day and the reminder of this one would be lost.
  */
 @Singleton
 class Reminders @Inject constructor(
@@ -52,6 +57,15 @@ class Reminders @Inject constructor(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val alarms get() = context.getSystemService(AlarmManager::class.java)
     private val zone: ZoneId get() = ZoneId.systemDefault()
+    private val prefs get() = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    private val lock = Mutex()
+
+    /** The time the alarm goes to and has not reminded of yet. */
+    internal var pending: Instant?
+        get() = prefs.getLong(KEY_PENDING, 0).takeIf { it > 0 }?.let(Instant::ofEpochMilli)
+        set(value) {
+            prefs.edit().apply { if (value == null) remove(KEY_PENDING) else putLong(KEY_PENDING, value.toEpochMilli()) }.commit()
+        }
 
     /** Started with the app: keeps the alarm as the reminders are, and clears a reminder once the profile weighs. */
     fun start() {
@@ -62,35 +76,41 @@ class Reminders @Inject constructor(
     /** After a restart of the phone or a change of its clock or zone, when the alarm is gone or due elsewhere. */
     suspend fun rescheduleAll() = schedule(profiles.reminders())
 
-    /** Sets the alarm on the way to the nearest time of [reminders], or none when all are off. */
-    fun schedule(reminders: List<Reminder>) {
+    /**
+     * Sets the alarm on the way to the nearest time of [reminders], or none when all are off; first reminds of a
+     * time the alarm went to and that has come.
+     */
+    suspend fun schedule(reminders: List<Reminder>) = lock.withLock { plan(reminders) }
+
+    /** The alarm went off: short of its time it comes closer, at it the reminders say what is due. */
+    suspend fun fire() = lock.withLock { plan(profiles.reminders()) }
+
+    private suspend fun plan(reminders: List<Reminder>) {
         val now = Instant.now(clock)
+        pending?.let { target ->
+            if (now.isBefore(target)) return@let
+            remind(target, now, reminders)
+            pending = null
+        }
         val target = ReminderSchedule.nearest(now.atZone(zone), reminders)?.toInstant()
+        pending = target
         if (target == null) {
-            alarms.cancel(alarmIntent(0))
+            alarms.cancel(alarmIntent())
             return
         }
         val at = ReminderSchedule.alarmAt(now, target)
-        alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at.toEpochMilli(), alarmIntent(target.toEpochMilli()))
+        alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at.toEpochMilli(), alarmIntent())
     }
 
-    /**
-     * The alarm on the way to [target] went off: short of it, the alarm comes closer; at it, each reminder whose
-     * time came since says what is due, if anything, and the alarm goes on to the next time.
-     */
-    suspend fun fire(target: Instant) {
-        val now = Instant.now(clock)
-        val reminders = profiles.reminders()
-        if (!now.isBefore(target)) {
-            val today = now.atZone(zone).toLocalDate()
-            val last = measurements.observeLastWeighings().first()
-            ReminderSchedule.reached(target.atZone(zone), now.atZone(zone), reminders).forEach { reminder ->
-                val profile = profiles.get(reminder.profileId) ?: return@forEach
-                val weighed = last[reminder.profileId]?.atZone(zone)?.toLocalDate()
-                ReminderSchedule.due(today, reminder, weighed)?.let { due -> notify(profile.id, profile.name, due) }
-            }
+    /** Each reminder whose time came from [target] to [now] says what is due, if anything. */
+    private suspend fun remind(target: Instant, now: Instant, reminders: List<Reminder>) {
+        val today = now.atZone(zone).toLocalDate()
+        val last = measurements.observeLastWeighings().first()
+        ReminderSchedule.reached(target.atZone(zone), now.atZone(zone), reminders).forEach { reminder ->
+            val profile = profiles.get(reminder.profileId) ?: return@forEach
+            val weighed = last[reminder.profileId]?.atZone(zone)?.toLocalDate()
+            ReminderSchedule.due(today, reminder, weighed)?.let { due -> notify(profile.id, profile.name, due) }
         }
-        schedule(reminders)
     }
 
     private fun notify(profileId: Long, name: String, due: ReminderDue) {
@@ -130,19 +150,16 @@ class Reminders @Inject constructor(
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 
-    private fun alarmIntent(target: Long): PendingIntent {
-        val intent = Intent(context, ReminderReceiver::class.java)
-            .setAction(ACTION_REMIND)
-            .setData(ALARM)
-            .putExtra(EXTRA_TARGET, target)
+    private fun alarmIntent(): PendingIntent {
+        val intent = Intent(context, ReminderReceiver::class.java).setAction(ACTION_REMIND)
         return PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
     }
 
     companion object {
         const val ACTION_REMIND = "dev.kinash.smartscales.REMIND"
-        val ALARM: Uri = Uri.parse("smartscales://reminder")
         const val CHANNEL = "reminders"
-        const val EXTRA_TARGET = "target"
+        private const val PREFS = "reminders"
+        private const val KEY_PENDING = "pending"
         const val TAG = "reminder"
     }
 }
@@ -154,10 +171,8 @@ class ReminderReceiver : BroadcastReceiver() {
     lateinit var reminders: Reminders
 
     override fun onReceive(context: Context, intent: Intent) {
-        // An alarm of a profile from a build before one alarm served all is let go
-        if (intent.action != Reminders.ACTION_REMIND || intent.data != Reminders.ALARM) return
-        val target = Instant.ofEpochMilli(intent.getLongExtra(Reminders.EXTRA_TARGET, 0))
-        async { reminders.fire(target) }
+        if (intent.action != Reminders.ACTION_REMIND) return
+        async { reminders.fire() }
     }
 }
 

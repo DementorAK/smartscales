@@ -88,14 +88,14 @@ class RemindersTest {
     fun anAlarmIsSetAtTheReminderTimeAndRemovedWhenItIsOff() {
         val alarms = shadowOf(context.getSystemService(AlarmManager::class.java))
         val time = LocalTime.now().plusHours(1).withSecond(0).withNano(0)
-        reminders.schedule(listOf(Reminder(profileId, time = time, onGap = true)))
+        runBlocking { reminders.schedule(listOf(Reminder(profileId, time = time, onGap = true))) }
         val alarm = alarms.scheduledAlarms.single()
         assertEquals(AlarmManager.RTC_WAKEUP, alarm.type)
         assertTrue(alarm.isAllowWhileIdle)
         // An hour away: halfway first, short of the time
         val at = Instant.ofEpochMilli(alarm.triggerAtTime).atZone(ZoneId.systemDefault()).toLocalTime()
         assertTrue(at.isBefore(time))
-        reminders.schedule(listOf(Reminder(profileId)))
+        runBlocking { reminders.schedule(listOf(Reminder(profileId))) }
         assertTrue(alarms.scheduledAlarms.isEmpty())
     }
 
@@ -104,7 +104,7 @@ class RemindersTest {
         val alarms = shadowOf(context.getSystemService(AlarmManager::class.java))
         val soon = LocalTime.now().plusMinutes(10).withSecond(0).withNano(0)
         val later = soon.plusHours(2)
-        reminders.schedule(listOf(Reminder(profileId, time = later, onGap = true), Reminder(otherId, time = soon, onGap = true)))
+        runBlocking { reminders.schedule(listOf(Reminder(profileId, time = later, onGap = true), Reminder(otherId, time = soon, onGap = true))) }
         val alarm = alarms.scheduledAlarms.single()
         // Within the last step: the time itself
         assertEquals(soon, Instant.ofEpochMilli(alarm.triggerAtTime).atZone(ZoneId.systemDefault()).toLocalTime())
@@ -118,9 +118,24 @@ class RemindersTest {
         weighed(Instant.now().minus(Duration.ofDays(5)))
         weighed(Instant.now().minus(Duration.ofDays(4)), otherId)
         // Late by three minutes, as Doze has it
-        reminders.fire(LocalDate.now().atTime(time).atZone(ZoneId.systemDefault()).toInstant())
+        reminders.pending = LocalDate.now().atTime(time).atZone(ZoneId.systemDefault()).toInstant()
+        reminders.fire()
         val texts = notifications.allNotifications.map { it.extras.getCharSequence("android.text").toString() }.sorted()
         assertEquals(listOf("Anna, no weighing for 4 days", "Dmitry, no weighing for 5 days"), texts)
+    }
+
+    @Test
+    fun aTimeHeldBackIsRemindedOfWhenTheAlarmIsSetAgainMeanwhile() = runBlocking {
+        val time = LocalTime.now().minusMinutes(5).withSecond(0).withNano(0)
+        val target = LocalDate.now().atTime(time).atZone(ZoneId.systemDefault()).toInstant()
+        profiles.setReminder(Reminder(profileId, time = time, onGap = true, gapDays = 3))
+        weighed(Instant.now().minus(Duration.ofDays(5)))
+        // The alarm went to the time and is late; the clock syncs meanwhile
+        reminders.pending = target
+        reminders.rescheduleAll()
+        assertEquals("Dmitry, no weighing for 5 days", notifications.allNotifications.single().extras.getCharSequence("android.text").toString())
+        // On to the next day
+        assertEquals(target.plus(Duration.ofDays(1)), reminders.pending)
     }
 
     @Test
@@ -147,14 +162,16 @@ class RemindersTest {
         val target = LocalDate.now().atTime(time).atZone(ZoneId.systemDefault()).toInstant()
         profiles.setReminder(Reminder(profileId, time = time, onGap = true, gapDays = 3))
         weighed(Instant.now().minus(Duration.ofDays(5)))
-        reminders.fire(target)
+        reminders.pending = target
+        reminders.fire()
         val shown = notifications.allNotifications.single()
         val text = shown.extras.getCharSequence("android.text").toString()
         assertEquals("Dmitry, no weighing for 5 days", text)
         context.getSystemService(NotificationManager::class.java).cancelAll()
 
         weighed(Instant.now())
-        reminders.fire(target)
+        reminders.pending = target
+        reminders.fire()
         assertTrue(notifications.allNotifications.isEmpty())
         // The next alarm is set either way
         assertNotNull(shadowOf(context.getSystemService(AlarmManager::class.java)).nextScheduledAlarm)

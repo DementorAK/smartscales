@@ -356,7 +356,7 @@ data class ImportLayout(
                         when (field) {
                             ImportField.IMPEDANCE -> impedance = number.takeIf { it > 0 }
                             ImportField.HEART_RATE -> heartRate = number.toInt().takeIf { it in 20..250 }
-                            ImportField.WATER_LITERS -> if (number > 0) values[field.key!!] = number / weight * 100
+                            ImportField.WATER_LITERS -> if (number > 0) values[field.key!!] = number * 100 / weight
                             // OKOK writes 0 where it had nothing worked out
                             else -> if (number > 0) values[field.key!!] = number
                         }

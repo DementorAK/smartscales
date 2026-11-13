@@ -18,6 +18,18 @@ enum class ChipseaProtocol {
     OKOK_V2,
     ;
 
+    /**
+     * The company ids, the first two bytes of the manufacturer data read little-endian, the family always
+     * advertises with; none for `C0`, whose second byte is the weighing number.
+     */
+    val manufacturerIds: Set<Int>
+        get() = when (this) {
+            OKOK_BROADCAST -> setOf(0x20CA)
+            OKOK -> setOf(0x10CA, 0x11CA)
+            OKOK_CLOUD, OKOK_CLOUD_V4 -> setOf(0xF0FF)
+            OKOK_V2 -> emptySet()
+        }
+
     /** Weighing works from advertisements alone; the other families need a GATT connection to lock a weight. */
     val isBroadcastOnly: Boolean get() = this == OKOK_BROADCAST || this == OKOK_V2
 

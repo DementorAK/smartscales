@@ -30,7 +30,13 @@
         android:maxSdkVersion="30" />
     <!-- Reminders to weigh, off unless a profile turns one on; asked for then, on Android 13+ -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <!-- Reminders are set again after the phone restarts -->
+    <!--
+        The background mode, off unless turned on: a service that stays connected to the scales. Android 14+ wants
+        its type, which needs one of the Bluetooth permissions above.
+    -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <!-- Reminders are set again after the phone restarts, and the background mode starts again -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <!--
@@ -72,6 +78,24 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.TIME_SET" />
                 <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
+        <service
+            android:name=".background.WeighingService"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice" />
+        <!-- The buttons of "whose weighing is it?" -->
+        <receiver
+            android:name=".background.WhoseAnswerReceiver"
+            android:exported="false" />
+        <!-- Protected broadcasts of the system, which only it can send -->
+        <receiver
+            android:name=".background.BackgroundStartReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>

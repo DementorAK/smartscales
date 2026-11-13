@@ -33,6 +33,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.kinash.smartscales.R
+import dev.kinash.smartscales.background.BackgroundMode
 import dev.kinash.smartscales.core.data.Profile
 import dev.kinash.smartscales.core.data.repository.ProfileRepository
 import dev.kinash.smartscales.core.data.repository.SettingsRepository
@@ -56,7 +57,24 @@ import kotlin.math.roundToInt
 class SettingsViewModel @Inject constructor(
     private val settings: SettingsRepository,
     profiles: ProfileRepository,
+    private val background: BackgroundMode,
 ) : ViewModel() {
+    /** Whether this phone can listen in the background (not Android 10–11). */
+    val backgroundAvailable: Boolean get() = background.available
+
+    val backgroundMode: StateFlow<Boolean> =
+        settings.backgroundMode.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    /** Saved and the service started or stopped, also when the screen is left right away. */
+    fun setBackgroundMode(on: Boolean) {
+        viewModelScope.launch {
+            withContext(NonCancellable) {
+                settings.setBackgroundMode(on)
+                background.sync()
+            }
+        }
+    }
+
     /** Null until read from disk, so the slider does not jump from the default. */
     val matchThresholdKg: StateFlow<Double?> =
         settings.matchThresholdKg.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
@@ -110,6 +128,7 @@ fun SettingsScreen(
     val stored by viewModel.matchThresholdKg.collectAsStateWithLifecycle()
     val profiles by viewModel.profiles.collectAsStateWithLifecycle()
     val unit by viewModel.weightUnit.collectAsStateWithLifecycle()
+    val background by viewModel.backgroundMode.collectAsStateWithLifecycle()
     Scaffold(
         topBar = {
             TopAppBar(
@@ -168,6 +187,7 @@ fun SettingsScreen(
             ) {
                 SectionTitle(stringResource(R.string.settings_weighing))
                 stored?.let { ThresholdSetting(it, unit, viewModel::setMatchThreshold) }
+                BackgroundSetting(viewModel.backgroundAvailable, background, viewModel::setBackgroundMode)
             }
             Column(Modifier.padding(horizontal = ScreenPadding).padding(top = ScreenPadding)) {
                 SectionTitle(stringResource(R.string.settings_data))

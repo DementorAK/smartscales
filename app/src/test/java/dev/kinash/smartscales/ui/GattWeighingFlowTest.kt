@@ -224,7 +224,11 @@ class GattWeighingFlowTest {
         waitFor(hasText("Saved for Dmitry"))
         assertEquals(listOf(newer), runBlocking { measurements.observeInbox().first() }.map { it.takenAt })
         // The mark moves to the newest time seen, the result's
-        compose.waitUntil(timeoutMillis = 5_000) { runBlocking { scales.get(scaleId) }!!.historyAcceptedUntil == now }
+        compose.waitUntil(timeoutMillis = 5_000) {
+            // The connection ends on the main thread, which reading the tree lets run
+            compose.onAllNodes(isRoot()).fetchSemanticsNodes()
+            runBlocking { scales.get(scaleId) }!!.historyAcceptedUntil == now
+        }
     }
 
     /** `FF F0 10`: version 0x10 (V4), property: kilograms with one decimal in the V4 layout, weight LE, product. */

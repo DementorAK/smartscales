@@ -34,6 +34,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import dev.kinash.smartscales.R
 import dev.kinash.smartscales.core.ble.AdvertisementScanner
+import dev.kinash.smartscales.core.ble.ScanFilters
 import dev.kinash.smartscales.core.ble.BluetoothUnavailableException
 import dev.kinash.smartscales.core.ble.ScanFailedException
 import dev.kinash.smartscales.core.ble.ScannedAdvertisement
@@ -44,13 +45,13 @@ import kotlinx.coroutines.CancellationException
  * Permissions BLE scanning needs on this Android version. From Android 12 connecting to scales read over GATT
  * needs its own permission; Android asks for both at once as "Nearby devices".
  */
-private val scanPermissions: Array<String> = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+internal val scanPermissions: Array<String> = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
     arrayOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT)
 } else {
     arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
 }
 
-private fun Context.hasScanPermission() =
+internal fun Context.hasScanPermission() =
     scanPermissions.all { ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED }
 
 /** Before Android 12 scanning finds nothing while location is off. */
@@ -156,8 +157,12 @@ const val SCAN_UNAVAILABLE = 0
  * Collects advertisements until cancelled; returns the error code when the scan fails instead of throwing,
  * or null when it was cancelled.
  */
-suspend fun AdvertisementScanner.scanUntilError(onAdvertisement: suspend (ScannedAdvertisement) -> Unit): Int? = try {
-    scan().collect(onAdvertisement)
+suspend fun AdvertisementScanner.scanUntilError(
+    filters: ScanFilters? = null,
+    saveBattery: Boolean = false,
+    onAdvertisement: suspend (ScannedAdvertisement) -> Unit,
+): Int? = try {
+    scan(filters, saveBattery).collect(onAdvertisement)
     null
 } catch (e: CancellationException) {
     throw e

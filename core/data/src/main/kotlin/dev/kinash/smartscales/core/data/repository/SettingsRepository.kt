@@ -60,6 +60,17 @@ class SettingsRepository @Inject constructor(
         dataStore.edit { it[CHILD_NORMS] = norms.name }
     }
 
+    /**
+     * The app listens to the scales in the background (requirements §2.3). This phone's alone, not in a backup:
+     * it runs a service with its notification and needs this phone's permissions, so it is not turned on by
+     * restoring on another one.
+     */
+    val backgroundMode: Flow<Boolean> = dataStore.data.map { it[BACKGROUND_MODE] ?: false }
+
+    suspend fun setBackgroundMode(on: Boolean) {
+        dataStore.edit { it[BACKGROUND_MODE] = on }
+    }
+
     /** The settings as a backup keeps them. */
     suspend fun backup(): SettingsBackup = dataStore.data.first().let { prefs ->
         SettingsBackup(
@@ -91,8 +102,9 @@ class SettingsRepository @Inject constructor(
         private val SELECTED_PROFILE = longPreferencesKey("selected_profile")
         private val MATCH_THRESHOLD = doublePreferencesKey("match_threshold_kg")
         private val COMPARE_HINT_SEEN = booleanPreferencesKey("compare_hint_seen")
+        private val BACKGROUND_MODE = booleanPreferencesKey("background_mode")
 
-        /** Every key of the settings, each kept by a backup (see [restore]). */
+        /** Every key of the settings but [backgroundMode], each kept by a backup (see [restore]). */
         internal val BACKED_UP: List<Preferences.Key<*>> = listOf(CHILD_NORMS, SELECTED_PROFILE, MATCH_THRESHOLD, COMPARE_HINT_SEEN)
     }
 }

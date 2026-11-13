@@ -241,9 +241,16 @@ class WeighingFlowTest {
         scanner.advertise(encryptedFrame(seq = 1, weightRaw = 790, locked = false))
         scanner.advertise(encryptedFrame(seq = 1, weightRaw = 800, locked = true))
         waitFor(hasText("Check the key"))
+        // Kept in the inbox while it waits for the check, so the process may go meanwhile
+        assertEquals(1, runBlocking { measurements.observeInbox().first() }.size)
         compose.onNodeWithText("Different").performClick()
         waitFor(hasText("key is probably wrong", substring = true))
         assertEquals(1, runBlocking { measurements.observeHistory(dmitry).first() }.size)
+        // Decrypted wrong: gone
+        compose.waitUntil(timeoutMillis = 5_000) {
+            compose.onAllNodes(isRoot()).fetchSemanticsNodes()
+            runBlocking { measurements.observeInbox().first() }.isEmpty()
+        }
 
         scanner.advertise(encryptedFrame(seq = 2, weightRaw = 790, locked = false))
         scanner.advertise(encryptedFrame(seq = 2, weightRaw = 801, locked = true))
@@ -256,6 +263,8 @@ class WeighingFlowTest {
         scanner.advertise(encryptedFrame(seq = 3, weightRaw = 790, locked = false))
         scanner.advertise(encryptedFrame(seq = 3, weightRaw = 802, locked = true))
         compose.waitUntil(timeoutMillis = 5_000) {
+            // The weighing is saved on the main thread, which reading the tree lets run
+            compose.onAllNodes(isRoot()).fetchSemanticsNodes()
             runBlocking { measurements.observeHistory(dmitry).first() }.size == 3
         }
         compose.onNodeWithText("Check the key").assertDoesNotExist()

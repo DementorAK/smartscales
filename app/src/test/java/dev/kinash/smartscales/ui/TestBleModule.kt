@@ -7,6 +7,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
 import dev.kinash.smartscales.core.ble.AdvertisementScanner
+import dev.kinash.smartscales.core.ble.ScanFilters
 import dev.kinash.smartscales.core.ble.BluetoothLog
 import dev.kinash.smartscales.core.ble.ChipseaAdvertisementDriver
 import dev.kinash.smartscales.core.ble.CloudV4GattDriver
@@ -27,6 +28,7 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onSubscription
@@ -53,9 +55,23 @@ class FakeScanner : AdvertisementScanner {
 
     override fun observeEnabled(): Flow<Boolean> = flowOf(true)
 
-    override fun scan(): Flow<ScannedAdvertisement> = advertisements
-        .onSubscription { collectors.incrementAndGet() }
+    /** The filters of the last scan, null for one without; and whether it saved the battery. */
+    @Volatile
+    var filters: ScanFilters? = null
+        private set
+
+    @Volatile
+    var savingBattery: Boolean = false
+        private set
+
+    override fun scan(filters: ScanFilters?, saveBattery: Boolean): Flow<ScannedAdvertisement> = advertisements
+        .onSubscription {
+            this@FakeScanner.filters = filters
+            savingBattery = saveBattery
+            collectors.incrementAndGet()
+        }
         .onCompletion { collectors.decrementAndGet() }
+        .filter { filters == null || filters.matches(it) }
 
     /** Sends a scale advertisement with [manufacturerData] (with the company id bytes) from [address]. */
     fun advertise(manufacturerData: ByteArray, address: String = "AA:BB:CC:00:11:22") {

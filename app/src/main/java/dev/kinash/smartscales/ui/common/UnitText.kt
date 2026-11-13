@@ -1,7 +1,9 @@
 package dev.kinash.smartscales.ui.common
 
+import android.content.res.Resources
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import dev.kinash.smartscales.R
 import dev.kinash.smartscales.core.model.LengthUnit
@@ -22,13 +24,16 @@ fun weightText(kg: Double, unit: WeightUnit): String = when (unit) {
 
 /** Weight as the scale shows it, in its own unit and precision, for example "176.4 lb". */
 @Composable
-fun scaleWeightText(weight: ScaleWeight): String {
+fun scaleWeightText(weight: ScaleWeight): String = scaleWeightText(weight, LocalContext.current.resources)
+
+/** [scaleWeightText] outside a screen, for a notification. */
+fun scaleWeightText(weight: ScaleWeight, resources: Resources): String {
     val value = formatNumber(weight.value, weight.digits, weight.digits)
     return when (weight.unit) {
-        ScaleUnit.KILOGRAM -> stringResource(R.string.unit_kg_value, value)
-        ScaleUnit.JIN -> stringResource(R.string.unit_jin_value, value)
-        ScaleUnit.POUND -> stringResource(R.string.unit_lb_value, value)
-        ScaleUnit.STONE -> stringResource(R.string.unit_st_lb_value, weight.stones.toString(), formatNumber(weight.pounds, 1, 1))
+        ScaleUnit.KILOGRAM -> resources.getString(R.string.unit_kg_value, value)
+        ScaleUnit.JIN -> resources.getString(R.string.unit_jin_value, value)
+        ScaleUnit.POUND -> resources.getString(R.string.unit_lb_value, value)
+        ScaleUnit.STONE -> resources.getString(R.string.unit_st_lb_value, weight.stones.toString(), formatNumber(weight.pounds, 1, 1))
     }
 }
 

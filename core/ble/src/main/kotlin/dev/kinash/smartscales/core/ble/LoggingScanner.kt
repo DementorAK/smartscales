@@ -9,7 +9,7 @@ class LoggingScanner(
     private val log: BluetoothLog,
     private val drivers: ScaleDrivers,
 ) : AdvertisementScanner by scanner {
-    override fun scan(): Flow<ScannedAdvertisement> = scanner.scan().onEach { advertisement ->
+    override fun scan(filters: ScanFilters?, saveBattery: Boolean): Flow<ScannedAdvertisement> = scanner.scan(filters, saveBattery).onEach { advertisement ->
         if (log.recording.value) log.record(advertisement, drivers.recognise(advertisement)?.second?.protocol)
     }
 }

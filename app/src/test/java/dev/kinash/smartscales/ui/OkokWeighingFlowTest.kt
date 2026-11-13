@@ -133,7 +133,10 @@ class OkokWeighingFlowTest {
 
         waitFor(hasText("Who is on the scale?"))
         compose.onNode(hasText("Anna") and hasAnyAncestor(isDialog()), useUnmergedTree = true).performClick()
-        compose.waitUntil(timeoutMillis = 5_000) { gatt.writes.any { it.second[3].toInt() == 0x15 } }
+        compose.waitUntil(timeoutMillis = 5_000) {
+            compose.onAllNodes(isRoot()).fetchSemanticsNodes()
+            gatt.writes.any { it.second[3].toInt() == 0x15 }
+        }
         val select = gatt.writes.first { it.second[3].toInt() == 0x15 }.second
         assertEquals(anna.toInt(), select[7].toInt())
     }
